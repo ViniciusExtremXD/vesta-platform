@@ -1,6 +1,5 @@
 ---
 import Base from '../layouts/Base.astro';
-import Clocks from '../components/Clocks.astro';
 import Icon from '../components/Icon.astro';
 import { brand, contact, process } from '../data/site';
 
@@ -26,7 +25,7 @@ const after = [
   <section class="page-head on-void">
     <div class="wrap wrap-wide">
       <p class="kicker" data-reveal="up">Contact</p>
-      <h1 data-split>Fifteen minutes, <em>on your clock.</em></h1>
+      <h1 data-split>Direct brief, <em>immediate alignment.</em></h1>
       <p class="lead" data-reveal="up" style="--i:2">
         Pick a channel. Every one of them reaches the founder directly — there is nobody else here.
       </p>
@@ -118,9 +117,11 @@ const after = [
 
       <aside class="contact-aside">
         <div class="card" data-reveal="left" style="--i:2">
-          <p class="kicker">Hours</p>
-          <p class="muted contact-hours-note">{contact.hours.label}. One to two hours ahead of New York.</p>
-          <Clocks />
+          <p class="kicker">✦ Alignment</p>
+          <h3>Vesta Consultoria</h3>
+          <p class="muted contact-hours-note">
+            CNPJ {brand.cnpj} · Official corporate entity. Direct execution with founder Vinícius Magno.
+          </p>
         </div>
 
         <div class="card" data-reveal="left" style="--i:3">

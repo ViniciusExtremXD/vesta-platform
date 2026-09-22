@@ -3,7 +3,6 @@ import { Picture } from 'astro:assets';
 import { founder, contact, brand } from '../../data/site';
 import photo from '../../assets/vinicius-magno.jpg';
 import Icon from '../Icon.astro';
-import Clocks from '../Clocks.astro';
 
 export interface Props {
   /** The about page uses an <h1>; the home uses an <h2>. */
@@ -11,7 +10,6 @@ export interface Props {
 }
 const { level = 2 } = Astro.props;
 const Heading = level === 1 ? 'h1' : 'h2';
-const sealText = `${brand.mark} · FOUNDER · ${brand.city.toUpperCase()} · UTC−3 · `;
 ---
 
 <section class="founder section on-void" id="founder">
@@ -45,21 +43,8 @@ const sealText = `${brand.mark} · FOUNDER · ${brand.city.toUpperCase()} · UTC
         }
         <figcaption class="founder-hud hud">
           <b>{founder.name}</b>
-          <span>{brand.coordinates}</span>
-          <span data-clock="America/Sao_Paulo">--:--:--</span>
+          <span>{brand.legalName} · CNPJ {brand.cnpj}</span>
         </figcaption>
-        <div class="seal" aria-hidden="true">
-          <svg viewBox="0 0 120 120">
-            <defs>
-              <path id="seal-path" d="M60,60 m-44,0 a44,44 0 1,1 88,0 a44,44 0 1,1 -88,0" />
-            </defs>
-            <circle cx="60" cy="60" r="56" class="seal-ring" />
-            <text class="seal-text">
-              <textPath href="#seal-path">{sealText}{sealText}</textPath>
-            </text>
-            <circle cx="60" cy="60" r="6" class="seal-core" />
-          </svg>
-        </div>
         <span class="founder-corner founder-corner-tl" aria-hidden="true"></span>
         <span class="founder-corner founder-corner-br" aria-hidden="true"></span>
       </figure>
@@ -92,9 +77,10 @@ const sealText = `${brand.mark} · FOUNDER · ${brand.city.toUpperCase()} · UTC
       </ul>
 
       <div class="founder-tz card" data-reveal="up" style="--i:5">
-        <h3>{founder.timezone.title}</h3>
-        <p>{founder.timezone.body}</p>
-        <Clocks compact />
+        <p class="hud"><b>✦ Vesta Devotion</b> · The Sacred Science of Conversion</p>
+        <p>
+          Named after 4 Vesta — the celestial flame of focused purpose. We eliminate agency noise to forge sub-second, mathematically aligned landing pages that convert ad clicks into revenue.
+        </p>
       </div>
 
       <div class="btn-row" data-reveal="up" style="--i:6">
@@ -168,15 +154,15 @@ const sealText = `${brand.mark} · FOUNDER · ${brand.city.toUpperCase()} · UTC
     height: auto;
     aspect-ratio: 1;
     object-fit: cover;
-    filter: grayscale(100%) contrast(1.08);
+    filter: contrast(1.04);
+    border-radius: var(--radius-s);
     transition:
-      filter var(--dur-slow) var(--ease-out),
-      opacity var(--dur-slow) var(--ease-out),
-      transform var(--dur-slow) var(--ease-out);
+      transform var(--dur-slow) var(--ease-out),
+      box-shadow var(--dur-slow) var(--ease-out);
   }
 
   .founder-frame:hover :global(img) {
-    filter: grayscale(0%) contrast(1);
+    transform: scale(1.02);
   }
 
   /* typographic stand-in until a real portrait is supplied */
@@ -256,45 +242,6 @@ const sealText = `${brand.mark} · FOUNDER · ${brand.city.toUpperCase()} · UTC
     right: -1px;
     border-bottom-width: 2px;
     border-right-width: 2px;
-  }
-
-  /* the holographic seal */
-  .seal {
-    position: absolute;
-    top: -2.2rem;
-    right: -2.2rem;
-    width: 7.5rem;
-    height: 7.5rem;
-    animation: seal-spin 26s linear infinite;
-    filter: drop-shadow(0 0 14px rgb(168 85 247 / 0.45));
-  }
-
-  @keyframes seal-spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
-
-  .seal svg {
-    width: 100%;
-    height: 100%;
-  }
-
-  .seal-ring {
-    fill: rgb(14 12 21 / 0.9);
-    stroke: var(--violet-ink-dark);
-    stroke-width: 1;
-  }
-
-  .seal-text {
-    font-family: var(--font-mono);
-    font-size: 8.4px;
-    letter-spacing: 0.18em;
-    fill: var(--violet-ink-dark);
-  }
-
-  .seal-core {
-    fill: var(--violet);
   }
 
   .founder-copy > * + * {
@@ -380,9 +327,5 @@ const sealText = `${brand.mark} · FOUNDER · ${brand.city.toUpperCase()} · UTC
       position: sticky;
       top: calc(var(--nav-h) + 1.5rem);
     }
-  }
-
-  html.motion-reduced .seal {
-    animation: none;
   }
 </style>

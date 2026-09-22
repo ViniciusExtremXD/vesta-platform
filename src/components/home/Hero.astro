@@ -1,9 +1,8 @@
 ---
-import { hero } from '../../data/site';
+import { hero, brand } from '../../data/site';
 import measurementsJson from '../../data/measurements.json';
 import { url, formatDate } from '../../lib/url';
 import Icon from '../Icon.astro';
-import Clocks from '../Clocks.astro';
 
 interface Measurements {
   performance: number | null;
@@ -56,64 +55,71 @@ const date = measurements.date ?? '';
 
     <div class="hero-side">
       <div data-reveal="right" style="--i:2">
-        <div class="card hero-widget" data-tilt="5" data-glow>
+        <div class="card hero-widget hero-funnel-card" data-tilt="5" data-glow>
           <p class="hud hero-widget-head">
             <span class="pulse" aria-hidden="true"></span>
-            <b>Live</b> · time-zone telemetry
+            <b>Growth Architecture</b> · Paid Ads to Clients
           </p>
-          <Clocks />
-        </div>
-      </div>
-
-      {
-        measured && (
-          <div data-reveal="right" style="--i:3">
-            <div class="card hero-widget hero-score" data-tilt="5" data-glow>
-              <div class="score-ring" aria-hidden="true">
-                <svg viewBox="0 0 120 120">
-                  <circle class="score-track" cx="60" cy="60" r="52" />
-                  <circle
-                    class="score-arc"
-                    cx="60"
-                    cy="60"
-                    r="52"
-                    data-draw-path
-                    style={`--i:6; --score:${score / 100}`}
-                  />
-                </svg>
-                <span class="score-num display" data-count={score} data-count-dur="1600">
-                  {score}
-                </span>
+          <div class="hero-funnel">
+            <div class="funnel-step">
+              <span class="funnel-icon"><Icon name="bolt" size={16} /></span>
+              <div class="funnel-body">
+                <span class="funnel-title">Sub-Second Mobile Speed (&lt;1s)</span>
+                <span class="funnel-desc">Stops ad traffic bounce before the click is lost</span>
               </div>
-              <div class="score-copy">
-                <p class="hud">
-                  <b>This page</b> · Lighthouse
-                </p>
-                <p class="score-title">Mobile performance score</p>
-                <p class="score-meta mono">
-                  {measurements.tool}
-                  <br />
-                  Measured {formatDate(date)}
-                  {typeof measurements.lcpMs === 'number' && (
-                    <>
-                      <br />
-                      LCP {(measurements.lcpMs / 1000).toFixed(2)} s · {measurements.requests} requests · {measurements.transferKb} kB
-                    </>
-                  )}
-                </p>
+            </div>
+            <div class="funnel-step">
+              <span class="funnel-icon"><Icon name="check" size={16} /></span>
+              <div class="funnel-body">
+                <span class="funnel-title">High-Converting Layout &amp; Copy</span>
+                <span class="funnel-desc">Single-offer focus, instant WhatsApp &amp; CRM lead delivery</span>
+              </div>
+            </div>
+            <div class="funnel-step">
+              <span class="funnel-icon"><Icon name="shield" size={16} /></span>
+              <div class="funnel-body">
+                <span class="funnel-title">Google SEO &amp; Fast Indexing</span>
+                <span class="funnel-desc">Search Console setup, sitemaps &amp; Schema JSON-LD</span>
               </div>
             </div>
           </div>
-        )
-      }
+        </div>
+      </div>
+
+      <div data-reveal="right" style="--i:3">
+        <div class="card hero-widget hero-trust" data-tilt="5" data-glow>
+          <p class="hud"><b>{brand.legalName}</b> · Official Entity</p>
+          <div class="trust-content">
+            <div class="trust-tags">
+              <span class="badge badge-violet">CNPJ {brand.cnpj}</span>
+              <span class="badge badge-paper">Mackenzie CS Graduate</span>
+            </div>
+            <p class="hero-note-text">
+              Direct execution by <b>Vinícius Magno</b>. Formal contracts, Stripe USD invoicing or Brazilian Nota Fiscal, and 100% code ownership.
+            </p>
+            <div class="trust-pricing-pill">
+              <span>Landing pages from <b>$500 – $700</b></span>
+              <span class="muted">· Ready in 5–7 days</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div data-reveal="right" style="--i:4">
-        <div class="card hero-widget hero-note" data-tilt="5" data-glow>
-          <p class="hud"><b>Verify it</b> · open DevTools</p>
-          <p class="hero-note-text">
-            No framework, no tracker, no chat bubble. The scheduler loads only when you ask for it. The page you are reading
-            is the product.
+        <div class="card hero-widget hero-celestial" data-tilt="5" data-glow>
+          <p class="hud hero-widget-head">
+            <span class="pulse" aria-hidden="true"></span>
+            <b>✦ Celestial Alignment</b> · Live Project Slots
           </p>
+          <div class="celestial-status-body">
+            <p class="hero-note-text">
+              Direct founder execution. Booking dedicated landing page builds for ambitious brands running Google &amp; Meta Ads worldwide.
+            </p>
+            <div class="trust-pricing-pill">
+              <span>⚶ Vesta Focus: <b>Zero Agency Fluff</b></span>
+              <span class="muted">· Direct WhatsApp &amp; Stripe</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -235,61 +241,52 @@ const date = measurements.date ?? '';
     margin-bottom: var(--space-s);
   }
 
-  .hero-score {
+  .hero-funnel {
     display: grid;
-    grid-template-columns: auto 1fr;
-    gap: var(--space-m);
-    align-items: center;
+    gap: 0.85rem;
+    margin-top: var(--space-xs);
   }
 
-  .score-ring {
-    position: relative;
-    width: 7.5rem;
-    height: 7.5rem;
+  .funnel-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
   }
 
-  .score-ring svg {
-    width: 100%;
-    height: 100%;
-    transform: rotate(-90deg);
-  }
-
-  .score-track {
-    fill: none;
-    stroke: rgb(255 255 255 / 0.08);
-    stroke-width: 8;
-  }
-
-  .score-arc {
-    fill: none;
-    stroke: var(--pulse);
-    stroke-width: 8;
-    stroke-linecap: round;
-    /* the drawn length is the score share of the circumference */
-    stroke-dasharray: calc(var(--len, 327) * var(--score, 1)) var(--len, 327);
-  }
-
-  .score-num {
-    position: absolute;
-    inset: 0;
+  .funnel-icon {
     display: grid;
     place-items: center;
-    font-size: var(--step-3);
-    font-weight: 900;
-    letter-spacing: -0.03em;
+    width: 1.8rem;
+    height: 1.8rem;
+    border-radius: var(--radius-s);
+    background: var(--violet-soft);
+    color: var(--violet-ink-dark);
+    flex-shrink: 0;
+    margin-top: 0.1rem;
   }
 
-  .score-title {
-    font-family: var(--font-display);
-    font-weight: 700;
-    margin-top: 0.3rem;
+  .funnel-body {
+    display: grid;
+    gap: 0.2rem;
   }
 
-  .score-meta {
-    margin-top: 0.5rem;
+  .funnel-title {
+    font-size: var(--step--1);
+    font-weight: 600;
+    color: var(--text-dark);
+  }
+
+  .funnel-desc {
     font-size: var(--step--2);
     color: var(--text-dark-muted);
-    line-height: 1.6;
+    line-height: 1.4;
+  }
+
+  .trust-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: var(--space-xs);
   }
 
   .hero-note-text {
@@ -297,6 +294,19 @@ const date = measurements.date ?? '';
     font-size: var(--step--1);
     color: var(--text-dark-muted);
     max-width: 40ch;
+  }
+
+  .trust-pricing-pill {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: var(--space-s);
+    padding: 0.45rem 0.8rem;
+    border-radius: var(--radius-pill);
+    background: rgba(124, 58, 237, 0.12);
+    border: 1px solid rgba(124, 58, 237, 0.25);
+    font-size: var(--step--2);
+    color: var(--text-dark);
   }
 
   @media (min-width: 64rem) {

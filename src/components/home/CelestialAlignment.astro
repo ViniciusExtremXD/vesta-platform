@@ -1,0 +1,377 @@
+---
+import Icon from '../Icon.astro';
+import { url } from '../../lib/url';
+
+const elements = [
+  {
+    id: 'fire',
+    glyph: '♈ ♌ ♐',
+    symbol: '🔥',
+    name: 'Fire Alignment',
+    signs: 'Aries · Leo · Sagittarius',
+    archetype: 'The Trailblazer',
+    headline: 'High-Velocity Urgency & Instant Conversion',
+    description:
+      'Engineered for impulsive, high-energy campaigns on Meta Ads and TikTok. We craft bold above-the-fold value hooks, intense visual contrast, and instant WhatsApp click-to-call actions before the impulse fades.',
+    speedGoal: '< 0.7s Load Time',
+    conversionFocus: 'Direct WhatsApp & Lead Form Hook',
+    tracking: 'Meta Pixel + Conversion API Wired',
+    recommended: 'Nova Landing Page ($500 – $700)',
+    accent: 'rgb(249 115 22)',
+    bgGlow: 'radial-gradient(ellipse at center, rgba(249, 115, 22, 0.15), transparent 70%)',
+  },
+  {
+    id: 'earth',
+    glyph: '♉ ♍ ♑',
+    symbol: '🌍',
+    name: 'Earth Alignment',
+    signs: 'Taurus · Virgo · Capricorn',
+    archetype: 'The Sovereign Architect',
+    headline: 'Unshakable Authority & Google Search Dominance',
+    description:
+      'Engineered for high-intent Google Ads and Search traffic where trust and proof make or break the deal. Rich structured data, corporate legitimacy (CNPJ 61.465.539/0001-00), and flawless Google Search Console indexation.',
+    speedGoal: 'Core Web Vitals 98+ Score',
+    conversionFocus: 'High-Ticket Credibility & Reviews',
+    tracking: 'Google Ads & Schema.org JSON-LD',
+    recommended: 'Celestial Monolith + Google SEO ($750)',
+    accent: 'rgb(234 179 8)',
+    bgGlow: 'radial-gradient(ellipse at center, rgba(234, 179, 8, 0.15), transparent 70%)',
+    defaultActive: true,
+  },
+  {
+    id: 'air',
+    glyph: '♊ ♎ ♒',
+    symbol: '💨',
+    name: 'Air Alignment',
+    signs: 'Gemini · Libra · Aquarius',
+    archetype: 'The Conversion Alchemist',
+    headline: 'Omni-Channel Resonance & Multi-Audience Flow',
+    description:
+      'Engineered for multi-offer campaigns, software platforms, and consultative services. Lucid, intellectual copy structure, interactive qualification flows, and seamless CRM integrations that turn curious visitors into booked calls.',
+    speedGoal: 'Zero Layout Shift (CLS: 0)',
+    conversionFocus: 'Interactive Assessment & Lead Flow',
+    tracking: 'Multi-Pixel & Custom Event Tracking',
+    recommended: 'The Sovereign Platform (From $750)',
+    accent: 'rgb(168 85 247)',
+    bgGlow: 'radial-gradient(ellipse at center, rgba(168, 85, 247, 0.18), transparent 70%)',
+  },
+  {
+    id: 'water',
+    glyph: '♋ ♏ ♓',
+    symbol: '💧',
+    name: 'Water Alignment',
+    signs: 'Cancer · Scorpio · Pisces',
+    archetype: 'The Magnetic Luminary',
+    headline: 'Deep Emotional Resonance & High-Ticket Devotion',
+    description:
+      'Engineered for premium bespoke services, clinics, and executive consulting. Immersive storytelling, high-empathy narrative design, and direct founder access that make price comparisons irrelevant.',
+    speedGoal: 'Sub-Second Global CDN Delivery',
+    conversionFocus: 'Consultative Direct Line & Trust',
+    tracking: 'Privacy-First GA4 & Server Attribution',
+    recommended: 'Custom Alignment Scope',
+    accent: 'rgb(56 189 248)',
+    bgGlow: 'radial-gradient(ellipse at center, rgba(56, 189, 248, 0.15), transparent 70%)',
+  },
+];
+---
+
+<section class="celestial section on-void" id="alignment">
+  <div class="wrap wrap-wide">
+    <div class="section-head text-center" data-reveal="up">
+      <p class="kicker">✦ Astrological Conversion Engine</p>
+      <h2 data-split>Align your campaign with the <em>stars of conversion.</em></h2>
+      <p class="lead" style="--i:2">
+        Every campaign possesses an elemental temperament. Select your alignment to reveal the architectural blueprint engineered to turn your ad traffic into loyal clients.
+      </p>
+    </div>
+
+    <!-- Element Selector Buttons -->
+    <div class="element-nav" role="tablist" aria-label="Astrological Alignment Selector" data-reveal="up" style="--i:3">
+      {
+        elements.map((el) => (
+          <button
+            type="button"
+            class={`element-btn${el.defaultActive ? ' is-active' : ''}`}
+            role="tab"
+            aria-selected={el.defaultActive ? 'true' : 'false'}
+            aria-controls={`panel-${el.id}`}
+            id={`tab-${el.id}`}
+            data-element-tab={el.id}
+          >
+            <span class="element-symbol" aria-hidden="true">{el.symbol}</span>
+            <span class="element-title">{el.name}</span>
+            <span class="element-signs mono">{el.signs}</span>
+          </button>
+        ))
+      }
+    </div>
+
+    <!-- Alignment Panels -->
+    <div class="alignment-display" data-reveal="up" style="--i:4">
+      {
+        elements.map((el) => (
+          <article
+            class={`alignment-card card${el.defaultActive ? ' is-active' : ''}`}
+            id={`panel-${el.id}`}
+            role="tabpanel"
+            aria-labelledby={`tab-${el.id}`}
+            data-element-panel={el.id}
+            data-glow
+          >
+            <div class="alignment-glow" style={`background: ${el.bgGlow};`} aria-hidden="true"></div>
+
+            <div class="alignment-header">
+              <div class="alignment-badges">
+                <span class="badge badge-violet mono">{el.glyph}</span>
+                <span class="badge badge-paper">{el.archetype}</span>
+              </div>
+              <h3 class="alignment-headline">{el.headline}</h3>
+              <p class="alignment-desc">{el.description}</p>
+            </div>
+
+            <div class="alignment-specs">
+              <div class="spec-item">
+                <span class="spec-label mono">Speed Horizon</span>
+                <span class="spec-val display">{el.speedGoal}</span>
+              </div>
+              <div class="spec-item">
+                <span class="spec-label mono">Conversion Engine</span>
+                <span class="spec-val">{el.conversionFocus}</span>
+              </div>
+              <div class="spec-item">
+                <span class="spec-label mono">Telemetry &amp; Tracking</span>
+                <span class="spec-val">{el.tracking}</span>
+              </div>
+              <div class="spec-item spec-highlight">
+                <span class="spec-label mono">Recommended Rite</span>
+                <span class="spec-val-hi">{el.recommended}</span>
+              </div>
+            </div>
+
+            <div class="alignment-cta-row">
+              <a class="btn btn-primary" href={url('/contact/')} data-magnetic>
+                Align Your Campaign Now
+                <Icon name="arrow" class="arrow" />
+              </a>
+              <a class="btn btn-ghost" href="#services">
+                View Fixed Packages
+              </a>
+            </div>
+          </article>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<script>
+  function initAlignmentTabs(): void {
+    const tabs = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-element-tab]'));
+    const panels = Array.from(document.querySelectorAll<HTMLElement>('[data-element-panel]'));
+    if (!tabs.length || !panels.length) return;
+
+    tabs.forEach((tab) => {
+      tab.addEventListener('click', () => {
+        const targetId = tab.dataset.elementTab;
+        if (!targetId) return;
+
+        tabs.forEach((t) => {
+          const isActive = t === tab;
+          t.classList.toggle('is-active', isActive);
+          t.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+
+        panels.forEach((p) => {
+          const isActive = p.dataset.elementPanel === targetId;
+          p.classList.toggle('is-active', isActive);
+        });
+      });
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAlignmentTabs);
+  } else {
+    initAlignmentTabs();
+  }
+</script>
+
+<style>
+  .celestial {
+    position: relative;
+    padding-block: var(--space-2xl);
+    overflow: hidden;
+  }
+
+  .text-center {
+    text-align: center;
+    max-width: 48rem;
+    margin-inline: auto;
+    margin-bottom: var(--space-xl);
+  }
+
+  .text-center h2 {
+    max-width: 22ch;
+    margin-inline: auto;
+  }
+
+  .text-center .lead {
+    max-width: 42ch;
+    margin-inline: auto;
+  }
+
+  .element-nav {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+    gap: var(--space-s);
+    margin-bottom: var(--space-l);
+  }
+
+  .element-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+    padding: var(--space-s) var(--space-m);
+    border-radius: var(--radius-m);
+    border: 1px solid var(--line-dark);
+    background: var(--card);
+    color: var(--text-dark-muted);
+    cursor: pointer;
+    transition: all var(--dur-normal) var(--ease-out);
+    text-align: left;
+  }
+
+  .element-btn:hover {
+    border-color: var(--violet-ink-dark);
+    color: var(--text-dark);
+    transform: translateY(-2px);
+  }
+
+  .element-btn.is-active {
+    border-color: var(--violet);
+    background: linear-gradient(160deg, rgba(124, 58, 237, 0.18), var(--card-2) 65%);
+    color: var(--text-dark);
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.25);
+  }
+
+  .element-symbol {
+    font-size: 1.4rem;
+    line-height: 1;
+  }
+
+  .element-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: var(--step-0);
+  }
+
+  .element-signs {
+    font-size: var(--step--2);
+    color: var(--text-dark-faint);
+    letter-spacing: 0.04em;
+  }
+
+  .alignment-display {
+    position: relative;
+    min-height: 24rem;
+  }
+
+  .alignment-card {
+    display: none;
+    position: relative;
+    isolation: isolate;
+    padding: clamp(1.5rem, 1rem + 2vw, 2.75rem);
+    border: 1px solid var(--line-dark-strong);
+    background: var(--card-2);
+    border-radius: var(--radius-l);
+    overflow: hidden;
+  }
+
+  .alignment-card.is-active {
+    display: grid;
+    gap: var(--space-l);
+    animation: fadeIn 0.4s var(--ease-out) forwards;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .alignment-glow {
+    position: absolute;
+    inset: -20% -10% auto;
+    height: 120%;
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  .alignment-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: var(--space-xs);
+  }
+
+  .alignment-headline {
+    font-size: var(--step-3);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: var(--space-xs);
+    color: var(--text-dark);
+  }
+
+  .alignment-desc {
+    font-size: var(--step-0);
+    color: var(--text-dark-muted);
+    max-width: 55ch;
+    line-height: 1.6;
+  }
+
+  .alignment-specs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+    gap: var(--space-m);
+    padding-block: var(--space-m);
+    border-block: 1px solid var(--line-dark);
+  }
+
+  .spec-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .spec-label {
+    font-size: var(--step--2);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--violet-ink-dark);
+  }
+
+  .spec-val {
+    font-size: var(--step-0);
+    font-weight: 600;
+    color: var(--text-dark);
+  }
+
+  .spec-item.spec-highlight .spec-val-hi {
+    font-size: var(--step-1);
+    font-weight: 800;
+    color: var(--pulse);
+  }
+
+  .alignment-cta-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-m);
+  }
+</style>

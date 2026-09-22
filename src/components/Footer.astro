@@ -3,7 +3,6 @@ import { brand, contact, nav, legal, founder } from '../data/site';
 import { url } from '../lib/url';
 import Logo from './Logo.astro';
 import Icon from './Icon.astro';
-import Clocks from './Clocks.astro';
 ---
 
 <footer class="foot on-void-2">
@@ -13,6 +12,7 @@ import Clocks from './Clocks.astro';
         <Logo />
         <p class="foot-tagline">{brand.tagline}</p>
         <p class="foot-founder muted">
+          {brand.legalName} · CNPJ {brand.cnpj}<br />
           Built and run by {founder.name}. {founder.location}.
         </p>
       </div>
@@ -55,13 +55,15 @@ import Clocks from './Clocks.astro';
               </li>
             )
           }
-          <li><a href={url('/contact/')}><Icon name="clock" /> Book a 15-minute call</a></li>
+          <li><a href={url('/contact/')}><Icon name="arrow" /> Request a Quote</a></li>
         </ul>
       </div>
 
-      <div class="foot-col foot-clocks" data-reveal="up" style="--i:3">
-        <h2 class="foot-h">Hours</h2>
-        <Clocks compact />
+      <div class="foot-col foot-alignment" data-reveal="up" style="--i:3">
+        <h2 class="foot-h">Alignment</h2>
+        <p class="foot-founder muted">
+          Named after 4 Vesta — the celestial asteroid of the sacred flame. Forging digital monoliths aligned with peak conversion and Google SEO velocity.
+        </p>
       </div>
     </div>
 

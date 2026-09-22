@@ -14,7 +14,6 @@
 
 import { initParticles } from './particles';
 import { initTilt } from './tilt';
-import { initClocks } from './clocks';
 
 const STORAGE_KEY = 'vesta-motion';
 const READY_FLAG = '__vestaMotionReady';
@@ -453,7 +452,6 @@ function boot(): void {
     initScroll();
     initPointer();
     initImages();
-    initClocks();
     initTilt(isReduced);
     initParticles(isReduced);
   } catch (err) {

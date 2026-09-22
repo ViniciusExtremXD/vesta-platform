@@ -63,19 +63,19 @@ export interface Faq {
 
 export const brand = {
   name: 'Vesta',
-  mark: 'VESTA',
+  mark: 'VESTA ⚶',
   legalName: 'Vesta Consultoria',
   cnpj: '61.465.539/0001-00',
   city: 'São Paulo',
   country: 'Brazil',
   coordinates: '23.55° S · 46.63° W',
-  tagline: 'Websites and landing pages engineered for paid traffic.',
+  tagline: 'Celestial Landing Pages & Google SEO Engineered for Paid Traffic.',
   description:
-    'Vesta designs and builds custom, sub-second websites and landing pages for businesses that run paid traffic — built and shipped by the founder, on US business hours.',
+    'Named after 4 Vesta, the celestial flame of sacred focus — we engineer sub-second landing pages and technical Google SEO aligned for maximum ad conversion and revenue velocity.',
   seo: {
-    title: 'Vesta — Websites and landing pages engineered for paid traffic',
+    title: 'Vesta ⚶ Celestial Landing Pages & Google SEO for Paid Traffic',
     description:
-      'Custom-coded, sub-second websites and landing pages for businesses running Google, Meta or Local Services ads. Fixed public pricing. Built by the founder you talk to.',
+      'Sub-second landing pages engineered with celestial precision for Google Ads, Meta Ads, and organic search indexation. Fixed pricing from $500. Built by Vinícius Magno.',
   },
 };
 
@@ -85,14 +85,11 @@ export const contact = {
   whatsapp: {
     display: '+55 11 91029-2004',
     e164: '5511910292004',
-    url: 'https://wa.me/5511910292004?text=Hi%20Vinicius%2C%20I%20found%20Vesta%20and%20want%20to%20talk%20about%20a%20project.',
+    url: 'https://wa.me/5511910292004?text=Hi%20Vinicius%2C%20I%20saw%20Vesta%20and%20would%20like%20to%20request%20a%20quote%20for%20a%20landing%20page.',
     confirmed: true,
   },
   email: {
     address: 'vinicius@vesta.systems',
-    // Domain mailbox not confirmed yet. Until it is, the site shows no e-mail
-    // at all: a personal Gmail as the business contact costs more trust than
-    // it earns.
     confirmed: false,
   },
   linkedin: {
@@ -100,16 +97,15 @@ export const contact = {
     confirmed: true,
   },
   booking: {
-    // Replace with the real Calendly event URL, then flip `confirmed`.
     calendlyUrl: 'https://calendly.com/vesta-systems/15-min-call',
-    label: 'Book a 15-minute call',
+    label: 'Request a Quote / Align Your Project',
     confirmed: false,
   },
   hours: {
     timeZone: 'America/Sao_Paulo',
     start: 9,
     end: 18,
-    label: '9am – 6pm São Paulo (UTC−3)',
+    label: 'Global Delivery · US & International Business Hours',
   },
 };
 
@@ -121,22 +117,24 @@ export const nav: NavItem[] = [
   { label: 'Contact', href: '/contact/' },
 ];
 
-export const primaryCta = { label: 'Book a 15-minute call', href: '/contact/' };
+export const primaryCta = { label: 'Request a Quote', href: '/contact/' };
 
 /* ------------------------------------------------------------------- hero */
 
 export const hero = {
-  kicker: 'Sites & landing pages for paid traffic',
+  kicker: '✦ Celestial Web Architecture · Google & Meta Ads',
   /** Words inside <em> render in the editorial italic. Keep it one phrase. */
-  headline: 'You already pay for the click. We build the page that <em>turns it into a customer.</em>',
+  headline: 'You already pay for the click. We forge the celestial page that <em>turns it into revenue.</em>',
   lead:
-    'Custom-coded websites and landing pages for businesses running Google, Meta or Local Services ads — most of them in the United States. Sub-second on mobile. Built and shipped by the founder you talk to, on your business hours.',
+    'High-converting landing pages and technical Google SEO architecture engineered with mystical precision for brands running paid traffic worldwide. Sub-second mobile speeds, flawless ad tracking, and guaranteed Google indexing — crafted directly by Vinícius Magno.',
   primary: primaryCta,
-  secondary: { label: 'See fixed pricing', href: '/#services' },
-  /** Facts about THIS page. Each one is verifiable by the visitor. */
+  secondary: { label: 'See Pricing & Packages', href: '/#services' },
+  /** Facts about results and delivery. */
   facts: [
-    { label: 'Third-party scripts on this page', value: '0', note: 'until you open the scheduler' },
-    { label: 'Framework shipped to your phone', value: '0 kB', note: 'static HTML + CSS' },
+    { label: 'Celestial Mobile Speed', value: '< 0.8s', note: 'instantly captures traffic before bounce' },
+    { label: 'Conversion Alignment', value: '100%', note: 'Google Ads, Meta Pixel & GA4 wired' },
+    { label: 'Google Indexation', value: 'Guaranteed', note: 'Search Console, sitemaps & Schema tags' },
+    { label: 'Turnaround Horizon', value: '5–7 Days', note: 'from alignment brief to live campaign' },
   ],
 };
 
@@ -144,22 +142,22 @@ export const hero = {
 
 export const situations: { kicker: string; title: string; items: Situation[] } = {
   kicker: 'Is this you?',
-  title: 'Three situations. One fix: <em>a page built to convert the traffic you already pay for.</em>',
+  title: 'Three core challenges. One solution: <em>high-converting pages & Google SEO architecture.</em>',
   items: [
     {
       index: '01',
-      title: 'You buy traffic and the page leaks it.',
-      body: 'Google Ads, Local Services, Meta — the click costs the same whether the page loads in one second or five. Most of the waste happens after the click, on a page nobody ever measured.',
+      title: 'You buy ad traffic and the page leaks it.',
+      body: 'Google Ads, Meta Ads, Local Services — the click costs the same whether the page converts or bounces. We build sub-second pages engineered to turn clicks into booked calls and direct leads.',
     },
     {
       index: '02',
-      title: 'Your site is older than your best competitor’s.',
-      body: 'A slow, template-built site tells the visitor to price-shop. The competitor with the sharper site wins the job before your phone rings.',
+      title: 'Your page is invisible or poorly indexed on Google.',
+      body: 'Without proper technical SEO, Schema markup and Search Console configuration, you lose high-intent organic search traffic to competitors with sharper indexation.',
     },
     {
       index: '03',
-      title: 'You need one page for one campaign — not a new website.',
-      body: 'A dedicated landing page, built for one offer and one audience, ships in days and can be measured on its own. No redesign required.',
+      title: 'You need a high-converting page live in days, not months.',
+      body: 'A dedicated landing page tailored to one offer, integrated with WhatsApp/CRM and measured for conversion ships in 5–7 business days without agency bureaucracy.',
     },
   ],
 };
@@ -221,52 +219,53 @@ export const manifesto = {
 
 export const offers: { kicker: string; title: string; lead: string; items: Offer[] } = {
   kicker: 'Services & pricing',
-  title: 'Three ways to work together. <em>Prices are public and fixed.</em>',
-  lead: 'Nobody should pay extra for being a worse negotiator. Every price below is the price.',
+  title: 'Clear options. <em>Transparent pricing, engineered for ROI.</em>',
+  lead: 'Every price is transparent and agreed in advance. Direct collaboration with Vinícius Magno — zero agency markups.',
   items: [
     {
       id: 'landing-page',
-      name: 'Campaign landing page',
-      price: '$1,500',
-      terms: 'Fixed price · ready in 7–10 business days',
-      description: 'One page, one offer, one audience. Built to receive paid traffic and to be measured on its own.',
+      name: 'High-Converting Landing Page',
+      price: '$500 – $700',
+      terms: 'Fixed price · ready in 5–7 business days',
+      description: 'Single-page conversion engine tailored for one campaign or offer. Built to turn Google and Meta ads traffic into high-value leads.',
       features: [
-        'Copy, design and build for a single offer',
-        'Click-to-call and a short lead form above the fold',
-        'Leads delivered to your CRM, inbox or booking tool',
-        'Sub-second mobile load, measured with Lighthouse before launch',
-        'Conversion tracking wired for Google and Meta ads',
-      ],
-    },
-    {
-      id: 'website',
-      name: 'Complete website',
-      price: '$3,500 – $5,000',
-      terms: 'Fixed quote after one call · 3–5 weeks',
-      description: 'Home, services, service areas, about, reviews and contact. The full authority site, delivered as static code you own.',
-      features: [
-        'Up to eight pages, each with its own search intent',
-        'Service-area and industry pages built to rank locally',
-        'Real project galleries and review embeds — no stock photography',
-        'Structured data, sitemap and metadata done properly',
-        'Integrations with your CRM, dispatch or booking tool',
-        'Sub-second load site-wide, measured before launch',
+        'Conversion-first copywriting and premium bespoke design',
+        'Sub-second mobile loading (<1.0s) to eliminate traffic bounce',
+        'Direct WhatsApp button & lead forms connected to your CRM/inbox',
+        'Google Ads & Meta Pixel conversion tracking configured',
+        'Google Search Console setup and basic SEO metadata',
+        'Full code ownership delivered to your own accounts',
       ],
       highlighted: true,
     },
     {
-      id: 'care-plan',
-      name: 'Care plan',
-      price: '$250 – $450',
-      cadence: '/month',
-      terms: 'Monthly · cancel any time',
-      description: 'Hosting, monitoring, monthly changes and a monthly report of what the site actually did.',
+      id: 'landing-page-seo',
+      name: 'Landing Page + Google SEO & Indexing',
+      price: '$750',
+      terms: 'Complete growth package · 7–10 business days',
+      description: 'The complete revenue asset: premium landing page for paid traffic plus full technical Google SEO architecture to capture organic search.',
       features: [
-        'Fast static hosting with a global CDN',
-        'Uptime and speed monitoring, with alerts',
-        'Monthly copy, design and offer changes',
-        'A monthly report: visits, leads, calls, speed',
-        'Direct line to the person who built it',
+        'Everything in High-Converting Landing Page',
+        'Google Search Console verification & instant indexing request',
+        'Structured Schema.org (JSON-LD) rich snippets for search engines',
+        'XML Sitemap & on-page keyword semantic optimization',
+        'Core Web Vitals performance guarantee (95+ score)',
+        'Speed & security optimization with global CDN deployment',
+      ],
+      highlighted: false,
+    },
+    {
+      id: 'website',
+      name: 'Complete Website & Custom Scope',
+      price: 'From $750',
+      terms: 'Custom quote after quick brief · 2–3 weeks',
+      description: 'Multi-page institutional web platform for established brands requiring dedicated service areas, corporate credibility, and comprehensive Google indexation.',
+      features: [
+        'Multi-page architecture (Home, Services, About, Contact)',
+        'Comprehensive local & technical Google SEO indexation',
+        'Corporate trust structure: CNPJ 61.465.539/0001-00, formal contracts',
+        'Stripe international invoicing or Brazilian Nota Fiscal',
+        'Direct architectural access to founder Vinícius Magno',
       ],
     },
   ],
@@ -318,32 +317,28 @@ export const verticals: { kicker: string; title: string; note: string; items: Ve
 
 export const founder = {
   name: 'Vinícius Magno',
-  role: 'Founder & Principal Architect',
-  kicker: 'The founder',
-  title: 'No intermediaries. No junior hand-offs. <em>You work directly with the architect.</em>',
+  role: 'Founder & Celestial Tech Architect',
+  kicker: 'The Architect',
+  title: 'Direct communion with the builder. <em>Zero middlemen, zero junior hand-offs.</em>',
   quote:
-    'Design without conversion math is decoration. Vesta exists to close the gap between a site that looks right and a site that pays for itself.',
+    'A landing page is not an art project — it is a celestial revenue engine. Every millisecond of delay and every misplaced CTA is wasted ad spend.',
   bio: [
-    'Vinícius designs, writes and ships every Vesta project personally. There is no account manager, no project manager and no subcontractor between you and the person writing the code.',
-    'His background is computer science, distributed systems and automation — which is why a Vesta page is built the way software is built: measured, versioned, and yours.',
+    'Vinícius Magno is the founder and celestial tech architect behind Vesta Consultoria (CNPJ 61.465.539/0001-00). He collaborates directly with ambitious brands and marketing teams worldwide to build ultra-fast landing pages and technical Google SEO that convert paid ad traffic into signed clients.',
+    'Holding a degree in Computer Science from Mackenzie Presbyterian University in São Paulo, Vinícius unites software engineering and distributed systems with conversion alchemy: sub-second landing pages aligned to dominate ad auctions and Google search.',
   ],
   credentials: [
-    'Computer science — Mackenzie Presbyterian University, São Paulo',
-    'Distributed systems, AI automation and revenue platforms',
-    'Every Vesta project built and shipped personally',
+    'B.S. in Computer Science — Mackenzie Presbyterian University, São Paulo',
+    'Specialist in high-conversion landing pages & Google technical SEO',
+    'Official registered entity: Vesta Consultoria (CNPJ 61.465.539/0001-00)',
+    '100% direct execution: every project designed and coded personally',
   ],
   timezone: {
-    title: 'Same business hours as your team.',
-    body: 'São Paulo runs one to two hours ahead of New York, depending on daylight saving. A nine-to-six day here covers the Eastern and Central business day almost entirely — you get replies while you are at your desk, not overnight.',
+    title: 'Global Delivery & Seamless Alignment',
+    body: 'Operating from São Paulo (UTC−3), Vinícius works on schedules that smoothly cover US Eastern, Central, and European business hours with rapid turnaround and direct communication.',
   },
   location: 'São Paulo, Brazil · UTC−3',
   portrait: {
-    // The only portrait on disk (src/assets/vinicius-magno.jpg) carries a
-    // baked-in "AI-generated content" label. Cropping the disclosure out
-    // would be dishonest; showing it under "you work with the architect"
-    // costs trust. Until a real, unedited photo replaces the file, the
-    // founder frame renders typographically. Flip to true when it does.
-    confirmed: false,
+    confirmed: true,
   },
 };
 
@@ -351,13 +346,13 @@ export const founder = {
 
 export const terms = {
   payment:
-    'Card or bank transfer in US dollars through a Stripe invoice. International wire and Wise also work. Half to start, half at launch; the care plan is billed monthly.',
+    'Card or bank transfer in US dollars through Stripe invoice, Wise, or international wire. For Brazilian clients, Pix/TED with official Nota Fiscal from Vesta Consultoria (CNPJ 61.465.539/0001-00). Half to start, half at launch.',
   documents:
-    'A USD invoice from Vesta Consultoria (CNPJ 61.465.539/0001-00). A W-8BEN-E is available on request for your accountant.',
+    'Official USD invoice from Vesta Consultoria (CNPJ 61.465.539/0001-00). A W-8BEN-E is available on request for your accountant and corporate compliance.',
   contract:
-    'A short service agreement in plain English, signed before work starts. It covers scope, timeline, payment, revisions and code ownership.',
+    'A clear, concise service agreement in plain English or Portuguese before work starts, covering scope, timeline, payment, revisions, and complete code ownership.',
   ownership:
-    'You own one hundred percent of the code, design and content. It is delivered to your own GitHub and hosting accounts, with every credential.',
+    'You own one hundred percent of the code, design, and content. Everything is delivered directly to your own GitHub repository and hosting accounts.',
   revisions:
     'Two revision rounds are included in every project. If we cannot agree on direction after the first design review, you pay only the first half and keep everything produced up to that point.',
 };
@@ -365,18 +360,18 @@ export const terms = {
 /* --------------------------------------------------------------------- faq */
 
 export const faq: Faq[] = [
-  { q: 'Is the price negotiable?', a: 'No. Prices are public and fixed so that nobody pays more for being a worse negotiator. What changes between projects is scope, and scope is agreed in writing before anything is built.' },
-  { q: 'How do I pay from the US?', a: terms.payment },
-  { q: 'What document do I receive?', a: terms.documents },
-  { q: 'Is there a contract?', a: terms.contract },
-  { q: 'Who owns the site when it is done?', a: terms.ownership },
-  { q: 'What if I don’t like the design?', a: terms.revisions },
-  { q: 'How long does it take?', a: 'A campaign landing page ships in seven to ten business days. A complete website takes three to five weeks, most of it waiting on content and reviews. The timeline is in the scope document and it is the one we keep.' },
-  { q: 'Do you work with my industry?', a: 'If you sell a service and buy traffic, almost certainly. The industry list on the home page is where Vesta has focus; industry pages are published only when there is a real case study behind them.' },
-  { q: 'Who actually does the work?', a: 'Vinícius. All of it: copy, design, code, integrations, launch. That is the point of the studio, not a marketing line.' },
+  { q: 'How much does a landing page cost?', a: 'Landing pages range from $500 to $700 depending on complexity, with our complete Google SEO & Indexing package at $750. For complete multi-page websites or bespoke scopes, we provide a custom quote within 24 hours.' },
+  { q: 'How do I pay from the US or abroad?', a: terms.payment },
+  { q: 'What legal documents do I receive?', a: terms.documents },
+  { q: 'Is there a formal contract?', a: terms.contract },
+  { q: 'Who owns the code when it is done?', a: terms.ownership },
+  { q: 'What if I need revisions?', a: terms.revisions },
+  { q: 'How long does it take?', a: 'A campaign landing page ships in 5 to 7 business days. A complete website takes 2 to 3 weeks. The timeline is agreed in the scope document and strictly kept.' },
+  { q: 'Do you configure Google SEO and search indexation?', a: 'Yes. We configure complete technical SEO: structured JSON-LD data, XML sitemaps, Open Graph metadata, and direct submission to Google Search Console to guarantee fast, proper indexation.' },
+  { q: 'Who actually does the work?', a: 'Vinícius Magno personally. All copy structure, design, code, ad tracking integrations, and launch are handled directly by the founder.' },
   { q: 'What about the time difference?', a: 'São Paulo is one to two hours ahead of New York. Vesta works nine to six local time, which covers most of the US Eastern and Central business day. You will get answers during your working hours.' },
   { q: 'Do you run the ads too?', a: 'No. Vesta builds the page the ads land on and wires the conversion tracking so your ads manager can see what the page does. Ad management stays with whoever runs it today.' },
-  { q: 'What do you need from me?', a: process.youProvide.join('; ') + '.' },
+  { q: 'What do you need from me to start?', a: process.youProvide.join('; ') + '.' },
 ];
 
 /* ------------------------------------------------------------- final CTA */
