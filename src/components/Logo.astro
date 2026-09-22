@@ -1,0 +1,30 @@
+---
+import { brand } from '../data/site';
+export interface Props {
+  class?: string;
+}
+const { class: cls = '' } = Astro.props;
+---
+
+<span class={`logo ${cls}`}>{brand.mark}<span class="logo-dot" aria-hidden="true">.</span></span>
+
+<style>
+  .logo {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 1.35rem;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    color: currentColor;
+    white-space: nowrap;
+  }
+
+  .logo-dot {
+    color: var(--violet-ink-dark);
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+
+  :global(:is(.on-paper, .on-paper-2)) .logo-dot {
+    color: var(--violet-ink);
+  }
+</style>

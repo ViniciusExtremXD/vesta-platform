@@ -1,0 +1,111 @@
+---
+import { verticals } from '../../data/site';
+import { url } from '../../lib/url';
+
+export interface Props {
+  /** Slugs that have a live industry page (at least one confirmed case). */
+  pages?: Set<string>;
+}
+const { pages = new Set<string>() } = Astro.props;
+const list = verticals.items;
+---
+
+<section class="vert section-tight on-void-2" id="industries" aria-labelledby="vert-title">
+  <div class="wrap wrap-wide">
+    <div class="vert-head">
+      <p class="kicker" data-reveal="up">{verticals.kicker}</p>
+      <h2 id="vert-title" class="vert-title" data-split set:html={verticals.title} />
+    </div>
+  </div>
+
+  <div class="marquee vert-marquee" data-reveal="fade" style="--i:2">
+    <ul class="marquee-track" aria-label="Industries">
+      {
+        [0, 1].map((copy) =>
+          list.map((v) =>
+            pages.has(v.slug) ? (
+              <li aria-hidden={copy === 1 ? 'true' : undefined}>
+                <a class="vert-chip is-link" href={url(`/industries/${v.slug}/`)}>
+                  {v.label}
+                </a>
+              </li>
+            ) : (
+              <li aria-hidden={copy === 1 ? 'true' : undefined}>
+                <span class="vert-chip">{v.label}</span>
+              </li>
+            )
+          )
+        )
+      }
+    </ul>
+  </div>
+
+  <div class="wrap wrap-wide">
+    <p class="vert-note mono" data-reveal="fade" style="--i:3">{verticals.note}</p>
+  </div>
+</section>
+
+<style>
+  .vert {
+    border-block: 1px solid var(--line-dark);
+  }
+
+  .vert-head {
+    max-width: 44rem;
+    margin-bottom: var(--space-l);
+  }
+
+  .vert-head > * + * {
+    margin-top: var(--space-s);
+  }
+
+  .vert-title {
+    font-size: var(--step-4);
+  }
+
+  .vert-marquee {
+    --marquee-dur: 38s;
+    padding-block: 0.5rem;
+  }
+
+  .marquee-track {
+    gap: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .vert-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.7em 1.3em;
+    border: 1px solid var(--line-dark-strong);
+    border-radius: var(--radius-pill);
+    font-family: var(--font-display);
+    font-size: var(--step-1);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--text-dark-muted);
+    white-space: nowrap;
+    text-decoration: none;
+    transition:
+      color var(--dur-fast) var(--ease-out),
+      border-color var(--dur-fast) var(--ease-out),
+      background-color var(--dur-fast) var(--ease-out);
+  }
+
+  .vert-chip.is-link {
+    color: var(--text-dark);
+    border-color: rgb(182 156 255 / 0.5);
+  }
+
+  .vert-chip.is-link:hover {
+    background: rgb(124 58 237 / 0.18);
+    border-color: var(--violet-ink-dark);
+  }
+
+  .vert-note {
+    margin-top: var(--space-m);
+    font-size: var(--step--2);
+    letter-spacing: 0.04em;
+    color: var(--text-dark-faint);
+  }
+</style>

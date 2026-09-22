@@ -1,0 +1,60 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import Hero from '../components/home/Hero.astro';
+import ProofStrip from '../components/home/ProofStrip.astro';
+import Situations from '../components/home/Situations.astro';
+import Manifesto from '../components/home/Manifesto.astro';
+import Offers from '../components/home/Offers.astro';
+import Process from '../components/home/Process.astro';
+import Founder from '../components/home/Founder.astro';
+import Calculator from '../components/home/Calculator.astro';
+import Verticals from '../components/home/Verticals.astro';
+import Faq from '../components/home/Faq.astro';
+import FinalCta from '../components/home/FinalCta.astro';
+import { brand, faq, offers } from '../data/site';
+
+const cases = (await getCollection('cases')).filter((c) => c.data.confirmed);
+const industryPages = new Set(cases.map((c) => c.data.vertical));
+
+const faqLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: faq.map((f) => ({
+    '@type': 'Question',
+    name: f.q,
+    acceptedAnswer: { '@type': 'Answer', text: f.a },
+  })),
+};
+
+const offersLd = {
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name: 'Vesta services',
+  itemListElement: offers.items.map((o, i) => ({
+    '@type': 'ListItem',
+    position: i + 1,
+    item: {
+      '@type': 'Service',
+      name: o.name,
+      description: o.description,
+      provider: { '@type': 'ProfessionalService', name: brand.name },
+      offers: { '@type': 'Offer', priceCurrency: 'USD', price: o.price.replace(/[^0-9–-]/g, '').split(/[–-]/)[0] },
+    },
+  })),
+};
+---
+
+<Base title={brand.seo.title} description={brand.seo.description} canonical="/" jsonLd={[faqLd, offersLd]}>
+  <Hero />
+  <ProofStrip />
+  <Situations />
+  <Manifesto />
+  <Offers />
+  <Process />
+  <Founder />
+  <Calculator />
+  <Verticals pages={industryPages} />
+  <Faq />
+  <FinalCta />
+</Base>

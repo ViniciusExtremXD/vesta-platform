@@ -1,0 +1,205 @@
+---
+import { getCollection, render } from 'astro:content';
+import { Picture } from 'astro:assets';
+import Base from '../../layouts/Base.astro';
+import FinalCta from '../../components/home/FinalCta.astro';
+import Icon from '../../components/Icon.astro';
+import { brand, verticals } from '../../data/site';
+import { url, formatDate, isoDate } from '../../lib/url';
+
+export async function getStaticPaths() {
+  const cases = (await getCollection('cases')).filter((c) => c.data.confirmed);
+  return cases.map((c) => ({ params: { slug: c.id }, props: { entry: c } }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+const d = entry.data;
+const verticalLabel = verticals.items.find((v) => v.slug === d.vertical)?.label ?? d.vertical;
+
+const breadcrumbs = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Work', item: url('/work/') },
+    { '@type': 'ListItem', position: 2, name: d.title },
+  ],
+};
+---
+
+<Base title={`${d.title} — ${brand.name} case study`} description={d.summary} canonical={`/work/${entry.id}/`} ogType="article" jsonLd={breadcrumbs}>
+  <article>
+    <header class="page-head on-void">
+      <div class="wrap wrap-wide">
+        <p class="kicker" data-reveal="up">
+          <a href={url('/work/')}>Work</a> · {verticalLabel}
+        </p>
+        <h1 data-split>{d.title}</h1>
+        <p class="lead" data-reveal="up" style="--i:2">{d.summary}</p>
+        <p class="hud" data-reveal="fade" style="--i:3">
+          <b>{d.client}</b> · {d.location} · launched <time datetime={isoDate(d.launched)}>{formatDate(d.launched)}</time>
+          {
+            d.url && (
+              <a href={d.url} target="_blank" rel="noopener" class="link-arrow">
+                Live site <Icon name="external" size={11} />
+              </a>
+            )
+          }
+        </p>
+      </div>
+    </header>
+
+    {
+      d.cover && (
+        <div class="wrap wrap-wide on-void" data-reveal="scale">
+          <Picture src={d.cover} alt={`${d.client} — the page Vesta built`} widths={[640, 960, 1400]} sizes="(min-width: 80rem) 78rem, 92vw" formats={['avif', 'webp']} fallbackFormat="jpg" data-img-fade pictureAttributes={{ class: 'case-cover' }} />
+        </div>
+      )
+    }
+
+    {
+      d.metrics.length > 0 && (
+        <section class="section-tight on-paper">
+          <div class="wrap wrap-wide">
+            <p class="kicker" data-reveal="up">Measured</p>
+            <div class="metrics" role="table" aria-label="Before and after">
+              {d.metrics.map((m, i) => (
+                <div class="metric" role="row" data-reveal="up" style={`--i:${i + 1}`}>
+                  <span class="metric-label" role="rowheader">
+                    {m.label}
+                  </span>
+                  <span class="metric-before display" role="cell">
+                    {m.before}
+                  </span>
+                  <span class="metric-arrow" aria-hidden="true">
+                    <Icon name="arrow" size={18} />
+                  </span>
+                  <span class="metric-after display" role="cell">
+                    {m.after}
+                  </span>
+                  <span class="metric-src mono" role="cell">
+                    {m.tool} · {formatDate(m.measured)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )
+    }
+
+    <section class="section on-void">
+      <div class="wrap wrap-wide case-grid">
+        <div data-reveal="up">
+          <p class="kicker">Problem</p>
+          <p class="lead">{d.problem}</p>
+        </div>
+        <div data-reveal="up" style="--i:1">
+          <p class="kicker">What was built</p>
+          <p class="lead">{d.solution}</p>
+        </div>
+      </div>
+      <div class="wrap prose case-body" data-reveal="up" style="--i:2">
+        <Content />
+      </div>
+    </section>
+  </article>
+
+  <FinalCta />
+</Base>
+
+<style>
+  .page-head {
+    padding-block: calc(var(--nav-h) + clamp(3rem, 2rem + 5vw, 6rem)) clamp(2rem, 1.5rem + 3vw, 3rem);
+  }
+
+  .page-head > .wrap > * + * {
+    margin-top: var(--space-m);
+  }
+
+  .page-head h1 {
+    font-size: var(--step-5);
+    max-width: 20ch;
+  }
+
+  .page-head .kicker a {
+    text-decoration: none;
+  }
+
+  :global(.case-cover) {
+    display: block;
+    border-radius: var(--radius-l);
+    overflow: hidden;
+    border: 1px solid var(--line-dark);
+  }
+
+  .metrics {
+    display: grid;
+    margin-top: var(--space-m);
+    border-top: 2px solid var(--ink);
+  }
+
+  .metric {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    grid-template-areas:
+      'label before arrow after'
+      'src src src src';
+    gap: 0.3rem var(--space-m);
+    align-items: baseline;
+    padding-block: var(--space-m);
+    border-bottom: 1px solid var(--line-strong);
+  }
+
+  .metric-label {
+    grid-area: label;
+    font-family: var(--font-display);
+    font-weight: 700;
+  }
+
+  .metric-before {
+    grid-area: before;
+    font-size: var(--step-3);
+    color: var(--ink-faint);
+    text-decoration: line-through;
+    text-decoration-color: var(--line-strong);
+  }
+
+  .metric-arrow {
+    grid-area: arrow;
+    color: var(--violet-ink);
+  }
+
+  .metric-after {
+    grid-area: after;
+    font-size: var(--step-3);
+    font-weight: 900;
+    color: var(--violet-ink);
+  }
+
+  .metric-src {
+    grid-area: src;
+    font-size: var(--step--2);
+    color: var(--ink-faint);
+  }
+
+  .case-grid {
+    display: grid;
+    gap: var(--space-xl);
+    margin-bottom: var(--space-2xl);
+  }
+
+  .case-grid .kicker {
+    margin-bottom: var(--space-s);
+  }
+
+  .case-body {
+    color: var(--text-dark-muted);
+  }
+
+  @media (min-width: 56rem) {
+    .case-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+</style>

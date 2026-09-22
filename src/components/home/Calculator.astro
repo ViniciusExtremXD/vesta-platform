@@ -1,0 +1,363 @@
+---
+import { compute, money, int, pct, ABANDON_AT_3S } from '../../scripts/calculator';
+import { manifesto } from '../../data/site';
+import Icon from '../Icon.astro';
+
+const defaults = { spend: 8000, cpc: 6, mobileShare: 0.65, loadTime: 4.5, convRate: 0.06, closeRate: 0.35, jobValue: 1200 };
+const o = compute(defaults);
+
+const sliders = [
+  { name: 'spend', label: 'Monthly ad spend', min: 2000, max: 50000, step: 500, value: defaults.spend, show: money(defaults.spend) },
+  { name: 'cpc', label: 'Average cost per click', min: 1, max: 60, step: 0.5, value: defaults.cpc, show: money(defaults.cpc, 2) },
+  { name: 'mobile', label: 'Share of clicks on mobile', min: 30, max: 90, step: 5, value: defaults.mobileShare * 100, show: pct(defaults.mobileShare) },
+  { name: 'load', label: 'Your mobile load time', min: 1, max: 8, step: 0.1, value: defaults.loadTime, show: `${defaults.loadTime.toFixed(1)} s` },
+  { name: 'conv', label: 'Visits that become leads', min: 1, max: 20, step: 0.5, value: defaults.convRate * 100, show: pct(defaults.convRate) },
+  { name: 'close', label: 'Leads that become jobs', min: 10, max: 80, step: 5, value: defaults.closeRate * 100, show: pct(defaults.closeRate) },
+  { name: 'job', label: 'Average job value', min: 200, max: 20000, step: 100, value: defaults.jobValue, show: money(defaults.jobValue) },
+];
+
+const integrations = ['HubSpot', 'Jobber', 'ServiceTitan', 'Housecall Pro', 'Calendly', 'Google Sheets', 'Zapier', 'Make', 'Slack', 'your inbox'];
+const research = manifesto.research[0];
+---
+
+<section class="calc-section section on-paper" id="calculator">
+  <div class="wrap wrap-wide">
+    <div class="section-head">
+      <p class="kicker" data-reveal="up">Revenue-bleed calculator</p>
+      <h2 data-split>How much of your ad budget <em>never sees your page?</em></h2>
+      <p class="lead" data-reveal="up" style="--i:2">
+        Your numbers, one published study, no magic. Move the sliders. The result updates as you go — and the formula is
+        printed underneath.
+      </p>
+    </div>
+
+    <form class="calc" data-calc novalidate aria-label="Revenue-bleed calculator" data-reveal="up" style="--i:2">
+      <div class="calc-inputs">
+        {
+          sliders.map((s) => (
+            <div class="calc-field">
+              <label for={`calc-${s.name}`}>
+                <span>{s.label}</span>
+                <output data-label={s.name} for={`calc-${s.name}`} class="mono">
+                  {s.show}
+                </output>
+              </label>
+              <input id={`calc-${s.name}`} type="range" name={s.name} min={s.min} max={s.max} step={s.step} value={s.value} />
+            </div>
+          ))
+        }
+      </div>
+
+      <div class="calc-out" data-glow>
+        <p class="hud"><b>Estimate</b> · per month</p>
+
+        <div class="calc-big">
+          <span class="calc-big-label">Ad spend lost before the page loads</span>
+          <span class="calc-big-value display" data-out="wasted">{money(o.wastedSpend)}</span>
+        </div>
+
+        <div class="calc-big calc-big-rev">
+          <span class="calc-big-label">Revenue those visits would have produced</span>
+          <span class="calc-big-value display" data-out="revenue">{money(o.lostRevenue)}</span>
+          <span class="calc-yearly mono">
+            ≈ <span data-out="yearly">{money(o.lostRevenue * 12)}</span> a year
+          </span>
+        </div>
+
+        <dl class="calc-breakdown mono">
+          <div><dt>Paid clicks</dt><dd data-out="clicks">{int(o.clicks)}</dd></div>
+          <div><dt>On mobile</dt><dd data-out="mobile">{int(o.mobileClicks)}</dd></div>
+          <div><dt>Abandon before load</dt><dd data-out="abandon">{pct(o.abandonShare)}</dd></div>
+          <div><dt>Visits lost</dt><dd data-out="lost">{int(o.lostVisits)}</dd></div>
+          <div><dt>Leads lost</dt><dd data-out="leads">{o.lostLeads.toLocaleString('en-US', { maximumFractionDigits: 1 })}</dd></div>
+          <div><dt>Jobs lost</dt><dd data-out="jobs">{o.lostJobs.toLocaleString('en-US', { maximumFractionDigits: 1 })}</dd></div>
+        </dl>
+      </div>
+
+      <details class="calc-method" data-reveal="fade" style="--i:3">
+        <summary>How this is calculated</summary>
+        <div class="calc-method-body">
+          <p>
+            Clicks = spend ÷ CPC. Mobile clicks = clicks × mobile share. Visits lost = mobile clicks × abandonment. Abandonment
+            is {pct(ABANDON_AT_3S)} at three seconds or slower, zero at one second, and a straight line in between — the only
+            outside figure in the model:
+          </p>
+          <p class="mono calc-src">
+            <a href={research.url} target="_blank" rel="noopener">
+              {research.source}, {research.year} <Icon name="external" size={11} />
+            </a>
+          </p>
+          <p>
+            Lost leads = visits lost × your lead rate. Lost jobs = lost leads × your close rate. Revenue = lost jobs × your
+            average job. It is an estimate; your ads account and analytics hold the real numbers, and a fifteen-minute call
+            is enough to read them together.
+          </p>
+        </div>
+      </details>
+    </form>
+
+    <div class="integ" data-reveal="up" style="--i:2">
+      <div class="integ-copy">
+        <p class="kicker">Where the leads go</p>
+        <h3>The form posts where you already work.</h3>
+        <p>
+          Every Vesta page delivers leads by webhook or native form into the tool you run the business on — no new inbox to
+          babysit. Call tracking and ad conversions are wired at launch.
+        </p>
+      </div>
+      <ul class="integ-list" aria-label="Tools Vesta pages deliver leads into">
+        {integrations.map((t) => <li class="badge">{t}</li>)}
+      </ul>
+    </div>
+  </div>
+</section>
+
+<style>
+  .calc {
+    display: grid;
+    gap: var(--space-l);
+    padding: clamp(1.4rem, 1.1rem + 1.5vw, 2.4rem);
+    background: var(--paper-2);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-xl);
+  }
+
+  .calc-inputs {
+    display: grid;
+    gap: var(--space-m) var(--space-l);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+    align-content: start;
+  }
+
+  .calc-field label {
+    display: flex;
+    justify-content: space-between;
+    gap: 1em;
+    align-items: baseline;
+    font-size: var(--step--1);
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 0.5rem;
+  }
+
+  .calc-field output {
+    font-weight: 700;
+    color: var(--violet-ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  input[type='range'] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--violet) var(--fill, 50%), var(--line-strong) 0);
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type='range']::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--paper);
+    border: 3px solid var(--violet);
+    box-shadow: var(--shadow-s);
+    transition: transform var(--dur-fast) var(--ease-out);
+  }
+
+  input[type='range']::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--paper);
+    border: 3px solid var(--violet);
+    box-shadow: var(--shadow-s);
+  }
+
+  input[type='range']:hover::-webkit-slider-thumb,
+  input[type='range']:focus-visible::-webkit-slider-thumb {
+    transform: scale(1.15);
+  }
+
+  .calc-out {
+    display: grid;
+    gap: var(--space-m);
+    padding: clamp(1.4rem, 1.1rem + 1.5vw, 2.2rem);
+    background: var(--void);
+    color: var(--text-dark);
+    border-radius: var(--radius-l);
+    border: 1px solid var(--line-dark);
+  }
+
+  .calc-out .hud {
+    color: var(--text-dark-faint);
+  }
+
+  .calc-out .hud b {
+    color: var(--text-dark);
+  }
+
+  .calc-big {
+    display: grid;
+    gap: 0.3rem;
+  }
+
+  .calc-big-label {
+    font-size: var(--step--1);
+    color: var(--text-dark-muted);
+  }
+
+  .calc-big-value {
+    font-size: var(--step-5);
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-dark);
+  }
+
+  .calc-big-rev .calc-big-value {
+    color: var(--violet-ink-dark);
+  }
+
+  .calc-yearly {
+    font-size: var(--step--1);
+    color: var(--text-dark-muted);
+  }
+
+  .calc-breakdown {
+    display: grid;
+    gap: 0.5rem 1.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    padding-top: var(--space-s);
+    border-top: 1px solid var(--line-dark);
+    font-size: var(--step--2);
+  }
+
+  .calc-breakdown div {
+    display: flex;
+    justify-content: space-between;
+    gap: 1em;
+  }
+
+  .calc-breakdown dt {
+    color: var(--text-dark-faint);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .calc-breakdown dd {
+    color: var(--text-dark);
+    font-weight: 600;
+  }
+
+  .calc-method {
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--line-strong);
+    padding-top: var(--space-s);
+  }
+
+  .calc-method summary {
+    cursor: pointer;
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--ink);
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 0.6em;
+  }
+
+  .calc-method summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .calc-method summary::before {
+    content: '+';
+    font-family: var(--font-mono);
+    color: var(--violet-ink);
+    transition: transform var(--dur-base) var(--ease-out);
+  }
+
+  .calc-method[open] summary::before {
+    transform: rotate(45deg);
+  }
+
+  .calc-method-body {
+    display: grid;
+    gap: var(--space-s);
+    margin-top: var(--space-s);
+    max-width: 62ch;
+    color: var(--ink-muted);
+    font-size: var(--step--1);
+  }
+
+  .calc-src a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    color: var(--violet-ink);
+    text-decoration: none;
+    font-size: var(--step--2);
+  }
+
+  .calc-src a:hover {
+    text-decoration: underline;
+  }
+
+  /* integrations */
+  .integ {
+    display: grid;
+    gap: var(--space-l) var(--space-3xl);
+    align-items: center;
+    margin-top: clamp(3rem, 2rem + 4vw, 5rem);
+    padding-top: clamp(2rem, 1.5rem + 2vw, 3rem);
+    border-top: 1px solid var(--line-strong);
+  }
+
+  .integ-copy > * + * {
+    margin-top: var(--space-s);
+  }
+
+  .integ-copy h3 {
+    font-size: var(--step-3);
+  }
+
+  .integ-copy p:not(.kicker) {
+    color: var(--ink-muted);
+    max-width: 48ch;
+  }
+
+  .integ-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .integ-list .badge {
+    font-size: var(--step--1);
+    text-transform: none;
+    letter-spacing: 0;
+    font-family: var(--font-display);
+    padding: 0.55em 1em;
+  }
+
+  @media (min-width: 60rem) {
+    .calc {
+      grid-template-columns: minmax(0, 1.15fr) minmax(20rem, 0.85fr);
+    }
+
+    .integ {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+  }
+</style>
+
+<script>
+  import { initCalculator } from '../../scripts/calculator';
+  initCalculator();
+</script>

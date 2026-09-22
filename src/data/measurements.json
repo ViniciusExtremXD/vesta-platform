@@ -1,0 +1,17 @@
+{
+  "note": "Written by `npm run measure` (scripts/measure.mjs). Lighthouse run locally against the production build served with gzip, mobile emulation and simulated throttling (slow 4G, 4x CPU). Median of three runs. Antivirus-injected scripts (Kaspersky) blocked.",
+  "performance": 95,
+  "accessibility": 100,
+  "bestPractices": 82,
+  "seo": 100,
+  "fcpMs": 1990,
+  "lcpMs": 2120,
+  "tbtMs": 23,
+  "cls": 0,
+  "speedIndexMs": 4233,
+  "transferKb": 191,
+  "requests": 6,
+  "tool": "Lighthouse 12.8.2, mobile emulation, simulated slow 4G",
+  "date": "2026-09-22",
+  "route": "/"
+}

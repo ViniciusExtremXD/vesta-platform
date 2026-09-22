@@ -1,0 +1,315 @@
+---
+import { hero } from '../../data/site';
+import measurementsJson from '../../data/measurements.json';
+import { url, formatDate } from '../../lib/url';
+import Icon from '../Icon.astro';
+import Clocks from '../Clocks.astro';
+
+interface Measurements {
+  performance: number | null;
+  lcpMs: number | null;
+  requests: number | null;
+  transferKb: number | null;
+  tool: string | null;
+  date: string | null;
+}
+const measurements = measurementsJson as unknown as Measurements;
+const measured = typeof measurements.performance === 'number' && typeof measurements.date === 'string';
+const score = measurements.performance ?? 0;
+const date = measurements.date ?? '';
+---
+
+<section class="hero on-void" id="top">
+  <div class="field" data-particles aria-hidden="true"></div>
+  <div class="hero-glow" aria-hidden="true"></div>
+  <div class="hero-grid-lines" aria-hidden="true"></div>
+
+  <div class="wrap wrap-wide hero-inner" data-hero-exit>
+    <div class="hero-copy">
+      <p class="kicker" data-reveal="up">{hero.kicker}</p>
+      <h1 data-split set:html={hero.headline} />
+      <p class="lead" data-reveal="up" style="--i:2">{hero.lead}</p>
+
+      <div class="btn-row hero-actions" data-reveal="up" style="--i:3">
+        <a class="btn btn-primary btn-lg" href={url(hero.primary.href)} data-magnetic>
+          {hero.primary.label}
+          <Icon name="arrow" class="arrow" />
+        </a>
+        <a class="btn btn-ghost btn-lg" href={url(hero.secondary.href)} data-magnetic="0.18">
+          {hero.secondary.label}
+        </a>
+      </div>
+
+      <ul class="hero-facts" data-reveal="fade" style="--i:5">
+        {
+          hero.facts.map((f) => (
+            <li>
+              <span class="hero-fact-value mono">{f.value}</span>
+              <span class="hero-fact-label">
+                {f.label} <span class="muted">· {f.note}</span>
+              </span>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+
+    <div class="hero-side">
+      <div data-reveal="right" style="--i:2">
+        <div class="card hero-widget" data-tilt="5" data-glow>
+          <p class="hud hero-widget-head">
+            <span class="pulse" aria-hidden="true"></span>
+            <b>Live</b> · time-zone telemetry
+          </p>
+          <Clocks />
+        </div>
+      </div>
+
+      {
+        measured && (
+          <div data-reveal="right" style="--i:3">
+            <div class="card hero-widget hero-score" data-tilt="5" data-glow>
+              <div class="score-ring" aria-hidden="true">
+                <svg viewBox="0 0 120 120">
+                  <circle class="score-track" cx="60" cy="60" r="52" />
+                  <circle
+                    class="score-arc"
+                    cx="60"
+                    cy="60"
+                    r="52"
+                    data-draw-path
+                    style={`--i:6; --score:${score / 100}`}
+                  />
+                </svg>
+                <span class="score-num display" data-count={score} data-count-dur="1600">
+                  {score}
+                </span>
+              </div>
+              <div class="score-copy">
+                <p class="hud">
+                  <b>This page</b> · Lighthouse
+                </p>
+                <p class="score-title">Mobile performance score</p>
+                <p class="score-meta mono">
+                  {measurements.tool}
+                  <br />
+                  Measured {formatDate(date)}
+                  {typeof measurements.lcpMs === 'number' && (
+                    <>
+                      <br />
+                      LCP {(measurements.lcpMs / 1000).toFixed(2)} s · {measurements.requests} requests · {measurements.transferKb} kB
+                    </>
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
+        )
+      }
+
+      <div data-reveal="right" style="--i:4">
+        <div class="card hero-widget hero-note" data-tilt="5" data-glow>
+          <p class="hud"><b>Verify it</b> · open DevTools</p>
+          <p class="hero-note-text">
+            No framework, no tracker, no chat bubble. The scheduler loads only when you ask for it. The page you are reading
+            is the product.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .hero {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    padding-block: calc(var(--nav-h) + clamp(3rem, 2rem + 5vw, 6.5rem)) clamp(3.5rem, 2.5rem + 5vw, 7rem);
+    min-height: 92svh;
+    display: flex;
+    align-items: center;
+  }
+
+  .hero-glow {
+    position: absolute;
+    inset: -20% -10% auto;
+    height: 90%;
+    z-index: 0;
+    background:
+      radial-gradient(60rem 36rem at 22% 12%, rgb(124 58 237 / 0.28), transparent 60%),
+      radial-gradient(40rem 30rem at 92% 80%, rgb(168 85 247 / 0.14), transparent 60%);
+    pointer-events: none;
+    animation: breathe 9s var(--ease-in-out) infinite alternate;
+  }
+
+  @keyframes breathe {
+    from {
+      transform: translate3d(0, 0, 0) scale(1);
+      opacity: 0.85;
+    }
+    to {
+      transform: translate3d(0, 1.5%, 0) scale(1.04);
+      opacity: 1;
+    }
+  }
+
+  .hero-grid-lines {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background-image:
+      linear-gradient(rgb(255 255 255 / 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(255 255 255 / 0.035) 1px, transparent 1px);
+    background-size: 96px 96px;
+    -webkit-mask-image: radial-gradient(70% 60% at 50% 40%, #000 30%, transparent 100%);
+    mask-image: radial-gradient(70% 60% at 50% 40%, #000 30%, transparent 100%);
+    pointer-events: none;
+  }
+
+  .hero-inner {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    gap: var(--space-2xl) var(--space-xl);
+    align-items: center;
+  }
+
+  .hero-copy > * + * {
+    margin-top: var(--space-m);
+  }
+
+  .hero h1 {
+    max-width: 15ch;
+  }
+
+  .hero .lead {
+    max-width: 52ch;
+  }
+
+  .hero-actions {
+    margin-top: var(--space-l);
+  }
+
+  .hero-facts {
+    display: grid;
+    gap: 0.6rem;
+    margin-top: var(--space-xl);
+    padding-top: var(--space-m);
+    border-top: 1px solid var(--line-dark);
+  }
+
+  .hero-facts li {
+    display: grid;
+    grid-template-columns: 4em 1fr;
+    align-items: baseline;
+    gap: 0.4em 0.9em;
+    font-size: var(--step--1);
+  }
+
+  .hero-fact-value {
+    font-weight: 700;
+    color: var(--violet-ink-dark);
+  }
+
+  .hero-fact-label {
+    color: var(--text-dark-muted);
+  }
+
+  /* ---- widgets ---- */
+
+  .hero-side {
+    display: grid;
+    gap: var(--space-s);
+    align-content: center;
+  }
+
+  .hero-widget {
+    background: rgb(14 12 21 / 0.82);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    box-shadow: var(--shadow-l);
+  }
+
+  .hero-widget-head {
+    margin-bottom: var(--space-s);
+  }
+
+  .hero-score {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--space-m);
+    align-items: center;
+  }
+
+  .score-ring {
+    position: relative;
+    width: 7.5rem;
+    height: 7.5rem;
+  }
+
+  .score-ring svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+  }
+
+  .score-track {
+    fill: none;
+    stroke: rgb(255 255 255 / 0.08);
+    stroke-width: 8;
+  }
+
+  .score-arc {
+    fill: none;
+    stroke: var(--pulse);
+    stroke-width: 8;
+    stroke-linecap: round;
+    /* the drawn length is the score share of the circumference */
+    stroke-dasharray: calc(var(--len, 327) * var(--score, 1)) var(--len, 327);
+  }
+
+  .score-num {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-size: var(--step-3);
+    font-weight: 900;
+    letter-spacing: -0.03em;
+  }
+
+  .score-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    margin-top: 0.3rem;
+  }
+
+  .score-meta {
+    margin-top: 0.5rem;
+    font-size: var(--step--2);
+    color: var(--text-dark-muted);
+    line-height: 1.6;
+  }
+
+  .hero-note-text {
+    margin-top: 0.6rem;
+    font-size: var(--step--1);
+    color: var(--text-dark-muted);
+    max-width: 40ch;
+  }
+
+  @media (min-width: 64rem) {
+    .hero-inner {
+      grid-template-columns: minmax(0, 1.25fr) minmax(20rem, 0.9fr);
+    }
+
+    .hero h1 {
+      max-width: 15ch;
+    }
+  }
+
+  html.motion-reduced .hero-glow {
+    animation: none;
+  }
+</style>

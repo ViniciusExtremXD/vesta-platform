@@ -1,0 +1,28 @@
+{
+  "name": "vesta-site",
+  "type": "module",
+  "version": "2.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "verify": "node scripts/verify.mjs",
+    "shoot": "node scripts/shoot.mjs",
+    "measure": "node scripts/measure.mjs",
+    "og": "node scripts/gen-og.mjs"
+  },
+  "dependencies": {
+    "astro": "^7.3.3",
+    "sharp": "^0.35.4"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "@astrojs/sitemap": "^3.7.4",
+    "chrome-launcher": "^1.2.1",
+    "lighthouse": "^12.8.2",
+    "puppeteer-core": "^25.11.0",
+    "typescript": "^5.9.3"
+  }
+}

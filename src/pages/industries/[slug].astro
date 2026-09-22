@@ -1,0 +1,100 @@
+---
+/**
+ * Industry pages. One per vertical, and only when at least one confirmed
+ * case study exists for it — a vertical page without proof is the trap the
+ * old site fell into, and this route refuses to build it.
+ */
+import { getCollection } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import Offers from '../../components/home/Offers.astro';
+import FinalCta from '../../components/home/FinalCta.astro';
+import { brand, verticals } from '../../data/site';
+import { url, formatDate } from '../../lib/url';
+
+export async function getStaticPaths() {
+  const cases = (await getCollection('cases')).filter((c) => c.data.confirmed);
+  const slugs = new Set(cases.map((c) => c.data.vertical));
+  return verticals.items
+    .filter((v) => slugs.has(v.slug))
+    .map((v) => ({
+      params: { slug: v.slug },
+      props: { vertical: v, cases: cases.filter((c) => c.data.vertical === v.slug) },
+    }));
+}
+
+const { vertical, cases } = Astro.props;
+const title = `${vertical.label} website design & landing pages — ${brand.name}`;
+const description = `Custom, sub-second websites and landing pages for ${vertical.label.toLowerCase()} businesses running paid traffic. Fixed public pricing. See the measured case studies.`;
+---
+
+<Base title={title} description={description} canonical={`/industries/${vertical.slug}/`}>
+  <section class="page-head on-void">
+    <div class="wrap wrap-wide">
+      <p class="kicker" data-reveal="up">{vertical.label}</p>
+      <h1 data-split>Websites and landing pages built for <em>{vertical.label.toLowerCase()} businesses that buy traffic.</em></h1>
+      <p class="lead" data-reveal="up" style="--i:2">
+        The same offer, the same fixed prices — and the case studies below are the proof it works in your industry.
+      </p>
+    </div>
+  </section>
+
+  <section class="section-tight on-void">
+    <div class="wrap wrap-wide">
+      <ul class="ind-cases">
+        {
+          cases.map((c, i) => (
+            <li data-reveal="up" style={`--i:${i + 1}`}>
+              <a class="card ind-case" href={url(`/work/${c.id}/`)} data-glow>
+                <h2>{c.data.title}</h2>
+                <p class="muted">{c.data.summary}</p>
+                <span class="mono ind-meta">
+                  {c.data.location} · {formatDate(c.data.launched)}
+                </span>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <Offers />
+  <FinalCta />
+</Base>
+
+<style>
+  .page-head {
+    padding-block: calc(var(--nav-h) + clamp(3rem, 2rem + 5vw, 6rem)) clamp(2rem, 1.5rem + 3vw, 3rem);
+  }
+
+  .page-head > .wrap > * + * {
+    margin-top: var(--space-m);
+  }
+
+  .page-head h1 {
+    font-size: var(--step-5);
+    max-width: 18ch;
+  }
+
+  .ind-cases {
+    display: grid;
+    gap: var(--space-m);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  }
+
+  .ind-case {
+    height: 100%;
+    gap: var(--space-s);
+    text-decoration: none;
+  }
+
+  .ind-case h2 {
+    font-size: var(--step-2);
+  }
+
+  .ind-meta {
+    margin-top: auto;
+    font-size: var(--step--2);
+    color: var(--text-dark-faint);
+  }
+</style>

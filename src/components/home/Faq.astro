@@ -1,0 +1,122 @@
+---
+import { faq } from '../../data/site';
+---
+
+<section class="faq section on-void" id="faq">
+  <div class="wrap wrap-wide faq-grid">
+    <div class="section-head faq-head">
+      <p class="kicker" data-reveal="up">Questions</p>
+      <h2 data-split>The things people ask <em>before they book.</em></h2>
+    </div>
+
+    <div class="faq-list">
+      {
+        faq.map((f, i) => (
+          <details class="faq-item" data-reveal="up" style={`--i:${Math.min(i, 6)}`}>
+            <summary>
+              <span>{f.q}</span>
+              <span class="faq-plus mono" aria-hidden="true">
+                +
+              </span>
+            </summary>
+            <div class="faq-a">
+              <p>{f.a}</p>
+            </div>
+          </details>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  .faq-grid {
+    display: grid;
+    gap: var(--space-xl) var(--space-3xl);
+    align-items: start;
+  }
+
+  .faq-head {
+    margin-bottom: 0;
+  }
+
+  .faq-list {
+    border-top: 1px solid var(--line-dark-strong);
+  }
+
+  .faq-item {
+    border-bottom: 1px solid var(--line-dark);
+  }
+
+  .faq-item summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-m);
+    padding: 1.1rem 0;
+    cursor: pointer;
+    list-style: none;
+    font-family: var(--font-display);
+    font-size: var(--step-1);
+    font-weight: 700;
+    color: var(--text-dark);
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+
+  .faq-item summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .faq-item summary:hover {
+    color: var(--violet-ink-dark);
+  }
+
+  .faq-plus {
+    flex: 0 0 auto;
+    width: 2rem;
+    height: 2rem;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--line-dark-strong);
+    border-radius: 50%;
+    font-size: var(--step-0);
+    color: var(--violet-ink-dark);
+    transition: transform var(--dur-base) var(--ease-out);
+  }
+
+  .faq-item[open] .faq-plus {
+    transform: rotate(45deg);
+  }
+
+  .faq-a {
+    padding: 0 0 1.4rem;
+    max-width: 62ch;
+    color: var(--text-dark-muted);
+  }
+
+  .faq-item[open] .faq-a {
+    animation: faq-in 320ms var(--ease-out);
+  }
+
+  @keyframes faq-in {
+    from {
+      opacity: 0;
+      transform: translate3d(0, -6px, 0);
+    }
+  }
+
+  @media (min-width: 60rem) {
+    .faq-grid {
+      grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    }
+
+    .faq-head {
+      position: sticky;
+      top: calc(var(--nav-h) + 1.5rem);
+    }
+  }
+
+  html.motion-reduced .faq-item[open] .faq-a {
+    animation: none;
+  }
+</style>

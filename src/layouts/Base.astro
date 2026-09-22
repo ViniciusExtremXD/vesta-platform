@@ -1,0 +1,179 @@
+---
+import { Font } from 'astro:assets';
+import '../styles/global.css';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import { brand, contact, founder } from '../data/site';
+import { url, absolute } from '../lib/url';
+
+export interface Props {
+  /** Becomes the <title>. Required, unique per page. */
+  title: string;
+  /** Meta description. Required, never equal to the title. */
+  description: string;
+  /** Canonical path, with trailing slash. */
+  canonical?: string;
+  ogImage?: string;
+  ogType?: 'website' | 'article';
+  noindex?: boolean;
+  /** Extra JSON-LD beyond Organization/WebSite/Person. */
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
+  bodyClass?: string;
+}
+
+const { title, description, canonical, ogImage, ogType = 'website', noindex = false, jsonLd, bodyClass = '' } = Astro.props;
+
+const basePrefix = import.meta.env.BASE_URL.replace(/\/$/, '');
+const path = canonical ?? (Astro.url.pathname.replace(basePrefix, '') || '/');
+const canonicalUrl = absolute(path, Astro.site);
+const ogImageUrl = absolute(ogImage ?? '/og/default.png', Astro.site);
+const siteUrl = Astro.site ? Astro.site.origin + (basePrefix || '') : 'https://vesta.systems';
+
+const sameAs = [contact.linkedin.confirmed ? contact.linkedin.url : null].filter(Boolean);
+
+const organization = {
+  '@context': 'https://schema.org',
+  '@type': 'ProfessionalService',
+  '@id': `${siteUrl}/#organization`,
+  name: brand.name,
+  legalName: brand.legalName,
+  url: siteUrl,
+  logo: absolute('/og/logo.png', Astro.site),
+  description: brand.description,
+  address: { '@type': 'PostalAddress', addressLocality: brand.city, addressRegion: 'SP', addressCountry: 'BR' },
+  areaServed: [{ '@type': 'Country', name: 'United States' }, { '@type': 'Country', name: 'Canada' }, { '@type': 'Country', name: 'United Kingdom' }],
+  founder: { '@id': `${siteUrl}/#founder` },
+  sameAs,
+  priceRange: '$1,500 – $5,000',
+};
+
+const person = {
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  '@id': `${siteUrl}/#founder`,
+  name: founder.name,
+  jobTitle: founder.role,
+  worksFor: { '@id': `${siteUrl}/#organization` },
+  sameAs,
+};
+
+const website = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  '@id': `${siteUrl}/#website`,
+  url: siteUrl,
+  name: brand.name,
+  inLanguage: 'en-US',
+  publisher: { '@id': `${siteUrl}/#organization` },
+};
+
+const extraLd = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalUrl} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
+
+    <meta property="og:type" content={ogType} />
+    <meta property="og:site_name" content={brand.name} />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:image" content={ogImageUrl} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImageUrl} />
+
+    <meta name="theme-color" content="#050507" />
+    <link rel="icon" href={url('/favicon.svg')} type="image/svg+xml" />
+    <link rel="sitemap" href={url('/sitemap-index.xml')} />
+
+    <Font cssVariable="--font-display" preload />
+    <Font cssVariable="--font-serif" preload />
+    <Font cssVariable="--font-mono" />
+
+    <script is:inline set:html={JSON.stringify(organization)} type="application/ld+json" />
+    <script is:inline set:html={JSON.stringify(person)} type="application/ld+json" />
+    <script is:inline set:html={JSON.stringify(website)} type="application/ld+json" />
+    {extraLd.map((ld) => <script is:inline set:html={JSON.stringify(ld)} type="application/ld+json" />)}
+
+    {/*
+      Failure guard. Two jobs, both before first paint:
+      1. apply the saved motion preference, so someone who reduced it never
+         sees a flash of animation;
+      2. if the motion engine has not reported in within 4 s, mark
+         html.motion-failed — the CSS then reveals the whole site.
+      Invisible content is the one unacceptable defect here.
+    */}
+    <script is:inline>
+      (function () {
+        var h = document.documentElement;
+        try {
+          if (localStorage.getItem('vesta-motion') === 'reduced') h.classList.add('motion-reduced');
+        } catch (e) {}
+        window.setTimeout(function () {
+          if (!window.__vestaMotionReady) h.classList.add('motion-failed');
+        }, 4000);
+      })();
+    </script>
+
+    <noscript>
+      <style>
+        [data-reveal],
+        [data-reveal='mask'] > *,
+        [data-split] .w,
+        [data-draw],
+        img[data-img-fade] {
+          opacity: 1 !important;
+          transform: none !important;
+          filter: none !important;
+          transition: none !important;
+        }
+        [data-draw-path] {
+          stroke-dashoffset: 0 !important;
+        }
+        [data-parallax],
+        [data-hero-exit],
+        [data-magnetic],
+        [data-tilt] {
+          transform: none !important;
+          opacity: 1 !important;
+        }
+        .field {
+          display: none !important;
+        }
+      </style>
+    </noscript>
+  </head>
+
+  <body class={bodyClass}>
+    <a class="skip-link" href="#content">Skip to content</a>
+
+    <div class="progress" data-progress aria-hidden="true">
+      <div class="progress-bar"></div>
+    </div>
+
+    <Nav />
+
+    <main id="content">
+      <slot />
+    </main>
+
+    <Footer />
+
+    <script>
+      import '../scripts/motion';
+    </script>
+  </body>
+</html>

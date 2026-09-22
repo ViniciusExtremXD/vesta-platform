@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://viniciusextremxd.github.io/vesta-platform/sitemap-index.xml

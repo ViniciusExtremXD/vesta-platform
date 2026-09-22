@@ -1,0 +1,34 @@
+---
+import Base from '../layouts/Base.astro';
+import Icon from '../components/Icon.astro';
+import { brand, primaryCta } from '../data/site';
+import { url } from '../lib/url';
+---
+
+<Base title={`Page not found — ${brand.name}`} description="That page does not exist. The home page does, and it loads fast." noindex canonical="/404/">
+  <section class="nf on-void">
+    <div class="wrap wrap-narrow nf-inner">
+      <p class="kicker" data-reveal="up">404</p>
+      <h1 data-split>This page loads fast. <em>It just isn’t the one you wanted.</em></h1>
+      <p class="lead" data-reveal="up" style="--i:2">The link is broken or the page moved. Everything worth seeing is one click away.</p>
+      <div class="btn-row" data-reveal="up" style="--i:3">
+        <a class="btn btn-primary" href={url('/')}>Home <Icon name="arrow" class="arrow" /></a>
+        <a class="btn btn-ghost" href={url(primaryCta.href)}>{primaryCta.label}</a>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .nf {
+    min-height: 80svh;
+    display: flex;
+    align-items: center;
+    padding-block: calc(var(--nav-h) + 3rem) 4rem;
+  }
+
+  .nf-inner {
+    display: grid;
+    gap: var(--space-m);
+  }
+</style>

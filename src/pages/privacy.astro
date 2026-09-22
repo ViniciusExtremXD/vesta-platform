@@ -1,0 +1,126 @@
+---
+import Base from '../layouts/Base.astro';
+import { brand, contact } from '../data/site';
+
+const updated = '2026-09-22';
+const title = `Privacy policy — ${brand.name}`;
+const description = 'What this website collects (almost nothing), what happens when you open the scheduler or WhatsApp, and your rights under GDPR and CCPA.';
+---
+
+<Base title={title} description={description} canonical="/privacy/">
+  <section class="page-head on-void">
+    <div class="wrap wrap-wide">
+      <p class="kicker" data-reveal="up">Privacy</p>
+      <h1 data-split>Short, because <em>there is little to tell.</em></h1>
+      <p class="lead" data-reveal="up" style="--i:2">
+        This is a static website. It has no accounts, no forms that post to a server, no analytics and no advertising
+        pixels. Last updated <time datetime={updated}>September 22, 2026</time>.
+      </p>
+    </div>
+  </section>
+
+  <section class="section on-paper">
+    <div class="wrap prose">
+      <h2 data-reveal="up">Who is responsible</h2>
+      <p data-reveal="up">
+        {brand.legalName} (CNPJ {brand.cnpj}), {brand.city}, {brand.country} — “{brand.name}”, “we”. For anything in this
+        policy, contact us through the channels on the <a href="/contact/">contact page</a>.
+      </p>
+
+      <h2 data-reveal="up">What this site collects</h2>
+      <ul data-reveal="up">
+        <li>
+          <strong>Nothing, by default.</strong> The pages are static files. We do not run analytics, tag managers, session
+          recording, heat maps or advertising scripts.
+        </li>
+        <li>
+          <strong>One preference in your browser.</strong> If you use the “Motion” toggle in the footer, the choice is saved
+          in your browser’s local storage under the key <code>vesta-motion</code>. It never leaves your device and you can
+          clear it from your browser settings. It is not a cookie.
+        </li>
+        <li>
+          <strong>Hosting logs.</strong> The site is served by a hosting provider (GitHub Pages or a CDN), which may keep
+          standard server logs — IP address, user agent, requested page, time — for security and operations, under its
+          own policy.
+        </li>
+      </ul>
+
+      <h2 data-reveal="up">When you take an action</h2>
+      <ul data-reveal="up">
+        <li>
+          <strong>Scheduler.</strong> The booking widget (Calendly) loads only after you press “Load the scheduler”. From
+          that point Calendly processes the details you enter to book the call, under
+          <a href="https://calendly.com/privacy" target="_blank" rel="noopener">Calendly’s privacy policy</a>. We receive
+          your name, e-mail, time-zone and any notes you add, and use them only to hold the call and follow up on it.
+        </li>
+        <li>
+          <strong>WhatsApp and LinkedIn.</strong> Those links open the respective apps or websites, which have their own
+          policies. Messages you send us there are used only to answer you.
+        </li>
+        <li>
+          <strong>Projects.</strong> If we work together, the data needed to deliver the project (contacts, access to your
+          tools, invoicing details) is processed under the service agreement, kept for as long as the law requires for
+          invoices, and deleted or returned after that.
+        </li>
+      </ul>
+
+      <h2 data-reveal="up">Legal basis and your rights</h2>
+      <p data-reveal="up">
+        For visitors in the European Economic Area and the United Kingdom (GDPR / UK GDPR), we process contact data on the
+        basis of taking steps at your request before entering a contract, and project data on the basis of the contract
+        itself. You may request access, correction, deletion, restriction or portability of your data, or object to
+        processing, at any time. You also have the right to complain to your local supervisory authority.
+      </p>
+      <p data-reveal="up">
+        For California residents (CCPA / CPRA): we do not sell or share personal information, and we do not use it for
+        targeted advertising. You may request to know what we hold about you and ask for it to be deleted. We will not
+        treat you differently for exercising those rights.
+      </p>
+      <p data-reveal="up">
+        For visitors in Brazil (LGPD), the same rights apply, and {brand.legalName} is the controller.
+      </p>
+
+      <h2 data-reveal="up">Transfers and retention</h2>
+      <p data-reveal="up">
+        We are based in Brazil. Contact data you send us is stored in the tools we use to answer you (e-mail, WhatsApp,
+        Calendly), which may store it in the United States or the EU under their own safeguards. We keep contact data for
+        as long as the conversation is active plus twelve months, and invoicing records for the period Brazilian tax law
+        requires.
+      </p>
+
+      <h2 data-reveal="up">Changes</h2>
+      <p data-reveal="up">
+        If this policy changes, the date at the top changes with it. Material changes are noted on this page.
+      </p>
+      {
+        contact.email.confirmed && (
+          <p data-reveal="up">
+            Questions: <a href={`mailto:${contact.email.address}`}>{contact.email.address}</a>.
+          </p>
+        )
+      }
+    </div>
+  </section>
+</Base>
+
+<style>
+  .page-head {
+    padding-block: calc(var(--nav-h) + clamp(3rem, 2rem + 5vw, 6rem)) clamp(2rem, 1.5rem + 3vw, 3rem);
+  }
+
+  .page-head > .wrap > * + * {
+    margin-top: var(--space-m);
+  }
+
+  .page-head h1 {
+    max-width: 14ch;
+  }
+
+  .prose code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    padding: 0.1em 0.4em;
+    background: var(--paper-3);
+    border-radius: var(--radius-xs);
+  }
+</style>

@@ -1,0 +1,188 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import FinalCta from '../../components/home/FinalCta.astro';
+import Icon from '../../components/Icon.astro';
+import { brand, foundingProgram, verticals, primaryCta } from '../../data/site';
+import { url, formatDate } from '../../lib/url';
+
+const cases = (await getCollection('cases'))
+  .filter((c) => c.data.confirmed)
+  .sort((a, b) => b.data.launched.getTime() - a.data.launched.getTime());
+
+const labelFor = (slug: string) => verticals.items.find((v) => v.slug === slug)?.label ?? slug;
+
+const title = `Work — ${brand.name} case studies`;
+const description =
+  'Case studies from Vesta: the problem, what was built, and the numbers measured before and after. Published only with the client’s permission.';
+---
+
+<Base title={title} description={description} canonical="/work/">
+  <section class="page-head on-void">
+    <div class="wrap wrap-wide">
+      <p class="kicker" data-reveal="up">Work</p>
+      <h1 data-split>Problem, build, <em>measured result.</em></h1>
+      <p class="lead" data-reveal="up" style="--i:2">
+        Every case here names the client, shows the page, and prints the before-and-after with the tool and the date it
+        was measured. Nothing else qualifies.
+      </p>
+    </div>
+  </section>
+
+  {
+    cases.length > 0 ? (
+      <section class="section-tight on-void">
+        <div class="wrap wrap-wide">
+          <ul class="case-grid">
+            {cases.map((c, i) => (
+              <li data-reveal="up" style={`--i:${i + 1}`}>
+                <a class="card case-card" href={url(`/work/${c.id}/`)} data-tilt="4" data-glow>
+                  <span class="badge badge-violet">{labelFor(c.data.vertical)}</span>
+                  <h2>{c.data.title}</h2>
+                  <p class="muted">{c.data.summary}</p>
+                  {c.data.metrics[0] && (
+                    <p class="case-metric mono">
+                      {c.data.metrics[0].label}: {c.data.metrics[0].before} → <b>{c.data.metrics[0].after}</b>
+                    </p>
+                  )}
+                  <span class="case-meta mono">
+                    {c.data.location} · {formatDate(c.data.launched)}
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+    ) : (
+      <section class="section on-paper">
+        <div class="wrap wrap-wide founding">
+          <div class="founding-copy">
+            <p class="kicker" data-reveal="up">{foundingProgram.kicker}</p>
+            <h2 data-split set:html={foundingProgram.title} />
+            <p class="lead" data-reveal="up" style="--i:2">
+              {foundingProgram.body}
+            </p>
+            <div class="btn-row" data-reveal="up" style="--i:3">
+              <a class="btn btn-ink btn-lg" href={url(primaryCta.href)} data-magnetic>
+                {foundingProgram.label}
+                <Icon name="arrow" class="arrow" />
+              </a>
+            </div>
+          </div>
+          <div class="founding-ledger" data-reveal="left" style="--i:2">
+            <p class="kicker">What a published case contains</p>
+            <ol class="founding-list">
+              <li>The client’s name and the live URL, with written permission.</li>
+              <li>The problem, in the client’s own terms.</li>
+              <li>What was built, and what was deliberately left out.</li>
+              <li>Before-and-after numbers, each with the tool and the date measured.</li>
+              <li>A Lighthouse run on the final build, saved with the project.</li>
+            </ol>
+            <p class="founding-slots mono">
+              Founding-client slots: <b>{foundingProgram.slots}</b>
+            </p>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  <FinalCta />
+</Base>
+
+<style>
+  .page-head {
+    padding-block: calc(var(--nav-h) + clamp(3rem, 2rem + 5vw, 6rem)) clamp(2rem, 1.5rem + 3vw, 3rem);
+  }
+
+  .page-head > .wrap > * + * {
+    margin-top: var(--space-m);
+  }
+
+  .page-head h1 {
+    max-width: 14ch;
+  }
+
+  .case-grid {
+    display: grid;
+    gap: var(--space-m);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  }
+
+  .case-card {
+    height: 100%;
+    gap: var(--space-s);
+    text-decoration: none;
+    align-items: flex-start;
+  }
+
+  .case-card h2 {
+    font-size: var(--step-2);
+  }
+
+  .case-metric {
+    font-size: var(--step--1);
+    color: var(--violet-ink-dark);
+  }
+
+  .case-meta {
+    margin-top: auto;
+    font-size: var(--step--2);
+    color: var(--text-dark-faint);
+  }
+
+  .founding {
+    display: grid;
+    gap: var(--space-2xl) var(--space-3xl);
+    align-items: start;
+  }
+
+  .founding-copy > * + * {
+    margin-top: var(--space-m);
+  }
+
+  .founding-copy h2 {
+    max-width: 16ch;
+  }
+
+  .founding-ledger {
+    padding: clamp(1.4rem, 1.1rem + 1vw, 2rem);
+    border: 1px solid var(--line-strong);
+    border-top: 3px solid var(--ink);
+    background: var(--paper-2);
+  }
+
+  .founding-list {
+    margin-top: var(--space-s);
+    padding-left: 1.3em;
+    display: grid;
+    gap: 0.6rem;
+    color: var(--ink);
+  }
+
+  .founding-list li::marker {
+    font-family: var(--font-mono);
+    color: var(--violet-ink);
+  }
+
+  .founding-slots {
+    margin-top: var(--space-m);
+    padding-top: var(--space-s);
+    border-top: 1px solid var(--line-strong);
+    font-size: var(--step--2);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .founding-slots b {
+    color: var(--violet-ink);
+  }
+
+  @media (min-width: 56rem) {
+    .founding {
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+    }
+  }
+</style>

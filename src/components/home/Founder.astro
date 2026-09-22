@@ -1,0 +1,388 @@
+---
+import { Picture } from 'astro:assets';
+import { founder, contact, brand } from '../../data/site';
+import photo from '../../assets/vinicius-magno.jpg';
+import Icon from '../Icon.astro';
+import Clocks from '../Clocks.astro';
+
+export interface Props {
+  /** The about page uses an <h1>; the home uses an <h2>. */
+  level?: 1 | 2;
+}
+const { level = 2 } = Astro.props;
+const Heading = level === 1 ? 'h1' : 'h2';
+const sealText = `${brand.mark} · FOUNDER · ${brand.city.toUpperCase()} · UTC−3 · `;
+---
+
+<section class="founder section on-void" id="founder">
+  <div class="founder-bg" aria-hidden="true"></div>
+  <div class="wrap wrap-wide founder-grid">
+    <div class="founder-visual" data-reveal="scale">
+      <figure class="founder-frame" data-tilt="4" data-glow>
+        {
+          founder.portrait.confirmed ? (
+            <Picture
+              src={photo}
+              alt={`${founder.name}, ${founder.role} at ${brand.name}`}
+              widths={[420, 640, 860, 1200]}
+              sizes="(min-width: 64rem) 30rem, (min-width: 40rem) 70vw, 92vw"
+              formats={['avif', 'webp']}
+              fallbackFormat="jpg"
+              loading="lazy"
+              decoding="async"
+              data-img-fade
+              pictureAttributes={{ class: 'founder-picture' }}
+            />
+          ) : (
+            <div class="founder-mark" role="img" aria-label={`${founder.name}, ${founder.role}`}>
+              <span class="founder-mark-glyph display" aria-hidden="true">
+                V<em>M</em>
+              </span>
+              <span class="founder-mark-name">{founder.name}</span>
+              <span class="founder-mark-role mono">{founder.role}</span>
+            </div>
+          )
+        }
+        <figcaption class="founder-hud hud">
+          <b>{founder.name}</b>
+          <span>{brand.coordinates}</span>
+          <span data-clock="America/Sao_Paulo">--:--:--</span>
+        </figcaption>
+        <div class="seal" aria-hidden="true">
+          <svg viewBox="0 0 120 120">
+            <defs>
+              <path id="seal-path" d="M60,60 m-44,0 a44,44 0 1,1 88,0 a44,44 0 1,1 -88,0" />
+            </defs>
+            <circle cx="60" cy="60" r="56" class="seal-ring" />
+            <text class="seal-text">
+              <textPath href="#seal-path">{sealText}{sealText}</textPath>
+            </text>
+            <circle cx="60" cy="60" r="6" class="seal-core" />
+          </svg>
+        </div>
+        <span class="founder-corner founder-corner-tl" aria-hidden="true"></span>
+        <span class="founder-corner founder-corner-br" aria-hidden="true"></span>
+      </figure>
+    </div>
+
+    <div class="founder-copy">
+      <p class="kicker" data-reveal="up">{founder.kicker}</p>
+      <Heading class="founder-title" data-split set:html={founder.title} />
+
+      <blockquote class="founder-quote" data-reveal="up" style="--i:2">
+        <p>“{founder.quote}”</p>
+        <footer>
+          <cite>{founder.name}</cite>, {founder.role}
+        </footer>
+      </blockquote>
+
+      <div class="founder-bio" data-reveal="up" style="--i:3">
+        {founder.bio.map((p) => <p>{p}</p>)}
+      </div>
+
+      <ul class="founder-creds" data-reveal="up" style="--i:4">
+        {
+          founder.credentials.map((c) => (
+            <li>
+              <Icon name="check" size={14} />
+              <span>{c}</span>
+            </li>
+          ))
+        }
+      </ul>
+
+      <div class="founder-tz card" data-reveal="up" style="--i:5">
+        <h3>{founder.timezone.title}</h3>
+        <p>{founder.timezone.body}</p>
+        <Clocks compact />
+      </div>
+
+      <div class="btn-row" data-reveal="up" style="--i:6">
+        {
+          contact.linkedin.confirmed && (
+            <a class="btn btn-ghost" href={contact.linkedin.url} target="_blank" rel="noopener">
+              <Icon name="linkedin" /> LinkedIn
+            </a>
+          )
+        }
+        {
+          contact.email.confirmed && (
+            <a class="btn btn-ghost" href={`mailto:${contact.email.address}`}>
+              <Icon name="mail" /> {contact.email.address}
+            </a>
+          )
+        }
+        {
+          contact.whatsapp.confirmed && (
+            <a class="btn btn-wa" href={contact.whatsapp.url} target="_blank" rel="noopener">
+              <Icon name="whatsapp" /> WhatsApp
+            </a>
+          )
+        }
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .founder {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+  }
+
+  .founder-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: radial-gradient(50rem 30rem at 15% 50%, rgb(124 58 237 / 0.16), transparent 60%);
+    pointer-events: none;
+  }
+
+  .founder-grid {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    gap: var(--space-2xl) var(--space-3xl);
+    align-items: center;
+  }
+
+  .founder-frame {
+    position: relative;
+    max-width: 30rem;
+    margin: 0;
+    padding: 0.75rem;
+    border: 1px solid var(--line-dark-strong);
+    background: var(--card);
+    border-radius: var(--radius-m);
+  }
+
+  .founder-frame :global(.founder-picture) {
+    display: block;
+    border-radius: var(--radius-s);
+    overflow: hidden;
+  }
+
+  .founder-frame :global(img) {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+    object-fit: cover;
+    filter: grayscale(100%) contrast(1.08);
+    transition:
+      filter var(--dur-slow) var(--ease-out),
+      opacity var(--dur-slow) var(--ease-out),
+      transform var(--dur-slow) var(--ease-out);
+  }
+
+  .founder-frame:hover :global(img) {
+    filter: grayscale(0%) contrast(1);
+  }
+
+  /* typographic stand-in until a real portrait is supplied */
+  .founder-mark {
+    display: grid;
+    align-content: end;
+    gap: 0.35rem;
+    aspect-ratio: 1;
+    padding: clamp(1.2rem, 1rem + 1vw, 2rem);
+    border-radius: var(--radius-s);
+    background:
+      radial-gradient(70% 60% at 30% 25%, rgb(124 58 237 / 0.35), transparent 70%),
+      linear-gradient(160deg, var(--card-2), var(--void) 80%);
+    background-image:
+      radial-gradient(70% 60% at 30% 25%, rgb(124 58 237 / 0.35), transparent 70%),
+      linear-gradient(rgb(255 255 255 / 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(255 255 255 / 0.04) 1px, transparent 1px),
+      linear-gradient(160deg, var(--card-2), var(--void) 80%);
+    background-size:
+      100% 100%,
+      48px 48px,
+      48px 48px,
+      100% 100%;
+  }
+
+  .founder-mark-glyph {
+    font-size: clamp(6rem, 4rem + 12vw, 13rem);
+    font-weight: 900;
+    line-height: 0.85;
+    letter-spacing: -0.06em;
+    color: var(--text-dark);
+  }
+
+  .founder-mark-glyph em {
+    color: var(--violet-ink-dark);
+  }
+
+  .founder-mark-name {
+    margin-top: var(--space-s);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: var(--step-1);
+  }
+
+  .founder-mark-role {
+    font-size: var(--step--2);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dark-muted);
+  }
+
+  .founder-hud {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.8em;
+    padding: 0.8rem 0.35rem 0.2rem;
+  }
+
+  .founder-corner {
+    position: absolute;
+    width: 1.2rem;
+    height: 1.2rem;
+    border-color: var(--violet-ink-dark);
+    border-style: solid;
+    border-width: 0;
+  }
+
+  .founder-corner-tl {
+    top: -1px;
+    left: -1px;
+    border-top-width: 2px;
+    border-left-width: 2px;
+  }
+
+  .founder-corner-br {
+    bottom: -1px;
+    right: -1px;
+    border-bottom-width: 2px;
+    border-right-width: 2px;
+  }
+
+  /* the holographic seal */
+  .seal {
+    position: absolute;
+    top: -2.2rem;
+    right: -2.2rem;
+    width: 7.5rem;
+    height: 7.5rem;
+    animation: seal-spin 26s linear infinite;
+    filter: drop-shadow(0 0 14px rgb(168 85 247 / 0.45));
+  }
+
+  @keyframes seal-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .seal svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .seal-ring {
+    fill: rgb(14 12 21 / 0.9);
+    stroke: var(--violet-ink-dark);
+    stroke-width: 1;
+  }
+
+  .seal-text {
+    font-family: var(--font-mono);
+    font-size: 8.4px;
+    letter-spacing: 0.18em;
+    fill: var(--violet-ink-dark);
+  }
+
+  .seal-core {
+    fill: var(--violet);
+  }
+
+  .founder-copy > * + * {
+    margin-top: var(--space-m);
+  }
+
+  .founder-title {
+    font-size: var(--step-5);
+    max-width: 16ch;
+  }
+
+  .founder-quote {
+    padding-left: var(--space-m);
+    border-left: 3px solid var(--violet);
+  }
+
+  .founder-quote p {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: var(--step-2);
+    line-height: 1.3;
+    color: var(--text-dark);
+  }
+
+  .founder-quote footer {
+    margin-top: 0.6rem;
+    font-size: var(--step--1);
+    color: var(--text-dark-muted);
+  }
+
+  .founder-quote cite {
+    font-style: normal;
+    font-weight: 700;
+    color: var(--text-dark);
+  }
+
+  .founder-bio > * + * {
+    margin-top: var(--space-s);
+  }
+
+  .founder-bio p {
+    color: var(--text-dark-muted);
+    max-width: 52ch;
+  }
+
+  .founder-creds {
+    display: grid;
+    gap: 0.55rem;
+  }
+
+  .founder-creds li {
+    display: flex;
+    gap: 0.6em;
+    align-items: flex-start;
+    font-size: var(--step--1);
+  }
+
+  .founder-creds svg {
+    flex: 0 0 auto;
+    margin-top: 0.3em;
+    color: var(--pulse);
+  }
+
+  .founder-tz {
+    gap: var(--space-s);
+  }
+
+  .founder-tz h3 {
+    font-size: var(--step-1);
+  }
+
+  .founder-tz p {
+    color: var(--text-dark-muted);
+    font-size: var(--step--1);
+  }
+
+  @media (min-width: 60rem) {
+    .founder-grid {
+      grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+    }
+
+    .founder-visual {
+      position: sticky;
+      top: calc(var(--nav-h) + 1.5rem);
+    }
+  }
+
+  html.motion-reduced .seal {
+    animation: none;
+  }
+</style>

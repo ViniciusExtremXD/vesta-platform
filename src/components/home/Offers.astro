@@ -1,0 +1,135 @@
+---
+import { offers, primaryCta } from '../../data/site';
+import { url } from '../../lib/url';
+import Icon from '../Icon.astro';
+---
+
+<section class="offers section on-void" id="services">
+  <div class="wrap wrap-wide">
+    <div class="section-head">
+      <p class="kicker" data-reveal="up">{offers.kicker}</p>
+      <h2 data-split set:html={offers.title} />
+      <p class="lead" data-reveal="up" style="--i:2">{offers.lead}</p>
+    </div>
+
+    <ul class="offer-grid">
+      {
+        offers.items.map((o, i) => (
+          <li data-reveal="up" style={`--i:${i + 1}`}>
+            <article class={`card offer${o.highlighted ? ' is-hi' : ''}`} data-tilt="4" data-glow aria-labelledby={`offer-${o.id}`}>
+              {o.highlighted && <span class="badge badge-violet offer-badge">Most chosen</span>}
+              <h3 id={`offer-${o.id}`} class="offer-name">
+                {o.name}
+              </h3>
+              <p class="offer-price">
+                <span class="display">{o.price}</span>
+                {o.cadence && <span class="offer-cadence">{o.cadence}</span>}
+              </p>
+              <p class="offer-terms mono">{o.terms}</p>
+              <p class="offer-desc">{o.description}</p>
+              <ul class="offer-features">
+                {o.features.map((f) => (
+                  <li>
+                    <Icon name="check" size={14} />
+                    <span>{f}</span>
+                  </li>
+                ))}
+              </ul>
+              <a class={`btn ${o.highlighted ? 'btn-primary' : 'btn-ghost'} offer-cta`} href={url(primaryCta.href)}>
+                {primaryCta.label}
+                <Icon name="arrow" class="arrow" />
+              </a>
+            </article>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</section>
+
+<style>
+  .offer-grid {
+    display: grid;
+    gap: var(--space-m);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+    align-items: stretch;
+  }
+
+  .offer {
+    height: 100%;
+    gap: var(--space-s);
+  }
+
+  .offer.is-hi {
+    border-color: rgb(182 156 255 / 0.5);
+    background: linear-gradient(170deg, rgb(124 58 237 / 0.18), var(--card) 55%);
+    box-shadow: 0 0 0 1px rgb(124 58 237 / 0.25), var(--shadow-violet);
+  }
+
+  .offer-badge {
+    position: absolute;
+    top: -0.85rem;
+    left: clamp(1.4rem, 1.1rem + 1vw, 2.1rem);
+  }
+
+  .offer-name {
+    font-size: var(--step-1);
+    color: var(--text-dark-muted);
+    font-weight: 600;
+  }
+
+  .offer-price {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4em;
+  }
+
+  .offer-price .display {
+    font-size: var(--step-4);
+    font-weight: 900;
+    letter-spacing: -0.035em;
+    line-height: 1;
+  }
+
+  .offer-cadence {
+    color: var(--text-dark-muted);
+    font-weight: 600;
+  }
+
+  .offer-terms {
+    font-size: var(--step--2);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--violet-ink-dark);
+  }
+
+  .offer-desc {
+    color: var(--text-dark-muted);
+  }
+
+  .offer-features {
+    display: grid;
+    gap: 0.6rem;
+    margin-block: var(--space-xs) var(--space-s);
+    padding-top: var(--space-s);
+    border-top: 1px solid var(--line-dark);
+  }
+
+  .offer-features li {
+    display: flex;
+    gap: 0.6em;
+    align-items: flex-start;
+    font-size: var(--step--1);
+  }
+
+  .offer-features svg {
+    flex: 0 0 auto;
+    margin-top: 0.3em;
+    color: var(--pulse);
+  }
+
+  .offer-cta {
+    margin-top: auto;
+    width: 100%;
+  }
+</style>

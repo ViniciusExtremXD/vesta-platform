@@ -1,0 +1,331 @@
+---
+import Base from '../layouts/Base.astro';
+import Clocks from '../components/Clocks.astro';
+import Icon from '../components/Icon.astro';
+import { brand, contact, process } from '../data/site';
+
+const title = `Contact ${brand.name} — book a 15-minute call`;
+const description =
+  'Book a fifteen-minute call with the founder, or message on WhatsApp. São Paulo hours, one to two hours ahead of New York — replies inside your business day.';
+
+const bring = [
+  'The URL your ads land on today',
+  'Roughly what you spend per month, and where',
+  'What a good month looks like in leads or jobs',
+  'The tool you run the business on (CRM, dispatch, booking)',
+];
+
+const after = [
+  { when: 'On the call', text: 'We open your page together and read the numbers. You leave knowing whether a rebuild pays off.' },
+  { when: 'Within 48 hours', text: 'A one-page scope with a fixed price and a date — if it makes sense for both sides.' },
+  { when: 'Then', text: 'You sign, pay the first half, and the work starts. No retainer, no discovery fee.' },
+];
+---
+
+<Base title={title} description={description} canonical="/contact/">
+  <section class="page-head on-void">
+    <div class="wrap wrap-wide">
+      <p class="kicker" data-reveal="up">Contact</p>
+      <h1 data-split>Fifteen minutes, <em>on your clock.</em></h1>
+      <p class="lead" data-reveal="up" style="--i:2">
+        Pick a channel. Every one of them reaches the founder directly — there is nobody else here.
+      </p>
+    </div>
+  </section>
+
+  <section class="contact section-tight on-void">
+    <div class="wrap wrap-wide contact-grid">
+      <div class="contact-main">
+        {
+          contact.booking.confirmed ? (
+            <div class="card booking" data-booking data-booking-url={contact.booking.calendlyUrl} data-reveal="up" style="--i:1">
+              <p class="kicker">Scheduler</p>
+              <h2>{contact.booking.label}</h2>
+              <p class="muted">
+                Calendly detects your time zone. It loads only when you press the button — nothing from a third party runs
+                on this page until then.
+              </p>
+              <button type="button" class="btn btn-primary btn-lg" data-booking-load data-magnetic>
+                Load the scheduler
+                <Icon name="arrow" class="arrow" />
+              </button>
+              <p class="booking-status mono" data-booking-status aria-live="polite" />
+              <div class="booking-slot" data-booking-slot hidden />
+            </div>
+          ) : (
+            <div class="card booking" data-reveal="up" style="--i:1">
+              <p class="kicker">Book a call</p>
+              <h2>{contact.booking.label}</h2>
+              <p class="muted">
+                Send a message with two or three times that suit you, in your time zone. You will get a confirmed slot back
+                inside the same business day.
+              </p>
+            </div>
+          )
+        }
+
+        <ul class="channels">
+          {
+            contact.whatsapp.confirmed && (
+              <li data-reveal="up" style="--i:2">
+                <a class="card channel" href={contact.whatsapp.url} target="_blank" rel="noopener" data-glow>
+                  <span class="channel-icon is-wa">
+                    <Icon name="whatsapp" size={20} />
+                  </span>
+                  <span class="channel-body">
+                    <span class="channel-title">WhatsApp</span>
+                    <span class="channel-meta mono">{contact.whatsapp.display}</span>
+                  </span>
+                  <Icon name="arrow" class="arrow" />
+                </a>
+              </li>
+            )
+          }
+          {
+            contact.email.confirmed && (
+              <li data-reveal="up" style="--i:3">
+                <a class="card channel" href={`mailto:${contact.email.address}`} data-glow>
+                  <span class="channel-icon">
+                    <Icon name="mail" size={20} />
+                  </span>
+                  <span class="channel-body">
+                    <span class="channel-title">E-mail</span>
+                    <span class="channel-meta mono">{contact.email.address}</span>
+                  </span>
+                  <Icon name="arrow" class="arrow" />
+                </a>
+              </li>
+            )
+          }
+          {
+            contact.linkedin.confirmed && (
+              <li data-reveal="up" style="--i:4">
+                <a class="card channel" href={contact.linkedin.url} target="_blank" rel="noopener" data-glow>
+                  <span class="channel-icon">
+                    <Icon name="linkedin" size={20} />
+                  </span>
+                  <span class="channel-body">
+                    <span class="channel-title">LinkedIn</span>
+                    <span class="channel-meta mono">Vinícius Magno</span>
+                  </span>
+                  <Icon name="external" class="arrow" />
+                </a>
+              </li>
+            )
+          }
+        </ul>
+      </div>
+
+      <aside class="contact-aside">
+        <div class="card" data-reveal="left" style="--i:2">
+          <p class="kicker">Hours</p>
+          <p class="muted contact-hours-note">{contact.hours.label}. One to two hours ahead of New York.</p>
+          <Clocks />
+        </div>
+
+        <div class="card" data-reveal="left" style="--i:3">
+          <p class="kicker">Bring to the call</p>
+          <ul class="bring">
+            {
+              bring.map((b) => (
+                <li>
+                  <Icon name="check" size={14} />
+                  <span>{b}</span>
+                </li>
+              ))
+            }
+          </ul>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <section class="after section on-paper">
+    <div class="wrap wrap-wide">
+      <div class="section-head">
+        <p class="kicker" data-reveal="up">What happens next</p>
+        <h2 data-split>Three steps, <em>none of them a sales call.</em></h2>
+      </div>
+      <ol class="after-list">
+        {
+          after.map((a, i) => (
+            <li data-reveal="up" style={`--i:${i + 1}`}>
+              <span class="after-when mono">{a.when}</span>
+              <p>{a.text}</p>
+            </li>
+          ))
+        }
+      </ol>
+      <p class="after-note muted" data-reveal="fade" style="--i:4">
+        You provide: {process.youProvide.slice(0, 3).join('; ').toLowerCase()}.
+      </p>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .page-head {
+    padding-block: calc(var(--nav-h) + clamp(3rem, 2rem + 5vw, 6rem)) clamp(2rem, 1.5rem + 3vw, 3rem);
+  }
+
+  .page-head > .wrap > * + * {
+    margin-top: var(--space-m);
+  }
+
+  .page-head h1 {
+    max-width: 14ch;
+  }
+
+  .contact-grid {
+    display: grid;
+    gap: var(--space-l);
+    align-items: start;
+  }
+
+  .contact-main {
+    display: grid;
+    gap: var(--space-m);
+  }
+
+  .booking {
+    gap: var(--space-s);
+    align-items: flex-start;
+  }
+
+  .booking h2 {
+    font-size: var(--step-3);
+  }
+
+  .booking-status {
+    font-size: var(--step--2);
+    color: var(--text-dark-muted);
+    min-height: 1.2em;
+  }
+
+  .booking-slot {
+    width: 100%;
+    min-height: 44rem;
+    border-radius: var(--radius-m);
+    overflow: hidden;
+  }
+
+  .channels {
+    display: grid;
+    gap: var(--space-s);
+  }
+
+  .channel {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-m);
+    text-decoration: none;
+    padding: 1.1rem 1.4rem;
+  }
+
+  .channel:hover {
+    transform: translateY(-2px);
+  }
+
+  .channel-icon {
+    display: grid;
+    place-items: center;
+    width: 2.8rem;
+    height: 2.8rem;
+    border-radius: var(--radius-s);
+    background: rgb(124 58 237 / 0.16);
+    color: var(--violet-ink-dark);
+    flex: 0 0 auto;
+  }
+
+  .channel-icon.is-wa {
+    background: rgb(34 197 94 / 0.14);
+    color: #4ade80;
+  }
+
+  .channel-body {
+    display: grid;
+    gap: 0.15rem;
+    flex: 1 1 auto;
+  }
+
+  .channel-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: var(--step-1);
+  }
+
+  .channel-meta {
+    font-size: var(--step--2);
+    color: var(--text-dark-muted);
+  }
+
+  .contact-aside {
+    display: grid;
+    gap: var(--space-m);
+  }
+
+  .contact-hours-note {
+    font-size: var(--step--1);
+    margin-block: var(--space-xs) var(--space-m);
+  }
+
+  .bring {
+    display: grid;
+    gap: 0.6rem;
+    margin-top: var(--space-s);
+  }
+
+  .bring li {
+    display: flex;
+    gap: 0.6em;
+    align-items: flex-start;
+    font-size: var(--step--1);
+  }
+
+  .bring svg {
+    flex: 0 0 auto;
+    margin-top: 0.3em;
+    color: var(--pulse);
+  }
+
+  .after-list {
+    display: grid;
+    gap: var(--space-m);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+    counter-reset: step;
+  }
+
+  .after-list li {
+    padding-top: var(--space-s);
+    border-top: 2px solid var(--ink);
+  }
+
+  .after-when {
+    display: block;
+    font-size: var(--step--2);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--violet-ink);
+    margin-bottom: 0.5rem;
+  }
+
+  .after-list p {
+    color: var(--ink-muted);
+  }
+
+  .after-note {
+    margin-top: var(--space-l);
+    font-size: var(--step--1);
+  }
+
+  @media (min-width: 60rem) {
+    .contact-grid {
+      grid-template-columns: minmax(0, 1.25fr) minmax(18rem, 0.75fr);
+    }
+  }
+</style>
+
+<script>
+  import { initBooking } from '../scripts/booking';
+  initBooking();
+</script>

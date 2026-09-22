@@ -1,0 +1,146 @@
+---
+import { process } from '../../data/site';
+import Icon from '../Icon.astro';
+---
+
+<section class="proc section on-paper-2" id="process">
+  <div class="wrap wrap-wide">
+    <div class="section-head">
+      <p class="kicker" data-reveal="up">{process.kicker}</p>
+      <h2 data-split set:html={process.title} />
+    </div>
+
+    <div class="proc-grid">
+      <ol class="proc-steps">
+        <span class="proc-spine" data-draw="y" aria-hidden="true"></span>
+        {
+          process.steps.map((s, i) => (
+            <li class="proc-step" data-reveal="up" style={`--i:${i + 1}`}>
+              <span class="proc-index mono">{s.index}</span>
+              <div class="proc-body">
+                <p class="proc-when mono">{s.when}</p>
+                <h3>{s.title}</h3>
+                <p>{s.body}</p>
+              </div>
+            </li>
+          ))
+        }
+      </ol>
+
+      <aside class="proc-aside" data-reveal="left" style="--i:2">
+        <div class="card" data-glow>
+          <p class="kicker">You provide</p>
+          <ul class="proc-provide">
+            {
+              process.youProvide.map((p) => (
+                <li>
+                  <Icon name="check" size={14} />
+                  <span>{p}</span>
+                </li>
+              ))
+            }
+          </ul>
+          <p class="proc-aside-note">Everything else — copy, design, code, hosting, tracking — is on Vesta.</p>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<style>
+  .proc-grid {
+    display: grid;
+    gap: var(--space-2xl) var(--space-3xl);
+    align-items: start;
+  }
+
+  .proc-steps {
+    position: relative;
+    display: grid;
+    gap: clamp(1.6rem, 1.2rem + 1.5vw, 2.4rem);
+    padding-left: 3.2rem;
+  }
+
+  .proc-spine {
+    position: absolute;
+    left: 0.95rem;
+    top: 0.6rem;
+    bottom: 0.6rem;
+    width: 2px;
+    background: linear-gradient(var(--violet), var(--line-strong));
+  }
+
+  .proc-step {
+    position: relative;
+  }
+
+  .proc-index {
+    position: absolute;
+    left: -3.2rem;
+    top: 0.1rem;
+    width: 2rem;
+    height: 2rem;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--paper);
+    border: 1px solid var(--line-strong);
+    font-size: var(--step--2);
+    font-weight: 700;
+    color: var(--violet-ink);
+  }
+
+  .proc-when {
+    font-size: var(--step--2);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 0.25rem;
+  }
+
+  .proc-body h3 {
+    font-size: var(--step-2);
+    margin-bottom: 0.35rem;
+  }
+
+  .proc-body p:not(.proc-when) {
+    color: var(--ink-muted);
+    max-width: 48ch;
+  }
+
+  .proc-aside {
+    position: sticky;
+    top: calc(var(--nav-h) + 1rem);
+  }
+
+  .proc-provide {
+    display: grid;
+    gap: 0.7rem;
+    margin-block: var(--space-s);
+  }
+
+  .proc-provide li {
+    display: flex;
+    gap: 0.6em;
+    align-items: flex-start;
+  }
+
+  .proc-provide svg {
+    flex: 0 0 auto;
+    margin-top: 0.35em;
+    color: var(--violet-ink);
+  }
+
+  .proc-aside-note {
+    font-size: var(--step--1);
+    color: var(--ink-muted);
+    padding-top: var(--space-s);
+    border-top: 1px solid var(--line);
+  }
+
+  @media (min-width: 56rem) {
+    .proc-grid {
+      grid-template-columns: minmax(0, 1.3fr) minmax(18rem, 0.8fr);
+    }
+  }
+</style>

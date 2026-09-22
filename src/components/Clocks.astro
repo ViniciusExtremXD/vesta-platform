@@ -1,0 +1,148 @@
+---
+/**
+ * Time-zone telemetry: São Paulo against the US business poles. Values are
+ * placeholders until clocks.ts takes over; the labels and offsets read fine
+ * without it.
+ */
+export interface Props {
+  compact?: boolean;
+  class?: string;
+}
+const { compact = false, class: cls = '' } = Astro.props;
+
+const zones = [
+  { tz: 'America/Sao_Paulo', city: 'São Paulo', code: 'BRT', home: true },
+  { tz: 'America/New_York', city: 'New York', code: 'ET' },
+  { tz: 'America/Chicago', city: 'Dallas', code: 'CT' },
+  { tz: 'America/Los_Angeles', city: 'Los Angeles', code: 'PT' },
+];
+---
+
+<div class={`clocks ${compact ? 'is-compact' : ''} ${cls}`} role="group" aria-label="Current time in São Paulo and the United States">
+  {
+    zones.map((z) => (
+      <div class={`clock ${z.home ? 'is-home' : ''}`}>
+        <span class="clock-city">
+          {z.city} <span class="clock-code">{z.code}</span>
+        </span>
+        <span class="clock-time mono" data-clock={z.tz}>
+          --:--:--
+        </span>
+        {!z.home && (
+          <span class="clock-offset mono" aria-label="São Paulo relative to this city">
+            SP <span data-clock-offset={z.tz}>—</span>
+          </span>
+        )}
+        {z.home && <span class="clock-offset mono">home</span>}
+      </div>
+    ))
+  }
+  <p class="clock-status mono" data-office-status>Hours: 9am – 6pm São Paulo</p>
+</div>
+
+<style>
+  .clocks {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem 1.2rem;
+  }
+
+  .clock {
+    display: grid;
+    gap: 0.2rem;
+    padding-left: 0.8rem;
+    border-left: 1px solid var(--line-dark-strong);
+  }
+
+  .clock.is-home {
+    border-left-color: var(--violet-ink-dark);
+  }
+
+  :global(:is(.on-paper, .on-paper-2)) .clock {
+    border-left-color: var(--line-strong);
+  }
+
+  :global(:is(.on-paper, .on-paper-2)) .clock.is-home {
+    border-left-color: var(--violet-ink);
+  }
+
+  .clock-city {
+    font-family: var(--font-mono);
+    font-size: var(--step--2);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-dark-faint);
+  }
+
+  :global(:is(.on-paper, .on-paper-2)) .clock-city {
+    color: var(--ink-faint);
+  }
+
+  .clock-code {
+    color: var(--violet-ink-dark);
+  }
+
+  :global(:is(.on-paper, .on-paper-2)) .clock-code {
+    color: var(--violet-ink);
+  }
+
+  .clock-time {
+    font-size: var(--step-1);
+    font-weight: 600;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    color: var(--text-dark);
+  }
+
+  :global(:is(.on-paper, .on-paper-2)) .clock-time {
+    color: var(--ink);
+  }
+
+  .clock-offset {
+    font-size: var(--step--2);
+    color: var(--text-dark-muted);
+  }
+
+  :global(:is(.on-paper, .on-paper-2)) .clock-offset {
+    color: var(--ink-muted);
+  }
+
+  .clock-status {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 0.6em;
+    margin-top: 0.2rem;
+    font-size: var(--step--2);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-dark-muted);
+  }
+
+  .clock-status::before {
+    content: '';
+    width: 0.5em;
+    height: 0.5em;
+    border-radius: 50%;
+    background: var(--text-dark-faint);
+    flex: 0 0 auto;
+  }
+
+  .clock-status.is-open::before {
+    background: var(--pulse);
+    box-shadow: 0 0 0 0 rgb(34 197 94 / 0.6);
+    animation: pulse 2.2s var(--ease-out) infinite;
+  }
+
+  :global(:is(.on-paper, .on-paper-2)) .clock-status {
+    color: var(--ink-muted);
+  }
+
+  .is-compact {
+    grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  }
+
+  .is-compact .clock-time {
+    font-size: var(--step-0);
+  }
+</style>

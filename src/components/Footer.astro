@@ -1,0 +1,191 @@
+---
+import { brand, contact, nav, legal, founder } from '../data/site';
+import { url } from '../lib/url';
+import Logo from './Logo.astro';
+import Icon from './Icon.astro';
+import Clocks from './Clocks.astro';
+---
+
+<footer class="foot on-void-2">
+  <div class="wrap wrap-wide">
+    <div class="foot-grid">
+      <div class="foot-brand" data-reveal="up">
+        <Logo />
+        <p class="foot-tagline">{brand.tagline}</p>
+        <p class="foot-founder muted">
+          Built and run by {founder.name}. {founder.location}.
+        </p>
+      </div>
+
+      <nav class="foot-col" aria-label="Footer" data-reveal="up" style="--i:1">
+        <h2 class="foot-h">Navigate</h2>
+        <ul class="foot-list">
+          {nav.map((item) => <li><a href={url(item.href)}>{item.label}</a></li>)}
+          <li><a href={url(legal.privacyUrl)}>Privacy</a></li>
+        </ul>
+      </nav>
+
+      <div class="foot-col" data-reveal="up" style="--i:2">
+        <h2 class="foot-h">Contact</h2>
+        <ul class="foot-list">
+          {
+            contact.whatsapp.confirmed && (
+              <li>
+                <a href={contact.whatsapp.url} target="_blank" rel="noopener">
+                  <Icon name="whatsapp" /> WhatsApp {contact.whatsapp.display}
+                </a>
+              </li>
+            )
+          }
+          {
+            contact.email.confirmed && (
+              <li>
+                <a href={`mailto:${contact.email.address}`}>
+                  <Icon name="mail" /> {contact.email.address}
+                </a>
+              </li>
+            )
+          }
+          {
+            contact.linkedin.confirmed && (
+              <li>
+                <a href={contact.linkedin.url} target="_blank" rel="noopener">
+                  <Icon name="linkedin" /> LinkedIn
+                </a>
+              </li>
+            )
+          }
+          <li><a href={url('/contact/')}><Icon name="clock" /> Book a 15-minute call</a></li>
+        </ul>
+      </div>
+
+      <div class="foot-col foot-clocks" data-reveal="up" style="--i:3">
+        <h2 class="foot-h">Hours</h2>
+        <Clocks compact />
+      </div>
+    </div>
+
+    <hr class="divider" data-draw style="--i:2" />
+
+    <div class="foot-bottom" data-reveal="fade" style="--i:1">
+      <p class="foot-legal mono">{legal.copyright}</p>
+
+      <button type="button" class="motion-toggle" data-motion-toggle aria-pressed="false" aria-label="Reduce motion">
+        <span class="motion-dot" aria-hidden="true"></span>
+        <span data-motion-label>Motion: on</span>
+      </button>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .foot {
+    padding-block: var(--space-2xl) var(--space-l);
+    border-top: 1px solid var(--line-dark);
+  }
+
+  .foot-grid {
+    display: grid;
+    gap: var(--space-xl) var(--space-l);
+    grid-template-columns: 1fr;
+    margin-bottom: var(--space-xl);
+  }
+
+  .foot-tagline {
+    margin-top: var(--space-s);
+    font-family: var(--font-display);
+    font-weight: 600;
+    max-width: 24ch;
+    text-wrap: balance;
+  }
+
+  .foot-founder {
+    margin-top: var(--space-xs);
+    font-size: var(--step--1);
+    max-width: 30ch;
+  }
+
+  .foot-h {
+    font-family: var(--font-mono);
+    font-size: var(--step--2);
+    font-weight: 600;
+    letter-spacing: var(--tracking-kicker);
+    text-transform: uppercase;
+    color: var(--text-dark-faint);
+    margin-bottom: var(--space-s);
+  }
+
+  .foot-list {
+    display: grid;
+    gap: 0.55rem;
+  }
+
+  .foot-list a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5em;
+    color: var(--text-dark-muted);
+    text-decoration: none;
+    font-size: var(--step--1);
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+
+  .foot-list a:hover {
+    color: var(--violet-ink-dark);
+  }
+
+  .foot-bottom {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-s);
+    padding-top: var(--space-m);
+  }
+
+  .foot-legal {
+    font-size: var(--step--2);
+    color: var(--text-dark-faint);
+    letter-spacing: 0.02em;
+  }
+
+  .motion-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55em;
+    padding: 0.45em 0.9em;
+    border: 1px solid var(--line-dark-strong);
+    border-radius: var(--radius-pill);
+    font-family: var(--font-mono);
+    font-size: var(--step--2);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-dark-muted);
+    transition:
+      color var(--dur-fast) var(--ease-out),
+      border-color var(--dur-fast) var(--ease-out);
+  }
+
+  .motion-toggle:hover {
+    color: var(--text-dark);
+    border-color: var(--violet-ink-dark);
+  }
+
+  .motion-dot {
+    width: 0.55em;
+    height: 0.55em;
+    border-radius: 50%;
+    background: var(--pulse);
+    transition: background-color var(--dur-fast) var(--ease-out);
+  }
+
+  .motion-toggle[aria-pressed='true'] .motion-dot {
+    background: var(--text-dark-faint);
+  }
+
+  @media (min-width: 48rem) {
+    .foot-grid {
+      grid-template-columns: 1.4fr 0.8fr 1.1fr 1.3fr;
+    }
+  }
+</style>
