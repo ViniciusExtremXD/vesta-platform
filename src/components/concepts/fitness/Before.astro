@@ -1,10 +1,17 @@
 ---
 /**
- * Concept 05 BEFORE — Ironbark Strength Club (fictional) on a loud 2016 gym
- * template. Dated, not a parody: neon green on black, Arial Black, a stock
- * "No pain, no gain" banner with slider arrows, a blinking "Join now!", the
- * class schedule posted as a screenshot, the price list as an image, and the
- * phone number only in the footer. Every text pair passes AA on its own fill.
+ * Concept 05 BEFORE — Ironbark Strength Club (fictional) on a loud late-2000s
+ * gym template, last touched in 2016. Dated and poor, not a parody: a diamond-
+ * plate wallpaper, a black-to-red header with flame clip art and a yellow
+ * Impact logo with a drop shadow, red gel tab buttons, a purple "Flash"
+ * banner with a low-res stock photo, "NO PAIN, NO GAIN!!!", a Comic Sans
+ * welcome, a bevelled neon "Join Now!" that blinks, a photo gallery that is
+ * still placeholder boxes, the class schedule posted as a screenshot, the
+ * price list as an image, three boxes that do not line up, a visitor
+ * counter, an "under construction" note, and the phone number only in a
+ * 6px footer. Mixed Impact / Verdana / Comic Sans / Arial Black. Every text
+ * pair passes AA on its own fill (on gradients, against every stop that sits
+ * behind the text; the element's background-color is the stop the gate reads).
  * Rendered by ConceptPlate.astro through the registry; sizes use --u (one
  * reference px of the 760-wide drawing). Renders twice in hero mode: no ids.
  */
@@ -16,6 +23,27 @@ export interface Props {
 const { class: cls = '' } = Astro.props;
 
 const B = fitness.before;
+
+/* drawing-only strings (the dated site's own clutter) */
+const F = {
+  follow: 'Follow Ironbark:',
+  viewed: 'Best viewed at 1024 x 768',
+  navExtra: ['Gallery', 'Links'],
+  slogan: 'No Pain, No Gain!!!',
+  welcome: 'Welcome to Ironbark Strength Club!!!',
+  burst: 'Open 7 Days!',
+  gallery: 'Photo Gallery',
+  galleryLink: 'View all photos »',
+  skip: 'Skip intro »',
+  visitor: 'You are visitor #',
+  counter: '018473',
+  construction: 'Online sign-up coming soon!',
+  guestbook: 'Sign the Guestbook!',
+  updated: 'Last updated: 06/12/2016',
+  rights: '© 2016',
+  rightsTail: 'All Rights Reserved · Site Map',
+};
+
 /* the screenshot of a spreadsheet timetable: 7 columns × 6 rows of cells,
    a few of them coloured the way a gym owner colours a class */
 const cells: [number, number, string][] = [
@@ -23,122 +51,207 @@ const cells: [number, number, string][] = [
   [0, 2, '#6EC1FF'], [5, 2, '#39FF14'], [2, 3, '#FFD84D'], [4, 3, '#6EC1FF'], [1, 4, '#39FF14'],
   [3, 4, '#39FF14'], [6, 4, '#FF7AC6'], [0, 5, '#FFD84D'], [5, 5, '#6EC1FF'],
 ];
+
+/* low-res stock photo: a lifter squatting, 24 × 16 pixels, drawn as runs */
+const pal: Record<string, string> = {
+  d: '#231A2E', w: '#3D3346', l: '#5A4D63', s: '#C89070', S: '#8A5A40', r: '#B02020',
+  b: '#1A1A1A', m: '#A0A0A0', p: '#0E0E0E', f: '#4A4040', k: '#111111',
+};
+const lifter = [
+  'dddddddddddddddddddddddd',
+  'dddwwwwwwwwllllwwwwwwddd',
+  'dpppwwwwwwwsSswwwwwpppdd',
+  'dpppwwwwwwwssswwwwwpppdd',
+  'dpppmmmmmmmmmmmmmmmpppdd',
+  'dpppwwwSrrrrrrrrSwwpppdd',
+  'dpppwwwwrrrrrrrrwwwpppdd',
+  'ddwwwwwwwrrrrrrwwwwwwddd',
+  'ddwwwwwwwrrrrrrwwwwwwddd',
+  'ddwwwwwwbbbbbbbbwwwwwddd',
+  'ddwwwwwbbbbbbbbbbwwwwddd',
+  'ddwwwwssswwwwwwsssswwddd',
+  'ddwwwwwSSwwwwwwSSwwwwddd',
+  'ddwwwwwSSwwwwwwSSwwwwddd',
+  'ffffffkkkfffffffkkkfffff',
+  'ffffffffffffffffffffffff',
+];
+const px = lifter.flatMap((row, y) => {
+  const out: { x: number; y: number; w: number; f: string }[] = [];
+  let x = 0;
+  while (x < row.length) {
+    let w = 1;
+    while (row[x + w] === row[x]) w++;
+    out.push({ x, y, w, f: pal[row[x]] });
+    x += w;
+  }
+  return out;
+});
+
+/* header flames: tips every 24 units, taller to the right of the logo */
+const flame = (scale: number) => {
+  let d = 'M0 26V21';
+  for (let i = 0; i < 32; i++) {
+    const x = i * 24;
+    const h = (x < 250 ? 5 + (i % 3) * 2 : 12 + ((i * 7) % 5) * 2.4) * scale;
+    const tip = 26 - h;
+    d += `Q${x + 7} ${tip + 7} ${x + 11} ${tip}Q${x + 16} ${tip + 9} ${x + 24} 21`;
+  }
+  return d + 'V26Z';
+};
+
+/* starburst: 16 spikes on an ellipse (viewBox 100 × 64) */
+const burst = Array.from({ length: 32 }, (_, i) => {
+  const a = (i / 32) * Math.PI * 2;
+  const r = i % 2 ? 0.76 : 1;
+  return `${(50 + Math.cos(a) * 49 * r).toFixed(1)},${(32 + Math.sin(a) * 31 * r).toFixed(1)}`;
+}).join(' ');
 ---
 
 <div class:list={['b-site', 'b-fit', cls]} aria-hidden="true">
   <div class="b-top">
-    <span class="b-mail">{B.topBar}</span>
-    <span class="b-social"><i></i><i></i><i></i></span>
+    <span>{B.topBar}</span>
+    <span class="b-follow">{F.follow}<i></i><i></i><i></i></span>
+    <span>{F.viewed}</span>
   </div>
+
   <div class="b-head">
+    <svg class="b-flames" viewBox="0 0 760 26" preserveAspectRatio="none" aria-hidden="true">
+      <path d={flame(1)} fill="#E8500A"></path>
+      <path d={flame(0.55)} fill="#FFB400"></path>
+    </svg>
+    <svg class="b-bell" viewBox="0 0 50 24" aria-hidden="true">
+      <path d="M8 10h34v4H8Z" fill="#C8C8C8"></path>
+      <path d="M3 2h7v20H3ZM40 2h7v20h-7Z" fill="#4A4A4A"></path>
+      <path d="M10 5h4v14h-4ZM36 5h4v14h-4Z" fill="#8C8C8C"></path>
+      <path d="M4 3h2v18H4ZM41 3h2v18h-2ZM9 10.5h33v1H9Z" fill="#EDEDED"></path>
+    </svg>
     <span class="b-logo">
       <span class="b-logo-a">{B.logo}</span>
       <span class="b-logo-b">{P.beforeTagline}</span>
     </span>
-    <span class="b-nav">
-      {B.nav.map((l, i) => <span class:list={['b-navl', i === 0 && 'is-on']}>{l}</span>)}
+    <span class="b-burst">
+      <svg viewBox="0 0 100 64" preserveAspectRatio="none" aria-hidden="true">
+        <polygon points={burst} fill="#FFE000" stroke="#B00000" stroke-width="1.4"></polygon>
+      </svg>
+      <span class="b-burst-t">{F.burst}</span>
     </span>
   </div>
 
+  <div class="b-nav">
+    {[...B.nav, ...F.navExtra].map((l, i) => <span class:list={['b-gel', i === 0 && 'is-on']}>{l}</span>)}
+  </div>
+
   <div class="b-hero">
-    <svg class="b-photo" viewBox="0 0 760 190" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-      <rect y="152" width="760" height="38" fill="#141414"></rect>
-      <!-- stock lifter, squat with the bar on the back -->
-      <g fill="#0C0C0C">
-        <rect x="58" y="70" width="176" height="6"></rect>
-        <rect x="66" y="52" width="16" height="42"></rect>
-        <rect x="84" y="58" width="9" height="30"></rect>
-        <rect x="210" y="52" width="16" height="42"></rect>
-        <rect x="199" y="58" width="9" height="30"></rect>
-        <circle cx="146" cy="58" r="10"></circle>
-        <path d="M128 72h36l6 42-10 4 -4 34h-12l-2-30h-6l-2 30h-12l-4-34-10-4Z"></path>
-      </g>
-      <!-- dumbbell rack -->
-      <g fill="#101010">
-        <rect x="560" y="118" width="170" height="5"></rect>
-        <rect x="560" y="146" width="170" height="5"></rect>
-        <rect x="566" y="118" width="5" height="34"></rect>
-        <rect x="719" y="118" width="5" height="34"></rect>
-      </g>
-      <g fill="#0A0A0A">
-        {[0, 1, 2, 3, 4].map((k) => <rect x={578 + k * 30} y="104" width="22" height="14" />)}
-        {[0, 1, 2, 3, 4].map((k) => <rect x={578 + k * 30} y="132" width="22" height="14" />)}
-      </g>
-    </svg>
-    <span class="b-arrow b-arrow--l"><svg viewBox="0 0 10 16" aria-hidden="true"><path d="M7 2 2 8l5 6" fill="none" stroke="#39FF14" stroke-width="2"></path></svg></span>
-    <span class="b-arrow b-arrow--r"><svg viewBox="0 0 10 16" aria-hidden="true"><path d="m3 2 5 6-5 6" fill="none" stroke="#39FF14" stroke-width="2"></path></svg></span>
+    <span class="b-shot">
+      <svg viewBox="0 0 24 16" preserveAspectRatio="none" shape-rendering="crispEdges" aria-hidden="true">
+        {px.map((p) => <rect x={p.x} y={p.y} width={p.w + 0.05} height="1.05" fill={p.f} />)}
+      </svg>
+    </span>
     <div class="b-cap">
-      <span class="b-slogan">{B.heroSub}</span>
-      <span class="b-welcome">{B.welcome}</span>
+      <span class="b-slogan">{F.slogan}</span>
+      <span class="b-welcome">{F.welcome}</span>
       <span class="b-join"><i class="b-ring"></i>{B.heroButton}</span>
     </div>
-    <span class="b-dots"><i class="is-on"></i><i></i><i></i><i></i></span>
-  </div>
-
-  <div class="b-boxes">
-    <div class="b-box">
-      <span class="b-title">{B.boxes[0]}</span>
-      <svg class="b-img" viewBox="0 0 206 88" preserveAspectRatio="none" aria-hidden="true">
-        <rect width="206" height="88" fill="#F2F2F2"></rect>
-        <rect width="206" height="11" fill="#3B3B3B"></rect>
-        {cells.map(([c, r, f]) => <rect x={20 + c * 26.6} y={11 + r * 12.8} width="26.6" height="12.8" fill={f} fill-opacity=".72" />)}
-        <path
-          d="M20 0V88M46.6 0V88M73.2 0V88M99.8 0V88M126.4 0V88M153 0V88M179.6 0V88M0 11H206M0 23.8H206M0 36.6H206M0 49.4H206M0 62.2H206M0 75H206"
-          stroke="#A8A8A8"
-          stroke-width=".8"></path>
-        <g fill="#8C8C8C">
-          {[0, 1, 2, 3, 4, 5].map((r) => <rect x="4" y={16 + r * 12.8} width="12" height="3" />)}
-          {[0, 1, 2, 3, 4, 5, 6].map((c) => <rect x={25 + c * 26.6} y="4" width="16" height="3" fill="#CFCFCF" />)}
-        </g>
-      </svg>
-      <span class="b-small">{P.beforeUpdated} · {P.beforeShot}</span>
-    </div>
-    <div class="b-box">
-      <span class="b-title">{B.boxes[1]}</span>
-      <svg class="b-img" viewBox="0 0 206 88" preserveAspectRatio="none" aria-hidden="true">
-        <rect width="206" height="88" fill="#1A1A1A"></rect>
+    <div class="b-gal">
+      <span class="b-gal-t">{F.gallery}</span>
+      <span class="b-thumbs">
         {
-          [0, 1, 2].map((k) => (
-            <g>
-              <rect x={10 + k * 66} y={k === 1 ? 4 : 10} width="56" height={k === 1 ? 80 : 70} fill="#262626" stroke={k === 1 ? '#39FF14' : '#3A3A3A'} />
-              <rect x={10 + k * 66} y={k === 1 ? 4 : 10} width="56" height="12" fill={k === 1 ? '#39FF14' : '#4A4A4A'} />
-              <rect x={24 + k * 66} y={k === 1 ? 26 : 30} width="28" height="9" fill="#E6E6E6" />
-              {[0, 1, 2, 3].map((r) => (
-                <rect x={18 + k * 66} y={(k === 1 ? 42 : 46) + r * 8} width="40" height="2.5" fill="#6A6A6A" />
-              ))}
-            </g>
+          [0, 1, 2].map(() => (
+            <svg viewBox="0 0 60 48" aria-hidden="true">
+              <rect width="60" height="48" fill="#BDBDBD"></rect>
+              <circle cx="43" cy="14" r="6" fill="#EFEFEF"></circle>
+              <path d="M4 42 20 20l10 12 7-8 19 18Z" fill="#8E8E8E"></path>
+            </svg>
           ))
         }
-      </svg>
-      <span class="b-small">{P.beforeShot}</span>
-    </div>
-    <div class="b-box">
-      <span class="b-title">{B.boxes[2]}</span>
-      <span class="b-icon">
-        <svg viewBox="0 0 20 12" aria-hidden="true">
-          <path d="M1 6h18M4 2v8M7 1v10M13 1v10M16 2v8" fill="none" stroke="#050505" stroke-width="2"></path>
-        </svg>
       </span>
-      <span class="b-text">{B.boxText}</span>
-      <span class="b-link">{B.boxLink}</span>
+      <span class="b-gal-l">{F.galleryLink}</span>
     </div>
+    <span class="b-dots"><i class="is-on"></i><i></i><i></i><i></i><i></i></span>
+    <span class="b-skip">{F.skip}</span>
   </div>
 
-  <div class="b-foot">{B.footer}</div>
+  <!-- three boxes that never quite line up, and a sidebar -->
+  <div class="b-box b-box--1">
+    <span class="b-bh b-bh--silver">{B.boxes[0]}</span>
+    <svg class="b-img" viewBox="0 0 206 88" preserveAspectRatio="none" aria-hidden="true">
+      <rect width="206" height="88" fill="#F2F2F2"></rect>
+      <rect width="206" height="11" fill="#3B3B3B"></rect>
+      {cells.map(([c, r, f]) => <rect x={20 + c * 26.6} y={11 + r * 12.8} width="26.6" height="12.8" fill={f} fill-opacity=".72" />)}
+      <path
+        d="M20 0V88M46.6 0V88M73.2 0V88M99.8 0V88M126.4 0V88M153 0V88M179.6 0V88M0 11H206M0 23.8H206M0 36.6H206M0 49.4H206M0 62.2H206M0 75H206"
+        stroke="#A8A8A8"
+        stroke-width=".8"></path>
+      <g fill="#8C8C8C">
+        {[0, 1, 2, 3, 4, 5].map((r) => <rect x="4" y={16 + r * 12.8} width="12" height="3" />)}
+        {[0, 1, 2, 3, 4, 5, 6].map((c) => <rect x={25 + c * 26.6} y="4" width="16" height="3" fill="#CFCFCF" />)}
+      </g>
+    </svg>
+    <span class="b-small">{P.beforeUpdated} · {P.beforeShot}</span>
+  </div>
+
+  <div class="b-box b-box--2">
+    <span class="b-bh b-bh--pink">{B.boxes[1]}</span>
+    <svg class="b-img" viewBox="0 0 206 88" preserveAspectRatio="none" aria-hidden="true">
+      <rect width="206" height="88" fill="#1A1A1A"></rect>
+      {
+        [0, 1, 2].map((k) => (
+          <g>
+            <rect x={10 + k * 66} y={k === 1 ? 4 : 10} width="56" height={k === 1 ? 80 : 70} fill="#262626" stroke={k === 1 ? '#39FF14' : '#3A3A3A'} />
+            <rect x={10 + k * 66} y={k === 1 ? 4 : 10} width="56" height="12" fill={k === 1 ? '#39FF14' : '#4A4A4A'} />
+            <rect x={24 + k * 66} y={k === 1 ? 26 : 30} width="28" height="9" fill="#E6E6E6" />
+            {[0, 1, 2, 3].map((r) => (
+              <rect x={18 + k * 66} y={(k === 1 ? 42 : 46) + r * 8} width="40" height="2.5" fill="#6A6A6A" />
+            ))}
+          </g>
+        ))
+      }
+    </svg>
+    <span class="b-small">{P.beforeShot}</span>
+  </div>
+
+  <div class="b-box b-box--3">
+    <span class="b-bh b-bh--red">{B.boxes[2]}</span>
+    <svg class="b-arm" viewBox="0 0 60 50" aria-hidden="true">
+      <path d="M2 44C2 36 10 30 20 28c4-8 12-8 14 0l4-14c-2-4 0-10 6-10s8 6 6 10l-4 24c-2 8-10 10-18 10H2Z" fill="#E0A878" stroke="#5A3010" stroke-width="1.5"></path>
+      <path d="M24 30c3-4 7-4 9 0" fill="none" stroke="#5A3010" stroke-width="1"></path>
+      <path d="M0 38h9v12H0Z" fill="#B00000"></path>
+    </svg>
+    <span class="b-text">{B.boxText}</span>
+    <span class="b-link">{B.boxLink}</span>
+  </div>
+
+  <div class="b-side">
+    <span class="b-visit">{F.visitor}</span>
+    <span class="b-digits">{F.counter.split('').map((d) => <b>{d}</b>)}</span>
+    <span class="b-uc">
+      <i></i>
+      <span>{F.construction}</span>
+    </span>
+    <span class="b-guest">{F.guestbook}</span>
+    <span class="b-upd">{F.updated}</span>
+  </div>
+
+  <div class="b-foot">{F.rights} {B.footer} · {F.rightsTail}</div>
 </div>
 
 <style>
   .b-fit {
     --u: calc(100cqi / 760);
-    --b-bg: #0b0b0b;
     --b-neon: #39ff14;
-    --b-bar: #1b1b1b;
+    /* Impact where it exists; elsewhere the site's own face, narrowed, so
+       the no-wrap slogan never outgrows its box */
+    --b-impact: Impact, Haettenschweiler, var(--font-sans, 'Arial Narrow'), sans-serif;
     position: absolute;
     inset: 0;
     overflow: hidden;
-    background-color: var(--b-bg);
+    /* diamond-plate wallpaper (imagery, not UI) */
+    background-color: #1c1c1c;
+    background-image:
+      repeating-linear-gradient(45deg, #2b2b2b 0 calc(1.6 * var(--u)), transparent calc(1.6 * var(--u)) calc(9 * var(--u))),
+      repeating-linear-gradient(-45deg, #262626 0 calc(1.6 * var(--u)), transparent calc(1.6 * var(--u)) calc(9 * var(--u)));
     color: #d6d6d6;
-    font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
     font-stretch: 100%;
     font-weight: 400;
     line-height: 1.25;
@@ -146,194 +259,248 @@ const cells: [number, number, string][] = [
     text-transform: none;
   }
 
-  /* ---------- top bar + header ---------- */
-  .b-top {
+  .b-fit > * {
     position: absolute;
+  }
+
+  /* ---------- top strip ---------- */
+  .b-top {
     inset: 0 0 auto;
-    height: calc(20 * var(--u));
+    height: calc(15 * var(--u));
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding-inline: calc(22 * var(--u));
-    background-color: var(--b-bar);
+    padding-inline: calc(10 * var(--u));
+    background-color: #000000;
+    color: #a8a8a8;
+    font-size: calc(6.2 * var(--u));
   }
 
-  .b-mail {
-    color: #bdbdbd;
-    font-size: calc(7.5 * var(--u));
-  }
-
-  .b-social {
+  .b-follow {
     display: flex;
-    gap: calc(4 * var(--u));
+    align-items: center;
+    gap: calc(3 * var(--u));
   }
 
-  .b-social i {
-    width: calc(10 * var(--u));
-    height: calc(10 * var(--u));
-    border: 1px solid var(--b-neon);
+  .b-follow i {
+    width: calc(8 * var(--u));
+    height: calc(8 * var(--u));
+    background-color: #3b5998;
   }
 
+  .b-follow i + i {
+    background-color: #33ccff;
+  }
+
+  .b-follow i + i + i {
+    background-color: #cc0000;
+  }
+
+  /* ---------- header: flames, dumbbell, Impact logo, starburst ---------- */
   .b-head {
-    position: absolute;
-    top: calc(20 * var(--u));
+    top: calc(15 * var(--u));
     left: 0;
     right: 0;
-    height: calc(52 * var(--u));
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding-inline: calc(22 * var(--u));
-    border-bottom: 1px solid #262626;
-    background-color: #050505;
+    height: calc(65 * var(--u));
+    overflow: hidden;
+    background-color: #2a0000;
+    background-image: linear-gradient(#000000, #4a0000);
+  }
+
+  .b-head > * {
+    position: absolute;
+  }
+
+  .b-flames {
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: calc(26 * var(--u));
+  }
+
+  .b-bell {
+    left: calc(14 * var(--u));
+    top: calc(14 * var(--u));
+    width: calc(52 * var(--u));
+    height: calc(25 * var(--u));
+    transform: rotate(-14deg);
   }
 
   .b-logo {
+    left: calc(72 * var(--u));
+    top: calc(6 * var(--u));
     display: flex;
     flex-direction: column;
-    gap: calc(1 * var(--u));
+    gap: calc(2 * var(--u));
   }
 
   .b-logo-a {
-    color: #ffffff;
-    font-family: 'Arial Black', Arial, sans-serif;
-    font-size: calc(21 * var(--u));
-    font-weight: 900;
+    color: #ffe000;
+    font-family: var(--b-impact);
+    font-stretch: 75%;
+    font-synthesis: none;
+    font-weight: 800;
+    font-size: calc(35 * var(--u));
     line-height: 1;
     letter-spacing: 0.02em;
-    transform: skewX(-8deg);
+    text-shadow:
+      calc(2 * var(--u)) calc(2 * var(--u)) 0 #b00000,
+      calc(-1 * var(--u)) calc(-1 * var(--u)) 0 #000000;
   }
 
   .b-logo-b {
-    color: var(--b-neon);
-    font-size: calc(7 * var(--u));
-    font-weight: 700;
-    letter-spacing: 0.34em;
-    text-transform: uppercase;
-  }
-
-  .b-nav {
-    display: flex;
-    gap: calc(15 * var(--u));
-  }
-
-  .b-navl {
-    position: relative;
     color: #ffffff;
-    font-size: calc(8 * var(--u));
-    font-weight: 700;
-    letter-spacing: 0.06em;
+    font-family: 'Arial Black', Arial, sans-serif;
+    font-size: calc(7.6 * var(--u));
+    font-weight: 900;
+    letter-spacing: 0.32em;
     text-transform: uppercase;
   }
 
-  .b-navl.is-on {
-    color: var(--b-neon);
+  .b-burst {
+    right: calc(22 * var(--u));
+    top: calc(4 * var(--u));
+    width: calc(98 * var(--u));
+    height: calc(56 * var(--u));
+    display: grid;
+    place-items: center;
+    transform: rotate(8deg);
   }
 
-  .b-navl.is-on::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: calc(-6 * var(--u));
-    height: calc(2 * var(--u));
-    background-color: var(--b-neon);
-  }
-
-  /* ---------- slider hero ---------- */
-  .b-hero {
-    position: absolute;
-    top: calc(72 * var(--u));
-    left: 0;
-    right: 0;
-    height: calc(190 * var(--u));
-    overflow: hidden;
-    background-color: #1c1c1c;
-    /* the stock photo's spotlight (imagery, not UI) */
-    background-image: radial-gradient(ellipse 60% 110% at 50% 0%, #4a4a4a, #1c1c1c);
-    border-bottom: calc(4 * var(--u)) solid var(--b-neon);
-  }
-
-  .b-photo {
+  .b-burst svg {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
   }
 
-  .b-arrow {
-    position: absolute;
-    top: calc(74 * var(--u));
-    display: grid;
-    place-items: center;
-    width: calc(22 * var(--u));
-    height: calc(34 * var(--u));
+  .b-burst-t {
+    position: relative;
+    max-width: calc(60 * var(--u));
+    background-color: #ffe000;
+    color: #b00000;
+    font-family: var(--b-impact);
+    font-stretch: 75%;
+    font-synthesis: none;
+    font-weight: 800;
+    font-size: calc(11 * var(--u));
+    line-height: 1;
+    text-align: center;
+    text-transform: uppercase;
+  }
+
+  /* ---------- red gel tabs ---------- */
+  .b-nav {
+    top: calc(80 * var(--u));
+    left: 0;
+    right: 0;
+    height: calc(21 * var(--u));
+    display: flex;
+    align-items: center;
+    gap: calc(3 * var(--u));
+    padding-inline: calc(8 * var(--u));
+    border-top: calc(1.5 * var(--u)) solid #ffe000;
     background-color: #000000;
   }
 
-  .b-arrow svg {
-    width: calc(8 * var(--u));
-    height: calc(14 * var(--u));
+  .b-gel {
+    padding: calc(3 * var(--u)) calc(9 * var(--u));
+    border: 1px solid #5a0000;
+    border-radius: calc(4 * var(--u));
+    background-color: #b00000;
+    background-image: linear-gradient(#d91a1a 0 48%, #b00000 52%, #7a0000);
+    color: #ffffff;
+    font-size: calc(7.4 * var(--u));
+    font-weight: 700;
   }
 
-  .b-arrow--l {
-    left: calc(14 * var(--u));
+  .b-gel.is-on {
+    border-color: #8c7000;
+    background-color: #ffe000;
+    background-image: linear-gradient(#fff27a 0 48%, #ffe000 52%, #e0b800);
+    color: #000000;
   }
 
-  .b-arrow--r {
-    right: calc(14 * var(--u));
+  /* ---------- purple "Flash" banner ---------- */
+  .b-hero {
+    top: calc(101 * var(--u));
+    left: 0;
+    right: 0;
+    height: calc(160 * var(--u));
+    overflow: hidden;
+    border-bottom: calc(3 * var(--u)) solid var(--b-neon);
+    background-color: #2b0a4a;
+    background-image: radial-gradient(ellipse 50% 70% at 48% 40%, #6a1fa0, #2b0a4a);
+  }
+
+  .b-hero > * {
+    position: absolute;
+  }
+
+  .b-shot {
+    left: calc(16 * var(--u));
+    top: calc(12 * var(--u));
+    padding: calc(2 * var(--u));
+    background-color: #ffffff;
+  }
+
+  .b-shot svg {
+    display: block;
+    width: calc(192 * var(--u));
+    height: calc(128 * var(--u));
   }
 
   .b-cap {
-    position: absolute;
-    left: calc(262 * var(--u));
-    top: calc(26 * var(--u));
+    left: calc(226 * var(--u));
+    top: calc(22 * var(--u));
     width: calc(236 * var(--u));
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: calc(7 * var(--u));
-    padding: calc(14 * var(--u)) calc(10 * var(--u)) calc(16 * var(--u));
-    background-color: #0d0d0d;
+    gap: calc(8 * var(--u));
     text-align: center;
   }
 
   .b-slogan {
-    color: #ffffff;
-    font-family: 'Arial Black', Arial, sans-serif;
-    font-size: calc(27 * var(--u));
-    font-weight: 900;
+    color: #ffe000;
+    font-family: var(--b-impact);
+    font-stretch: 75%;
+    font-synthesis: none;
+    font-weight: 800;
+    font-size: calc(30 * var(--u));
     line-height: 1;
-    letter-spacing: 0.01em;
-    text-transform: uppercase;
     white-space: nowrap;
-    transform: skewX(-8deg);
+    text-transform: uppercase;
+    text-shadow: calc(2 * var(--u)) calc(2 * var(--u)) 0 #000000;
   }
 
   .b-welcome {
-    color: var(--b-neon);
-    font-size: calc(9.5 * var(--u));
+    color: #ffffff;
+    font-family: 'Comic Sans MS', 'Comic Sans', 'Chalkboard SE', 'Comic Neue', sans-serif;
+    font-size: calc(10.5 * var(--u));
     font-weight: 700;
   }
 
   .b-join {
     position: relative;
-    margin-top: calc(5 * var(--u));
-    padding: calc(7 * var(--u)) calc(20 * var(--u));
-    background-color: var(--b-neon);
-    color: #050505;
-    font-size: calc(10 * var(--u));
-    font-weight: 700;
-    letter-spacing: 0.08em;
+    margin-top: calc(6 * var(--u));
+    padding: calc(6 * var(--u)) calc(18 * var(--u));
+    border: calc(2.5 * var(--u)) outset #7cff5a;
+    background-color: #2ee010;
+    background-image: linear-gradient(#8aff6e, #39ff14 50%, #22c20a);
+    color: #000000;
+    font-family: 'Arial Black', Arial, sans-serif;
+    font-size: calc(11 * var(--u));
+    font-weight: 900;
     text-transform: uppercase;
   }
 
-  /* the 2016 "blink": a neon ring flashing around the button (the label
+  /* the old "blink": a neon ring flashing around the button (the label
      itself never fades, so it stays legible) */
   .b-ring {
     position: absolute;
-    inset: calc(-4 * var(--u));
-    border: calc(1.5 * var(--u)) solid var(--b-neon);
+    inset: calc(-5 * var(--u));
+    border: calc(1.5 * var(--u)) solid #ffe000;
   }
 
   :global(.cp--hero) .b-ring {
@@ -351,122 +518,246 @@ const cells: [number, number, string][] = [
     }
   }
 
-  .b-dots {
-    position: absolute;
-    left: 50%;
-    bottom: calc(10 * var(--u));
+  .b-gal {
+    left: calc(484 * var(--u));
+    top: calc(16 * var(--u));
+    width: calc(250 * var(--u));
     display: flex;
-    gap: calc(5 * var(--u));
-    transform: translateX(-50%);
+    flex-direction: column;
+    gap: calc(6 * var(--u));
+  }
+
+  .b-gal-t {
+    color: #ffffff;
+    font-family: var(--b-impact);
+    font-stretch: 75%;
+    font-synthesis: none;
+    font-weight: 800;
+    font-size: calc(13 * var(--u));
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .b-thumbs {
+    display: flex;
+    gap: calc(6 * var(--u));
+  }
+
+  .b-thumbs svg {
+    width: calc(76 * var(--u));
+    height: calc(61 * var(--u));
+    border: calc(2 * var(--u)) solid #ffffff;
+  }
+
+  .b-gal-l {
+    color: var(--b-neon);
+    font-size: calc(7.5 * var(--u));
+    font-weight: 700;
+    text-decoration: underline;
+  }
+
+  .b-dots {
+    left: calc(302 * var(--u));
+    bottom: calc(9 * var(--u));
+    display: flex;
+    gap: calc(4 * var(--u));
   }
 
   .b-dots i {
-    width: calc(6 * var(--u));
-    height: calc(6 * var(--u));
-    border-radius: 50%;
-    background-color: #5a5a5a;
+    width: calc(7 * var(--u));
+    height: calc(7 * var(--u));
+    border: 1px solid #ffffff;
+    background-color: #5a3a7a;
   }
 
   .b-dots i.is-on {
     background-color: var(--b-neon);
   }
 
-  /* ---------- three identical boxes ---------- */
-  .b-boxes {
-    position: absolute;
-    top: calc(266 * var(--u));
-    left: 0;
-    right: 0;
-    height: calc(180 * var(--u));
-    display: flex;
-    justify-content: center;
-    gap: calc(12 * var(--u));
-    padding-top: calc(14 * var(--u));
-    background-color: var(--b-bg);
+  .b-skip {
+    right: calc(10 * var(--u));
+    bottom: calc(7 * var(--u));
+    color: #ffffff;
+    font-size: calc(6.4 * var(--u));
+    text-decoration: underline;
   }
 
+  /* ---------- boxes that never line up ---------- */
   .b-box {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: calc(7 * var(--u));
-    width: calc(230 * var(--u));
-    height: calc(152 * var(--u));
-    padding: calc(12 * var(--u));
-    border: 1px solid #2a2a2a;
+    gap: calc(6 * var(--u));
+    padding-bottom: calc(8 * var(--u));
+    border: 1px solid #3a3a3a;
     background-color: #151515;
     text-align: center;
   }
 
-  .b-title {
-    position: relative;
-    padding-bottom: calc(5 * var(--u));
-    color: #ffffff;
-    font-size: calc(10 * var(--u));
-    font-weight: 700;
-    letter-spacing: 0.05em;
+  .b-box--1 {
+    left: calc(10 * var(--u));
+    top: calc(272 * var(--u));
+    width: calc(214 * var(--u));
+  }
+
+  .b-box--2 {
+    left: calc(232 * var(--u));
+    top: calc(281 * var(--u));
+    width: calc(200 * var(--u));
+  }
+
+  .b-box--3 {
+    left: calc(440 * var(--u));
+    top: calc(268 * var(--u));
+    width: calc(176 * var(--u));
+    height: calc(172 * var(--u));
+  }
+
+  .b-bh {
+    align-self: stretch;
+    padding: calc(4 * var(--u)) calc(6 * var(--u));
+    font-size: calc(8.5 * var(--u));
+    font-weight: 900;
     text-transform: uppercase;
   }
 
-  .b-title::after {
-    content: '';
-    position: absolute;
-    left: 50%;
-    bottom: 0;
-    width: calc(24 * var(--u));
-    height: calc(2 * var(--u));
-    background-color: var(--b-neon);
-    transform: translateX(-50%);
+  .b-bh--silver {
+    background-color: #c8c8c8;
+    background-image: linear-gradient(#f4f4f4, #c8c8c8 50%, #a8a8a8);
+    color: #000000;
+    font-family: 'Arial Black', Arial, sans-serif;
+  }
+
+  .b-bh--pink {
+    background-color: #ff3ea5;
+    background-image: linear-gradient(#ff8cc6, #ff3ea5);
+    color: #000000;
+    font-family: var(--b-impact);
+    font-stretch: 75%;
+    font-synthesis: none;
+    font-weight: 800;
+    font-size: calc(10.5 * var(--u));
+    letter-spacing: 0.04em;
+  }
+
+  .b-bh--red {
+    background-color: #b00000;
+    background-image: linear-gradient(#d91a1a, #b00000 50%, #7a0000);
+    color: #ffffff;
+    font-family: 'Comic Sans MS', 'Comic Sans', 'Chalkboard SE', 'Comic Neue', sans-serif;
   }
 
   .b-img {
     flex: 0 0 auto;
-    width: calc(206 * var(--u));
-    height: calc(88 * var(--u));
+    width: calc(192 * var(--u));
+    height: calc(84 * var(--u));
+  }
+
+  .b-box--2 .b-img {
+    width: calc(176 * var(--u));
+    height: calc(76 * var(--u));
   }
 
   .b-small {
     color: #a0a0a0;
-    font-size: calc(7.5 * var(--u));
+    font-size: calc(6.4 * var(--u));
   }
 
-  .b-icon {
-    display: grid;
-    place-items: center;
-    width: calc(34 * var(--u));
-    height: calc(34 * var(--u));
-    margin-top: calc(6 * var(--u));
-    border-radius: 50%;
-    background-color: var(--b-neon);
-  }
-
-  .b-icon svg {
-    width: 62%;
-    height: 62%;
+  .b-arm {
+    width: calc(54 * var(--u));
+    height: calc(45 * var(--u));
   }
 
   .b-text {
-    max-width: calc(170 * var(--u));
+    max-width: calc(150 * var(--u));
+    color: #e0e0e0;
+    font-family: 'Comic Sans MS', 'Comic Sans', 'Chalkboard SE', 'Comic Neue', sans-serif;
     font-size: calc(8.5 * var(--u));
   }
 
   .b-link {
     color: var(--b-neon);
-    font-size: calc(8.5 * var(--u));
+    font-size: calc(8 * var(--u));
     font-weight: 700;
     text-decoration: underline;
   }
 
-  /* ---------- footer ---------- */
+  /* ---------- sidebar clutter ---------- */
+  .b-side {
+    left: calc(624 * var(--u));
+    top: calc(274 * var(--u));
+    width: calc(128 * var(--u));
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: calc(5 * var(--u));
+    padding: calc(7 * var(--u));
+    border: 1px dashed #666666;
+    background-color: #0a0a0a;
+  }
+
+  .b-visit {
+    color: #cccccc;
+    font-size: calc(6.6 * var(--u));
+  }
+
+  .b-digits {
+    display: flex;
+    gap: 1px;
+  }
+
+  .b-digits b {
+    padding: calc(1 * var(--u)) calc(2.5 * var(--u));
+    border: 1px solid #555555;
+    background-color: #000000;
+    color: #ff3030;
+    font-size: calc(9 * var(--u));
+  }
+
+  .b-uc {
+    display: flex;
+    flex-direction: column;
+    align-self: stretch;
+    border: 1px solid #ffe000;
+  }
+
+  .b-uc i {
+    height: calc(6 * var(--u));
+    background-color: #ffe000;
+    background-image: repeating-linear-gradient(-45deg, #111111 0 calc(4 * var(--u)), #ffe000 calc(4 * var(--u)) calc(8 * var(--u)));
+  }
+
+  .b-uc span {
+    padding: calc(4 * var(--u)) calc(5 * var(--u));
+    background-color: #ffe000;
+    color: #000000;
+    font-family: 'Comic Sans MS', 'Comic Sans', 'Chalkboard SE', 'Comic Neue', sans-serif;
+    font-size: calc(7.6 * var(--u));
+    font-weight: 700;
+  }
+
+  .b-guest {
+    color: var(--b-neon);
+    font-size: calc(7 * var(--u));
+    font-weight: 700;
+    text-decoration: underline;
+  }
+
+  .b-upd {
+    color: #9a9a9a;
+    font-size: calc(6 * var(--u));
+  }
+
+  /* ---------- footer: the phone number, 6px tall ---------- */
   .b-foot {
-    position: absolute;
     inset: auto 0 0;
-    height: calc(29 * var(--u));
+    height: calc(30 * var(--u));
     display: flex;
     align-items: center;
-    justify-content: center;
-    background-color: var(--b-bar);
-    color: #bdbdbd;
-    font-size: calc(8 * var(--u));
+    padding-inline: calc(12 * var(--u));
+    border-top: calc(2 * var(--u)) solid #b00000;
+    background-color: #000000;
+    color: #9a9a9a;
+    font-size: calc(6.2 * var(--u));
   }
 </style>

@@ -1,0 +1,643 @@
+---
+/**
+ * LogoMark: the owner's mark redrawn as vector (ROUND4 §1), with its
+ * entrance and idle life.
+ *
+ *   <LogoMark />                  lockup: mark + VESTA wordmark
+ *   <LogoMark wordmark={false} /> the symbol alone
+ *
+ * Drawn from src/assets/brand/vesta-logo-source.webp in the source's own
+ * frame (a 2× crop of the mark), so every coordinate below can be checked
+ * against the artwork:
+ *   - the violet slanted bar (left stroke of the V);
+ *   - the white swoosh (right stroke), a crescent whose tip lands on the ring;
+ *   - the orbit: a tilted ellipse, thicker at the lower left, that passes
+ *     behind the bar and runs into the swoosh tip;
+ *   - the debris ring: a wider tilted ellipse that breaks into fragments
+ *     (heavy at the two ends, sparse along the long sides) and fine dust;
+ *   - the star: a violet orb with a hot white core and a 4-point flare,
+ *     sitting on the orbit.
+ * The wordmark is SVG text in the site's Mona Sans (wide, heavy), pinned to
+ * the lockup's proportions with textLength.
+ *
+ * Motion (when it enters view; engine adds .is-in via data-inview):
+ *   the plane settles out of a 3D tilt · the V rises · the orbit draws
+ *   itself from behind the bar, round the bottom, through the star and into
+ *   the swoosh · the star ignites as the line reaches it (with one shock
+ *   ring) · the debris swings in. Then, only while on screen: fragments and
+ *   dust drift along the ring (two speeds), the flare breathes. The pointer
+ *   tilts the plane, with the star, orbit and debris at different depths.
+ *
+ * Every hidden starting state lives under
+ * html.js:not(.motion-reduced):not(.motion-failed) — without the engine the
+ * mark renders complete and still. The size comes from the parent: the root
+ * is width: 100% with the lockup's aspect ratio.
+ */
+
+export interface Props {
+  class?: string;
+  /** Show the VESTA wordmark beside the mark. Default true. */
+  wordmark?: boolean;
+}
+
+const { class: cls = '', wordmark = true } = Astro.props;
+
+/* one id namespace per instance (masks, clips, gradients) */
+const uid = `lm${Math.random().toString(36).slice(2, 8)}`;
+
+/* ------------------------------------------------------------ geometry */
+
+const rad = (d: number) => (d * Math.PI) / 180;
+const f = (n: number) => +n.toFixed(2);
+
+interface Ell {
+  cx: number;
+  cy: number;
+  a: number;
+  b: number;
+  rot: number;
+}
+/** point at parameter φ (degrees, clockwise on screen from the +major end) */
+const at = (e: Ell, phi: number): [number, number] => {
+  const t = rad(e.rot);
+  const u = e.a * Math.cos(rad(phi));
+  const v = e.b * Math.sin(rad(phi));
+  return [f(e.cx + u * Math.cos(t) - v * Math.sin(t)), f(e.cy + u * Math.sin(t) + v * Math.cos(t))];
+};
+const full = (e: Ell) => {
+  const p0 = at(e, 0);
+  const p1 = at(e, 180);
+  return `M${p0} A${e.a} ${e.b} ${e.rot} 0 1 ${p1} A${e.a} ${e.b} ${e.rot} 0 1 ${p0}Z`;
+};
+
+/* the orbit (fitted to the artwork's ring centreline) */
+const RING: Ell = { cx: 524, cy: 516, a: 521, b: 184, rot: -38.7 };
+/* the band: outer edge pushed down-left so the lower-left runs heavier */
+const ringOuter: Ell = { ...RING, cx: RING.cx - 7, cy: RING.cy + 9, a: RING.a + 13, b: RING.b + 13 };
+const ringInner: Ell = { ...RING, cx: RING.cx + 2, cy: RING.cy - 2, a: RING.a - 8, b: RING.b - 7 };
+const ringBand = `${full(ringOuter)} ${full(ringInner)}`;
+/* visible arc: from behind the bar (φ 258°), round the bottom, up through
+   the star, to the swoosh tip (φ −2°) */
+const ARC_FROM = 258;
+const ARC_TO = -2;
+const arcStart = at(RING, ARC_FROM);
+const arcEnd = at(RING, ARC_TO);
+const ringArc = `M${arcStart} A${RING.a} ${RING.b} ${RING.rot} 1 0 ${arcEnd}`;
+/* a dotted edge just outside the lower-left of the orbit */
+const DUST: Ell = { ...RING, cx: RING.cx - 6, cy: RING.cy + 8, a: RING.a + 30, b: RING.b + 26 };
+const dustArc = `M${at(DUST, 250)} A${DUST.a} ${DUST.b} ${DUST.rot} 0 0 ${at(DUST, 95)}`;
+
+/* the swoosh: tip on the orbit */
+const tip = at(RING, 5);
+const swoosh = `M483,521 L549,666 C564,498 668,306 ${tip} C790,160 596,262 483,521Z`;
+
+/* the bar */
+const bar = '140,210 295,210 515,688 405,748';
+
+/* the star on the orbit */
+const [sx, sy] = at(RING, 56);
+
+/* the debris ring, drawn as a circle of radius DEB.a inside a squashed,
+   turned group, so a rotation of the circle moves every fragment along the
+   ellipse (and foreshortens it the way a tilted ring would) */
+const DEB: Ell = { cx: 533, cy: 497, a: 631, b: 226, rot: -41.1 };
+const squash = f(DEB.b / DEB.a);
+
+/* deterministic scatter */
+let seed = 7;
+const rnd = () => {
+  seed = (seed * 16807) % 2147483647;
+  return (seed - 1) / 2147483646;
+};
+const lerp = (x: number, y: number, t: number) => x + (y - x) * t;
+const pick = (r: [number, number]) => r[0] + rnd() * (r[1] - r[0]);
+/**
+ * Dash pattern in real units round a circle of radius r (drawn inside the
+ * squashed group). `end` ranges apply at the ring's two ends (φ 0°/180°),
+ * `side` ranges along the long sides; in between they blend by |cos φ|^p.
+ * Dash lengths are pre-stretched so fragments read right after the squash.
+ */
+const scatter = (
+  r: number,
+  side: { on: [number, number]; off: [number, number] },
+  end: { on: [number, number]; off: [number, number] },
+  p = 1.5
+) => {
+  const C = 2 * Math.PI * r;
+  const out: number[] = [];
+  let s = 0;
+  while (s < C) {
+    const t = Math.abs(Math.cos((s / C) * Math.PI * 2)) ** p;
+    const on = lerp(pick(side.on), pick(end.on), t);
+    const off = lerp(pick(side.off), pick(end.off), t);
+    out.push(f(Math.max(0.01, on)), f(off));
+    s += on + off;
+  }
+  return out.join(' ');
+};
+/* heavy fragments: chunky at the ends, a few slivers along the sides */
+const chunksA = scatter(DEB.a, { on: [6, 30], off: [80, 280] }, { on: [30, 150], off: [6, 34] }, 2.6);
+/* a second, thinner band just inside: jagged edges */
+const chunksB = scatter(DEB.a - 15, { on: [3, 18], off: [70, 260] }, { on: [12, 70], off: [10, 60] }, 1.8);
+/* fine fragments just outside */
+const chunksC = scatter(DEB.a + 16, { on: [2, 12], off: [50, 200] }, { on: [6, 40], off: [14, 70] }, 1.4);
+/* dust (dots: zero dashes with round caps), even all round: it drifts */
+const dustA = scatter(DEB.a + 32, { on: [0, 0], off: [34, 120] }, { on: [0, 0], off: [34, 120] });
+const dustB = scatter(DEB.a - 34, { on: [0, 0], off: [60, 190] }, { on: [0, 0], off: [60, 190] });
+/* the dotted edge under the orbit (pathLength 1000 on its arc) */
+let dustRing = '';
+{
+  const out: number[] = [];
+  let s = 0;
+  while (s < 1000) {
+    const off = pick([6, 34]);
+    out.push(0.01, f(off));
+    s += off;
+  }
+  dustRing = out.join(' ');
+}
+
+/* the flare: a 4-point star, long thin spikes */
+const FL = 168;
+const FW = 7;
+const flare = `M${sx - FL},${sy} L${sx - FW},${sy - FW} L${sx},${sy - FL} L${sx + FW},${sy - FW} L${sx + FL},${sy} L${sx + FW},${sy + FW} L${sx},${sy + FL} L${sx - FW},${sy + FW}Z`;
+const FL2 = 96;
+const FW2 = 3;
+const flareCore = `M${sx - FL2},${sy} L${sx - FW2},${sy - FW2} L${sx},${sy - FL2} L${sx + FW2},${sy - FW2} L${sx + FL2},${sy} L${sx + FW2},${sy + FW2} L${sx},${sy + FL2} L${sx - FW2},${sy + FW2}Z`;
+
+/* frames */
+const VB_Y = 20;
+const VB_H = 955;
+const MARK_W = 1072;
+/* wordmark: cap height and span measured on the lockup source (2× crop frame) */
+const WORD_X = 1030;
+const WORD_BASE = 630;
+const WORD_W = 1620;
+const LOCK_W = WORD_X + WORD_W + 24;
+const VB_W = wordmark ? LOCK_W : MARK_W;
+const viewBox = `0 ${VB_Y} ${VB_W} ${VB_H}`;
+/* transform-origin of the mark plane, as % of the whole frame */
+const originX = `${((533 / VB_W) * 100).toFixed(2)}%`;
+---
+
+<div
+  class:list={['lm', { 'is-lockup': wordmark }, cls]}
+  style={`--lm-ratio:${VB_W} / ${VB_H}; --lm-ox:${originX}`}
+  data-logomark
+  data-inview
+  aria-hidden="true"
+>
+  <div class="lm-tilt">
+    <div class="lm-settle">
+      <svg class="lm-svg" viewBox={viewBox} focusable="false" overflow="visible">
+        <defs>
+          <linearGradient id={`${uid}-bar`} x1="0" y1="0" x2="0.35" y2="1">
+            <stop offset="0" stop-color="#b03bff" />
+            <stop offset="0.55" stop-color="#9f22fb" />
+            <stop offset="1" stop-color="#8a17ec" />
+          </linearGradient>
+          <radialGradient id={`${uid}-glow`}>
+            <stop offset="0" stop-color="#b44dff" stop-opacity="0.75" />
+            <stop offset="0.35" stop-color="#8a2be2" stop-opacity="0.32" />
+            <stop offset="1" stop-color="#5a12b8" stop-opacity="0" />
+          </radialGradient>
+          <radialGradient id={`${uid}-orb`}>
+            <stop offset="0" stop-color="#ffffff" />
+            <stop offset="0.3" stop-color="#fbeaff" />
+            <stop offset="0.55" stop-color="#e162ff" />
+            <stop offset="0.85" stop-color="#b033ff" />
+            <stop offset="1" stop-color="#8f1fe8" />
+          </radialGradient>
+          <radialGradient id={`${uid}-halo`}>
+            <stop offset="0" stop-color="#9f22fb" stop-opacity="0.5" />
+            <stop offset="1" stop-color="#9f22fb" stop-opacity="0" />
+          </radialGradient>
+          <mask id={`${uid}-draw`} maskUnits="userSpaceOnUse" x="0" y="0" width={MARK_W} height="1000">
+            <path class="lm-draw" d={ringArc} pathLength="1" />
+          </mask>
+        </defs>
+
+        <!-- a soft violet halo behind the V -->
+        <ellipse class="lm-halo" cx="330" cy="480" rx="260" ry="330" transform="rotate(-25 330 480)" fill={`url(#${uid}-halo)`} />
+
+        <!-- debris ring: fragments and dust drifting along a tilted ellipse -->
+        <g class="lm-par lm-par-deb">
+          <g transform={`translate(${DEB.cx} ${DEB.cy}) rotate(${DEB.rot}) scale(1 ${squash})`}>
+            <g class="lm-deb-in">
+              <g class="lm-frag">
+                <circle class="lm-chunks" r={DEB.a} stroke-width="30" stroke-dasharray={chunksA} />
+                <circle class="lm-chunks is-round" r={DEB.a - 15} stroke-width="14" stroke-dasharray={chunksB} />
+                <circle class="lm-chunks is-round" r={DEB.a + 16} stroke-width="8" stroke-dasharray={chunksC} />
+              </g>
+              <g class="lm-spin lm-spin-a">
+                <circle r={DEB.a + 32} fill="none" />
+                <circle class="lm-dust" r={DEB.a + 32} stroke-width="7" stroke-dasharray={dustA} />
+              </g>
+              <g class="lm-spin lm-spin-b">
+                <circle r={DEB.a - 34} fill="none" />
+                <circle class="lm-dust lm-dust-dim" r={DEB.a - 34} stroke-width="6" stroke-dasharray={dustB} />
+              </g>
+            </g>
+          </g>
+        </g>
+
+        <!-- the orbit: a band revealed by a drawing stroke -->
+        <g class="lm-par lm-par-ring">
+          <path class="lm-ring" d={ringBand} fill-rule="evenodd" mask={`url(#${uid}-draw)`} />
+          <path class="lm-ring-dust" d={dustArc} pathLength="1000" stroke-dasharray={dustRing} />
+        </g>
+
+        <!-- the V -->
+        <g class="lm-v">
+          <polygon class="lm-bar" points={bar} fill={`url(#${uid}-bar)`} />
+          <path class="lm-swoosh" d={swoosh} />
+        </g>
+
+        <!-- the star -->
+        <g class="lm-par lm-par-star">
+          <g class="lm-star">
+            <circle class="lm-shock" cx={sx} cy={sy} r="46" />
+            <g class="lm-breathe">
+              <circle class="lm-glow" cx={sx} cy={sy} r="190" fill={`url(#${uid}-glow)`} />
+              <path class="lm-flare" d={flare} />
+              <path class="lm-flare-core" d={flareCore} />
+            </g>
+            <circle cx={sx} cy={sy} r="52" fill={`url(#${uid}-orb)`} />
+            <circle class="lm-core" cx={sx - 4} cy={sy - 3} r="15" />
+          </g>
+        </g>
+      </svg>
+    </div>
+  </div>
+
+  {
+    wordmark && (
+      <div class="lm-word">
+        <svg class="lm-svg" viewBox={viewBox} focusable="false">
+          <defs>
+            <clipPath id={`${uid}-wclip`}>
+              <rect x={WORD_X - 40} y={VB_Y} width={WORD_W + 80} height={WORD_BASE + 14 - VB_Y} />
+            </clipPath>
+          </defs>
+          <g clip-path={`url(#${uid}-wclip)`}>
+            <text class="lm-word-t" x={WORD_X} y={WORD_BASE} textLength={WORD_W} lengthAdjust="spacing">
+              VESTA
+            </text>
+          </g>
+        </svg>
+      </div>
+    )
+  }
+</div>
+
+<style>
+  .lm {
+    --mx: 0;
+    --my: 0;
+    position: relative;
+    display: block;
+    width: 100%;
+    aspect-ratio: var(--lm-ratio);
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .lm-tilt,
+  .lm-settle,
+  .lm-word {
+    position: absolute;
+    inset: 0;
+  }
+
+  .lm-svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  /* ---------------------------------------------------------- the mark */
+
+  .lm-tilt {
+    transform-origin: var(--lm-ox) 50%;
+    transform: perspective(1400px) rotateY(calc(var(--mx) * 11deg)) rotateX(calc(var(--my) * -9deg));
+  }
+
+  .lm-settle {
+    transform-origin: var(--lm-ox) 55%;
+    transition:
+      transform 1900ms var(--ease-expo),
+      opacity 700ms linear;
+  }
+
+  .lm-halo {
+    opacity: 0.55;
+  }
+
+  .lm-bar {
+    transition:
+      transform 1300ms var(--ease-expo) 80ms,
+      opacity 500ms linear 80ms;
+  }
+
+  .lm-swoosh {
+    fill: #ffffff;
+    transition:
+      transform 1300ms var(--ease-expo) 220ms,
+      opacity 500ms linear 220ms;
+  }
+
+  .lm-ring {
+    fill: #ffffff;
+  }
+
+  .lm-draw {
+    fill: none;
+    stroke: #ffffff;
+    stroke-width: 64;
+    stroke-dasharray: 1 1;
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset 1500ms cubic-bezier(0.62, 0.02, 0.28, 1) 260ms;
+  }
+
+  .lm-ring-dust {
+    fill: none;
+    stroke: #d9ccff;
+    stroke-width: 5;
+    stroke-linecap: round;
+    opacity: 0.7;
+    transition: opacity 900ms linear 1400ms;
+  }
+
+  .lm-chunks {
+    fill: none;
+    stroke: #ffffff;
+  }
+
+  .lm-chunks.is-round {
+    stroke-linecap: round;
+  }
+
+  .lm-dust {
+    fill: none;
+    stroke: #ffffff;
+    stroke-linecap: round;
+  }
+
+  .lm-dust-dim {
+    stroke: #c7b4ff;
+  }
+
+  .lm-deb-in {
+    transform-box: fill-box;
+    transform-origin: center;
+    transition:
+      transform 2600ms var(--ease-expo) 420ms,
+      opacity 1200ms linear 420ms;
+  }
+
+  .lm-spin,
+  .lm-star,
+  .lm-shock,
+  .lm-breathe {
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  .lm-flare {
+    fill: #a93dff;
+    opacity: 0.9;
+  }
+
+  .lm-flare-core {
+    fill: #f3dcff;
+  }
+
+  .lm-core {
+    fill: #ffffff;
+  }
+
+  .lm-shock {
+    fill: none;
+    stroke: #d7b8ff;
+    stroke-width: 4;
+    opacity: 0;
+  }
+
+  /* depth: star nearest, orbit mid, debris farthest */
+  .lm-par-star {
+    translate: calc(var(--mx) * 26px) calc(var(--my) * 20px);
+  }
+
+  .lm-par-ring {
+    translate: calc(var(--mx) * 8px) calc(var(--my) * 6px);
+  }
+
+  .lm-par-deb {
+    translate: calc(var(--mx) * -18px) calc(var(--my) * -14px);
+  }
+
+  /* ------------------------------------------------------- the wordmark */
+
+  .lm-word-t {
+    fill: #ffffff;
+    font-family: var(--font-sans, Arial, sans-serif);
+    font-size: 452px;
+    font-weight: 800;
+    font-stretch: 125%;
+    font-variation-settings: 'wdth' 125;
+    transition:
+      transform 1300ms var(--ease-expo) 380ms,
+      opacity 600ms linear 380ms;
+  }
+
+  .lm-word {
+    translate: calc(var(--mx) * 5px) calc(var(--my) * 3px);
+  }
+
+  /* --------------------------------------------- entrance (engine only) */
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .lm:not(.is-in) .lm-settle {
+    opacity: 0.02;
+    transform: perspective(1400px) rotateY(-34deg) rotateX(32deg) translate3d(0, 6%, -180px);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .lm:not(.is-in) .lm-bar {
+    opacity: 0.02;
+    transform: translate(-40px, 150px);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .lm:not(.is-in) .lm-swoosh {
+    opacity: 0.02;
+    transform: translate(30px, 190px);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .lm:not(.is-in) .lm-draw {
+    stroke-dashoffset: 1;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .lm:not(.is-in) .lm-ring-dust {
+    opacity: 0.02;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .lm:not(.is-in) .lm-deb-in {
+    opacity: 0.02;
+    transform: rotate(-80deg);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .lm:not(.is-in) .lm-star {
+    opacity: 0.02;
+    transform: scale(0.2);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .lm:not(.is-in) .lm-word-t {
+    opacity: 0.02;
+    transform: translateY(400px);
+  }
+
+  /* the star ignites as the drawing line reaches it */
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .lm.is-in .lm-star {
+    animation: lm-ignite 1100ms cubic-bezier(0.2, 0.9, 0.3, 1) 1180ms both;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .lm.is-in .lm-shock {
+    animation: lm-shock 1400ms cubic-bezier(0.1, 0.7, 0.3, 1) 1260ms both;
+  }
+
+  /* idle life, from when the entrance settles; paused offscreen */
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .lm.is-in .lm-breathe {
+    animation: lm-breathe 5200ms ease-in-out 2300ms infinite alternate both;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .lm.is-in .lm-spin-a {
+    animation: lm-spin 70s linear infinite;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .lm.is-in .lm-spin-b {
+    animation: lm-spin 120s linear infinite;
+  }
+
+  .lm:not(.is-live) .lm-breathe,
+  .lm:not(.is-live) .lm-spin {
+    animation-play-state: paused !important;
+  }
+
+  @keyframes lm-ignite {
+    0% {
+      opacity: 0.02;
+      transform: scale(0.2);
+    }
+    30% {
+      opacity: 1;
+      transform: scale(1.5);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes lm-shock {
+    0% {
+      opacity: 0.9;
+      transform: scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(5.5);
+    }
+  }
+
+  @keyframes lm-breathe {
+    0% {
+      opacity: 0.82;
+      transform: scale(0.94) rotate(0deg);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1.1) rotate(4deg);
+    }
+  }
+
+  @keyframes lm-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  :global(html.motion-reduced) .lm *,
+  :global(html.motion-failed) .lm * {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  :global(html.motion-reduced) .lm,
+  :global(html.motion-failed) .lm {
+    --mx: 0 !important;
+    --my: 0 !important;
+  }
+</style>
+
+<script>
+  import { isReduced } from '../../scripts/motion';
+
+  // Idle loops run only on screen; the pointer tilts the plane (fine
+  // pointers), eased toward the target in a short rAF burst.
+  document.querySelectorAll<HTMLElement>('[data-logomark]').forEach((lm) => {
+    if (lm.dataset.lmBound) return;
+    lm.dataset.lmBound = '1';
+
+    let onscreen = false;
+    const live = () => lm.classList.toggle('is-live', onscreen && !document.hidden);
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver((entries) => {
+        onscreen = entries.some((e) => e.isIntersecting);
+        live();
+      }).observe(lm);
+    } else {
+      onscreen = true;
+      live();
+    }
+    document.addEventListener('visibilitychange', live);
+
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    // the hit area is the link around the mark when there is one
+    const host = lm.closest<HTMLElement>('a, [data-logomark-host]') ?? lm.parentElement;
+    if (!host) return;
+
+    let tx = 0;
+    let ty = 0;
+    let x = 0;
+    let y = 0;
+    let raf = 0;
+    const step = () => {
+      raf = 0;
+      x += (tx - x) * 0.12;
+      y += (ty - y) * 0.12;
+      if (Math.abs(tx - x) < 0.002 && Math.abs(ty - y) < 0.002) {
+        x = tx;
+        y = ty;
+      } else {
+        raf = requestAnimationFrame(step);
+      }
+      lm.style.setProperty('--mx', x.toFixed(3));
+      lm.style.setProperty('--my', y.toFixed(3));
+    };
+    const kick = () => {
+      if (!raf) raf = requestAnimationFrame(step);
+    };
+
+    host.addEventListener('pointermove', (e) => {
+      if (isReduced()) return;
+      const r = lm.getBoundingClientRect();
+      tx = Math.max(-1, Math.min(1, ((e.clientX - r.left) / r.width - 0.5) * 2));
+      ty = Math.max(-1, Math.min(1, ((e.clientY - r.top) / r.height - 0.5) * 2));
+      kick();
+    });
+    host.addEventListener('pointerleave', () => {
+      tx = 0;
+      ty = 0;
+      kick();
+    });
+  });
+</script>

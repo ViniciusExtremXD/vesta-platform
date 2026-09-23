@@ -7,17 +7,18 @@
  * the firm's ampersand as the one piece of art. Quiet and authoritative:
  * no verdicts, no ratings, no years in business, no gavels.
  *
- * The BEFORE is a plausible 2014 law-firm template: navy header, gold nav
- * band, gavel clip art, a shouted slogan, a wall of text, a stock handshake
- * and the only contact form at the bottom of the page.
+ * The BEFORE is a late-2000s law-firm template last touched in 2014: a
+ * fixed-width page on linen wallpaper, scales and gavel clip art, glossy gold
+ * tabs, a ticker, a starburst, cluttered sidebars, a low-res skyline, a wall
+ * of grey text and the only contact form cut off by the fold.
  */
 import { place, studyCaption, type Concept, type ConceptAnnotation } from './types';
 
 /** Marker anchors on this drawing (760 × 475 reference units, see types.ts). */
 const anchors: Record<string, Omit<ConceptAnnotation, 'id' | 'text'>> = {
-  A1: { x: 158, y: 355, a: 's' }, // after the contact form heading, bottom of the page
-  A2: { x: 214, y: 124, a: 'e' }, // gavel box + shouted slogan
-  A3: { x: 380, y: 216, a: 'c' }, // the wall of text
+  A1: { x: 316, y: 347, a: 's' }, // after the contact form heading, cut by the fold
+  A2: { x: 580, y: 97, a: 'e' }, // on the tab bar, against the starburst
+  A3: { x: 415, y: 236, a: 'c' }, // the wall of grey text
   A4: { x: 176, y: 0, a: 's', bar: true }, // metadata → URL bar
   B1: { x: 350, y: 142, a: 's' }, // the promise, first screen
   B2: { x: 392, y: 298, a: 's' }, // case review + call buttons
@@ -94,8 +95,8 @@ export const law: Concept = {
     before: place(
       {
         A1: 'The only contact form sits below the fold. No phone number on screen.',
-        A2: 'Gavel clip art and a shouted slogan. No city, no next step.',
-        A3: 'A wall of text before any way to act.',
+        A2: 'A starburst, clip art and a shouted welcome. No next step.',
+        A3: 'A wall of grey text before any way to act.',
         A4: 'No page title or description written for search.',
       },
       anchors

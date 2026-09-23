@@ -7,6 +7,15 @@
 import { concept, conceptPage } from '../site';
 import { defaultAnchors as pos, type Concept } from './types';
 
+/** Before-site anchors of the 2010 redraw (concepts/halden/Before.astro);
+ *  A4 and the B* anchors keep the shared geometry. */
+const beforePos: typeof pos = {
+  ...pos,
+  A1: { x: 438, y: 451, a: 's' }, // phone number, tiny, footer only
+  A2: { x: 671, y: 167, a: 'e' }, // slider arrow
+  A3: { x: 490, y: 258, a: 's' }, // "Welcome to Halden Roofing!"
+};
+
 const A = concept.after;
 const B = concept.before;
 export const halden: Concept = {
@@ -74,7 +83,7 @@ export const halden: Concept = {
     card: 'A roofing company in Austin, TX, and its website before and after a rebuild.',
   },
   annotations: {
-    before: concept.annotations.before.map((n) => ({ ...n, ...pos[n.id] })),
+    before: concept.annotations.before.map((n) => ({ ...n, ...beforePos[n.id] })),
     after: concept.annotations.after.map((n) => ({ ...n, ...pos[n.id] })),
   },
 };

@@ -17,10 +17,10 @@ import { studyCaption, type Concept, type ConceptAnnotation } from './types';
 
 /** Annotation anchors of this drawing (760 × 475 reference units). */
 const anchors: Record<string, Omit<ConceptAnnotation, 'id' | 'text'>> = {
-  A1: { x: 603, y: 9, a: 'e' }, // the tiny phone number in the top bar
-  A2: { x: 733, y: 186, a: 'c' }, // the stock-photo slider arrows
-  A3: { x: 362, y: 146, a: 's' }, // "Welcome to Pellwood Dental"
-  A4: { x: 192, y: 430, a: 's' }, // insurance forms as a PDF download
+  A1: { x: 577, y: 15, a: 'e' }, // the tiny phone number in the top bar
+  A2: { x: 480, y: 179, a: 'c' }, // the stock-photo slider arrow
+  A3: { x: 71, y: 142, a: 'e' }, // "Welcome to Pellwood Dental!"
+  A4: { x: 618, y: 229, a: 's' }, // insurance forms as a PDF download (sidebar)
   B1: { x: 414, y: 140, a: 's' }, // the promise, first screen
   B2: { x: 380, y: 295, a: 's' }, // book + new-patient call buttons
   B3: { x: 184, y: 398, a: 'e' }, // one page per treatment

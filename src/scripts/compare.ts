@@ -39,8 +39,9 @@ const mech = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 
 
 export interface PlateCtl {
   fig: HTMLElement;
-  /** Plays the rebuild from the old site: 0 → 1, then back to .56, armed. */
-  sweep(): Promise<void>;
+  /** Plays the rebuild from the old site: 0 → 1, then back to .56, armed.
+      `fast` (a visitor's pick): a shorter sweep. */
+  sweep(fast?: boolean): Promise<void>;
   /** Jumps to .56 and arms (reduced motion). */
   rest(): void;
   destroy(): void;
@@ -118,7 +119,7 @@ export function initPlate(fig: HTMLElement, start: Start = 'auto'): PlateCtl | n
     tween(REST, 500, arm);
   };
 
-  const sweep = () =>
+  const sweep = (fast = false) =>
     new Promise<void>((resolve) => {
       takeOver(0);
       if (isReduced() || document.hidden) {
@@ -127,7 +128,8 @@ export function initPlate(fig: HTMLElement, start: Start = 'auto'): PlateCtl | n
         resolve();
         return;
       }
-      tween(1, 1100, () => later(() => tween(REST, 520, () => (arm(), resolve())), 140));
+      const [up, pause, down] = fast ? [820, 60, 420] : [1100, 140, 520];
+      tween(1, up, () => later(() => tween(REST, down, () => (arm(), resolve())), pause));
     });
 
   /* ---- start ---------------------------------------------------------- */
@@ -311,19 +313,40 @@ function initShowcase(root: HTMLElement): void {
   if (!deck || !firstCard || !firstFig || tabs.length < 2) return;
 
   const order = tabs.map((t) => t.dataset.concept || '');
+  const n = order.length;
   const templates = new Map<string, HTMLTemplateElement>();
   root.querySelectorAll<HTMLTemplateElement>('template[data-card]').forEach((t) => templates.set(t.dataset.card || '', t));
   const ghosts = Array.from(root.querySelectorAll<HTMLElement>('[data-ghost]'));
   const capA = root.querySelector<HTMLElement>('[data-cap-a]');
   const capB = root.querySelector<HTMLElement>('[data-cap-b]');
   const capBox = root.querySelector<HTMLElement>('[data-cap]');
+  const switcher = root.querySelector<HTMLElement>('[data-switcher]');
+  const swName = root.querySelector<HTMLElement>('[data-sw-name]');
+  const swN = root.querySelector<HTMLElement>('[data-sw-n]');
+  const steps = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-step]'));
 
   let idx = Math.max(0, order.indexOf(firstCard.dataset.card || ''));
+  /* the first study ships live, not in a template: keep a pristine copy of
+     it (before initPlate touches it) so the deck can come back to it */
+  if (!templates.has(order[idx])) {
+    const keep = document.createElement('template');
+    const copy = firstCard.cloneNode(true) as HTMLElement;
+    copy.classList.remove('hs-card--first', 'is-live');
+    copy.style.removeProperty('--x');
+    copy.querySelectorAll('[data-compare-ready]').forEach((el) => el.removeAttribute('data-compare-ready'));
+    keep.content.append(copy);
+    templates.set(order[idx], keep);
+  }
   let card = firstCard;
   let ctl = initPlate(firstFig, 'auto');
+  /* every switch bumps the generation; a newer switch turns the older one's
+     callbacks into no-ops, so a click never waits for an animation */
+  let gen = 0;
   let busy = false;
-  let queued: number | null = null;
   let stopped = false;
+  /* cards on their way out, and the animations of the switch in flight */
+  let leaving: HTMLElement[] = [];
+  let running: Animation[] = [];
   const hold = { hover: false, focus: false, drag: false, off: false, hidden: document.hidden, busy: false, wait: true };
 
   const syncHold = () => {
@@ -332,7 +355,6 @@ function initShowcase(root: HTMLElement): void {
   };
 
   const setGhosts = () => {
-    const n = order.length;
     ghosts.forEach((g) => {
       const k = order.indexOf(g.dataset.ghost || '');
       g.style.setProperty('--slot', String((k - idx + n) % n));
@@ -346,7 +368,10 @@ function initShowcase(root: HTMLElement): void {
       t.tabIndex = on ? 0 : -1;
       t.classList.toggle('is-current', on);
     });
-    deck.setAttribute('aria-labelledby', tabs[idx].id);
+    const tab = tabs[idx];
+    deck.setAttribute('aria-labelledby', tab.id);
+    if (swName) swName.textContent = tab.querySelector('.hs-name')?.textContent || '';
+    if (swN) swN.textContent = tab.querySelector('.hs-num')?.textContent || String(idx + 1).padStart(2, '0');
   };
 
   /* restart the current tab's progress bar (a CSS animation) */
@@ -358,11 +383,19 @@ function initShowcase(root: HTMLElement): void {
     if (!stopped) fill.classList.add('is-run');
   };
 
+  let capGen = 0;
+  let capRunning: Animation[] = [];
+  const setCaption = (a: string, b: string) => {
+    if (capA) capA.textContent = a;
+    if (capB) capB.textContent = b;
+  };
   const flipCaption = (a: string, b: string) => {
     if (!capA || !capB) return;
+    const my = ++capGen;
+    capRunning.forEach((an) => an.cancel());
+    capRunning = [];
     if (isReduced() || !capBox?.animate) {
-      capA.textContent = a;
-      capB.textContent = b;
+      setCaption(a, b);
       return;
     }
     const out = capBox.animate(
@@ -370,49 +403,64 @@ function initShowcase(root: HTMLElement): void {
         { transform: 'none', opacity: 1 },
         { transform: 'translate3d(0,-40%,0) rotateX(80deg)', opacity: 0 },
       ],
-      { duration: 280, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'forwards' }
+      { duration: 240, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'forwards' }
     );
+    capRunning.push(out);
     out.finished
       .then(() => {
-        capA.textContent = a;
-        capB.textContent = b;
+        if (my !== capGen) return;
+        setCaption(a, b);
         const back = capBox.animate(
           [
             { transform: 'translate3d(0,40%,0) rotateX(-80deg)', opacity: 0 },
             { transform: 'none', opacity: 1 },
           ],
-          { duration: 620, easing: 'cubic-bezier(.16,1,.3,1)' }
+          { duration: 560, easing: 'cubic-bezier(.16,1,.3,1)' }
         );
+        capRunning.push(back);
         out.cancel();
-        return back.finished;
       })
       .catch(() => {
-        capA.textContent = a;
-        capB.textContent = b;
+        if (my === capGen) setCaption(a, b);
       });
   };
 
-  const go = (to: number, dir: 1 | -1) => {
+  /* the pose a card holds right now, mid-animation included */
+  const poseNow = (el: HTMLElement) => {
+    const cs = getComputedStyle(el);
+    const o = Number(cs.opacity);
+    return { transform: cs.transform || 'none', opacity: Number.isFinite(o) ? o : 1 };
+  };
+
+  const go = (to: number, dir: 1 | -1, fast: boolean) => {
     if (to === idx) return;
-    if (busy) {
-      queued = to;
-      return;
-    }
     const tpl = templates.get(order[to]);
     const next = tpl?.content.firstElementChild?.cloneNode(true) as HTMLElement | undefined;
     const nextFig = next?.querySelector<HTMLElement>('[data-compare]');
     if (!next || !nextFig) return;
 
+    const my = ++gen;
     busy = true;
     hold.busy = true;
     syncHold();
     tabs.forEach((t) => t.querySelector('.hs-fill')?.classList.remove('is-run'));
 
+    /* interrupt whatever is in flight: cards already leaving go at once; the
+       current card leaves from exactly where it is (even mid-entrance) */
     const old = card;
     const oldCtl = ctl;
+    const from = running.length ? poseNow(old) : { transform: 'none', opacity: 1 };
+    running.forEach((a) => a.cancel());
+    running = [];
+    leaving.forEach((el) => el.remove());
+    leaving = [];
+    oldCtl?.destroy();
+
     old.setAttribute('aria-hidden', 'true');
     old.inert = true;
+    old.classList.remove('is-entering');
     old.classList.add('is-leaving');
+    leaving.push(old);
 
     next.style.setProperty('--x', '0');
     next.classList.add('is-live', 'is-entering');
@@ -424,42 +472,45 @@ function initShowcase(root: HTMLElement): void {
     setGhosts();
     flipCaption(next.dataset.capA || '', next.dataset.capB || '');
 
+    const drop = (el: HTMLElement) => {
+      el.remove();
+      leaving = leaving.filter((l) => l !== el);
+    };
+
     const finish = () => {
-      old.remove();
-      oldCtl?.destroy();
+      if (my !== gen) return;
       next.classList.remove('is-entering');
+      running = [];
       busy = false;
       hold.busy = false;
       syncHold();
       restartFill();
-      if (queued !== null) {
-        const q = queued;
-        queued = null;
-        if (q !== idx) go(q, q > idx ? 1 : -1);
-      }
     };
 
     if (isReduced() || !next.animate) {
+      drop(old);
       ctl?.rest();
       finish();
       return;
     }
 
+    const outMs = fast ? 620 : 900;
+    const inMs = fast ? 720 : 1000;
     /* forward: the current card swings away toward the viewer and off to the
        right (never across the copy); back: it is tucked into the deck */
     const away = old.animate(
       dir > 0
         ? [
-            { transform: 'none', opacity: 1 },
-            { opacity: 1, offset: 0.5 },
+            { transform: from.transform, opacity: from.opacity },
+            { opacity: from.opacity, offset: 0.45 },
             { transform: 'translate3d(58%, 16%, 220px) rotateY(-56deg) rotateZ(5deg)', opacity: 0 },
           ]
         : [
-            { transform: 'none', opacity: 1 },
-            { opacity: 1, offset: 0.4 },
+            { transform: from.transform, opacity: from.opacity },
+            { opacity: from.opacity, offset: 0.35 },
             { transform: 'translate3d(6%, -12%, -260px) rotateX(8deg)', opacity: 0 },
           ],
-      { duration: 900, easing: 'cubic-bezier(.55,0,.2,1)', fill: 'forwards' }
+      { duration: outMs, easing: 'cubic-bezier(.55,0,.2,1)', fill: 'forwards' }
     );
     /* the next one comes forward off the deck (from the first ghost's slot) */
     const come = next.animate(
@@ -468,43 +519,62 @@ function initShowcase(root: HTMLElement): void {
         { opacity: 1, offset: 0.3 },
         { transform: 'none', opacity: 1 },
       ],
-      { duration: 1000, delay: 160, easing: 'cubic-bezier(.16,1,.3,1)', fill: 'backwards' }
+      { duration: inMs, delay: fast ? 60 : 160, easing: 'cubic-bezier(.16,1,.3,1)', fill: 'backwards' }
     );
-    away.finished.then(() => old.remove()).catch(() => old.remove());
+    running = [away, come];
+    away.finished.then(
+      () => drop(old),
+      () => undefined
+    );
     come.finished
-      .catch(() => undefined)
-      .then(() => (ctl ? ctl.sweep() : undefined))
+      .then(() => (my === gen && ctl ? ctl.sweep(fast) : undefined))
       .then(finish, finish);
   };
 
-  const pick = (k: number) => {
+  const pick = (k: number, dir?: 1 | -1) => {
     if (!stopped) {
       stopped = true;
       root.classList.add('is-stopped');
       tabs.forEach((t) => t.querySelector('.hs-fill')?.classList.remove('is-run'));
     }
-    go(k, k > idx ? 1 : -1);
+    go(k, dir ?? (k > idx ? 1 : -1), true);
   };
+
+  const step = (d: 1 | -1) => pick((idx + d + n) % n, d);
 
   tabs.forEach((t, k) => {
     t.addEventListener('click', () => pick(k));
-    t.addEventListener('keydown', (e) => {
-      const n = tabs.length;
-      let k2: number | null = null;
-      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') k2 = (k + 1) % n;
-      else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') k2 = (k - 1 + n) % n;
-      else if (e.key === 'Home') k2 = 0;
-      else if (e.key === 'End') k2 = n - 1;
-      if (k2 === null) return;
-      e.preventDefault();
-      tabs[k2].focus();
-      pick(k2);
-    });
     /* the dwell ends → the deck advances */
     t.querySelector('.hs-fill')?.addEventListener('animationend', () => {
-      if (stopped || k !== idx) return;
-      go((idx + 1) % order.length, 1);
+      if (stopped || k !== idx || busy) return;
+      go((idx + 1) % n, 1, false);
     });
+  });
+  steps.forEach((b) => b.addEventListener('click', () => step(Number(b.dataset.step) < 0 ? -1 : 1)));
+
+  /* keyboard on the switcher: ←/→ step (↑/↓ too on a tab), Home/End jump;
+     on a tab the focus follows the selection (roving tabindex) */
+  switcher?.addEventListener('keydown', (e) => {
+    const onTab = (e.target as HTMLElement | null)?.getAttribute?.('role') === 'tab';
+    let to: number | null = null;
+    let d: 1 | -1 = 1;
+    if (e.key === 'ArrowRight' || (onTab && e.key === 'ArrowDown')) {
+      to = (idx + 1) % n;
+      d = 1;
+    } else if (e.key === 'ArrowLeft' || (onTab && e.key === 'ArrowUp')) {
+      to = (idx - 1 + n) % n;
+      d = -1;
+    } else if (onTab && e.key === 'Home') {
+      to = 0;
+      d = -1;
+    } else if (onTab && e.key === 'End') {
+      to = n - 1;
+      d = 1;
+    }
+    if (to === null) return;
+    e.preventDefault();
+    pick(to, d);
+    if (onTab) tabs[idx].focus();
   });
 
   /* ---- holds -------------------------------------------------------------- */
@@ -521,16 +591,12 @@ function initShowcase(root: HTMLElement): void {
     syncHold();
   });
   /* the first plate's rebuild must finish before the clock starts */
-  root.addEventListener(
-    'plate:armed',
-    () => {
-      if (!hold.wait) return;
-      hold.wait = false;
-      syncHold();
-      restartFill();
-    },
-    { once: false }
-  );
+  root.addEventListener('plate:armed', () => {
+    if (!hold.wait) return;
+    hold.wait = false;
+    syncHold();
+    restartFill();
+  });
   if ('IntersectionObserver' in window) {
     new IntersectionObserver(
       (entries) => {

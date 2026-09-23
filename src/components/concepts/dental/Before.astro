@@ -1,12 +1,17 @@
 ---
 /**
  * Concept 02 BEFORE — Pellwood Dental Studio (fictional) on a plausible
- * 2015 dental template. Dated, not a parody: grey top bar with the phone
- * number in 7px type, teal logo with a clip-art tooth, a stock-photo slider
- * of a smiling family under a teal "Welcome to…" box, a row of three
- * identical tooth-icon boxes, "Insurance forms (PDF)" links, grey footer.
- * Every text pair passes AA on its own fill. Findings A1–A4: data file.
- * Sizes use --u (one reference px of the 760×475 drawing).
+ * 2010-era "Web 2.0" dental template (© 2016): a rounded white column on a lavender
+ * bubble background, the phone number in 6px type in the grey top bar, a
+ * mint header with a smiling clip-art tooth mascot and a Comic Sans speech
+ * bubble, glossy aqua pill buttons with a purple active pill, a slider whose
+ * stock family photo is stretched into a ridge frame, a yellow banner,
+ * three boxes with clashing header bars, and a cluttered right sidebar
+ * (hours table, forms as PDF downloads, Facebook badge, "Kids Corner!", an
+ * "under construction" gallery). Dated and poor, not a parody.
+ * Every text pair passes AA on its own opaque fill. Findings A1–A4 and their
+ * anchors: src/data/concepts/dental.ts. Sizes use --u (one reference px of
+ * the 760 × 475 drawing).
  */
 import { dental, dentalArt } from '../../../data/concepts/dental';
 
@@ -17,461 +22,882 @@ const { class: cls = '' } = Astro.props;
 
 const B = dental.before;
 const X = dentalArt.before;
+
+/* drawing-only strings (period copy, fictional business) */
+const T = {
+  bubble: ['New Patients', 'Welcome!'],
+  pager: ['1', '2', '3', '4'],
+  intro:
+    'Pellwood Dental offers complete dental care for the whole family in a friendly, comfortable environment. New patients are always welcome! Call the office today to schedule an appointment.',
+  banner: '★ Most insurance plans accepted ★ Evening appointments available ★ Emergencies seen same day ★',
+  hoursHead: 'Office Hours',
+  hours: [
+    ['Mon – Thu', '8:00 am – 5:00 pm'],
+    ['Friday', '8:00 am – 2:00 pm'],
+    ['Saturday', 'By appointment'],
+    ['Sunday', 'Closed'],
+  ],
+  formsHead: 'New Patients',
+  formsText: 'Save time! Print and complete these forms before your visit:',
+  facebook: 'Find Pellwood Dental on Facebook',
+  kidsHead: 'Kids Corner!',
+  kidsText: 'Coloring pages & fun tooth facts!',
+  galleryHead: 'Smile Gallery',
+  gallery: 'Coming Soon!',
+  tipHead: 'Tip of the Month',
+  tip: 'Replace your toothbrush every three months, or after a cold!',
+  rights: 'Copyright © 2016. All Rights Reserved.',
+};
+
+const toothPath =
+  'M13 4.2C10.6 2.2 7.6 1.6 5.2 2.8 2.2 4.3 1.4 8.2 2.6 12c.9 2.8 1.6 5.2 2 8.4.4 3 .9 5.6 2.6 5.6 2 0 2.2-3 2.8-6 .5-2.4 1.4-3.6 3-3.6s2.5 1.2 3 3.6c.6 3 .8 6 2.8 6 1.7 0 2.2-2.6 2.6-5.6.4-3.2 1.1-5.6 2-8.4 1.2-3.8.4-7.7-2.6-9.2C18.4 1.6 15.4 2.2 13 4.2Z';
+/* a four-point clip-art sparkle centred on (x, y) */
+const sparkle = (x: number, y: number, r: number) => {
+  const a = +(r * 0.28).toFixed(2);
+  const b = +(r * 0.72).toFixed(2);
+  return `M${x} ${y - r}l${a} ${b} ${b} ${a}-${b} ${a}L${x} ${y + r}l-${a}-${b}-${b}-${a} ${b}-${a}Z`;
+};
 ---
 
 <div class:list={['b-site', cls]} aria-hidden="true">
-  <div class="b-top">
-    <span class="b-hours">{B.topBar}</span>
-    <span class="b-phone">{X.phone}</span>
-    <span class="b-social">{X.social.map((s) => <span class="b-sq">{s}</span>)}</span>
-  </div>
+  <div class="b-page">
+    <!-- top bar: hours, email, the phone number in the smallest type -->
+    <div class="b-top">
+      <span class="b-hours">{B.topBar}</span>
+      <span class="b-phone">{X.phone}</span>
+      <span class="b-social"><i class="b-sq b-sq--f">f</i><i class="b-sq b-sq--t">t</i><span class="b-sq b-sq--g">{X.social[2]}</span></span>
+    </div>
 
-  <div class="b-head">
-    <span class="b-logo">
-      <svg class="b-tooth" viewBox="0 0 26 28" aria-hidden="true">
-        <path
-          d="M13 4.2C10.6 2.2 7.6 1.6 5.2 2.8 2.2 4.3 1.4 8.2 2.6 12c.9 2.8 1.6 5.2 2 8.4.4 3 .9 5.6 2.6 5.6 2 0 2.2-3 2.8-6 .5-2.4 1.4-3.6 3-3.6s2.5 1.2 3 3.6c.6 3 .8 6 2.8 6 1.7 0 2.2-2.6 2.6-5.6.4-3.2 1.1-5.6 2-8.4 1.2-3.8.4-7.7-2.6-9.2C18.4 1.6 15.4 2.2 13 4.2Z"
-          fill="#13707A"></path>
-        <path d="M6.6 7.4c.8-1.4 2.2-2 3.6-1.8" fill="none" stroke="#FFFFFF" stroke-width="1.2" stroke-linecap="round"></path>
+    <!-- mint header: tooth mascot, Trebuchet logo, Comic Sans bubble -->
+    <div class="b-head">
+      <svg class="b-mascot" viewBox="0 0 46 46" aria-hidden="true">
+        <path transform="translate(9 7) scale(1.08)" d={toothPath} fill="#FFFFFF" stroke="#0A5C63" stroke-width="1.4"></path>
+        <ellipse cx="19" cy="18" rx="1.8" ry="2.4" fill="#222222"></ellipse>
+        <ellipse cx="27" cy="18" rx="1.8" ry="2.4" fill="#222222"></ellipse>
+        <circle cx="19.6" cy="17.2" r="0.6" fill="#FFFFFF"></circle>
+        <circle cx="27.6" cy="17.2" r="0.6" fill="#FFFFFF"></circle>
+        <circle cx="15.5" cy="22" r="1.8" fill="#F7A1B5"></circle>
+        <circle cx="30.5" cy="22" r="1.8" fill="#F7A1B5"></circle>
+        <path d="M18.5 22.5q4.5 5 9 0" fill="none" stroke="#222222" stroke-width="1.4" stroke-linecap="round"></path>
+        <path d={sparkle(40, 8, 5)} fill="#FFD200" stroke="#D99A00" stroke-width="0.6"></path>
+        <path d={sparkle(6, 34, 3.5)} fill="#FFD200" stroke="#D99A00" stroke-width="0.6"></path>
       </svg>
-      <span class="b-logotype">
-        <span class="b-logo-name">{B.logo}</span>
-        <span class="b-tagline">{X.tagline}</span>
-      </span>
-    </span>
-    <span class="b-nav">
-      {B.nav.map((l, i) => <span class:list={['b-navl', i === 0 && 'is-on']}>{l}</span>)}
-    </span>
-  </div>
+      <span class="b-logo">{B.logo}</span>
+      <span class="b-tagline">{X.tagline}</span>
+      <span class="b-bubble"><span class="b-bubble-t">{T.bubble[0]}<br />{T.bubble[1]}</span></span>
+      <svg class="b-spark" viewBox="0 0 30 30" aria-hidden="true">
+        <path d={sparkle(10, 10, 8)} fill="#FFD200" stroke="#D99A00" stroke-width="0.8"></path>
+        <path d={sparkle(23, 22, 5)} fill="#FFD200" stroke="#D99A00" stroke-width="0.8"></path>
+      </svg>
+    </div>
 
-  <div class="b-slide">
-    <svg class="b-photo" viewBox="0 0 760 228" preserveAspectRatio="none" aria-hidden="true">
-      <rect x="392" y="0" width="368" height="228" fill="#E6F0F0" fill-opacity=".7"></rect>
-      <rect x="610" y="18" width="120" height="120" fill="#F4F8F8"></rect>
-      <path d="M670 18V138M610 78H730" stroke="#DCE8E8" stroke-width="4"></path>
-      <circle cx="430" cy="40" r="22" fill="#FFFFFF" fill-opacity=".45"></circle>
-      <circle cx="470" cy="70" r="12" fill="#FFFFFF" fill-opacity=".4"></circle>
-      <circle cx="728" cy="178" r="16" fill="#FFFFFF" fill-opacity=".35"></circle>
-      <rect x="392" y="176" width="368" height="52" fill="#B8CDD0"></rect>
-      <!-- the family: back row, then the children in front -->
-      <g>
-        <path d="M586 228v-74c0-20 22-34 54-34s54 14 54 34v74Z" fill="#8FB0B8"></path>
-        <circle cx="640" cy="92" r="24" fill="#D8AE90"></circle>
-        <path d="M616 88c0-17 11-26 24-26s24 9 24 26c-6-9-14-12-24-12s-18 3-24 12Z" fill="#4A3A2E"></path>
-        <circle cx="632" cy="91" r="1.6" fill="#6B5040"></circle><circle cx="648" cy="91" r="1.6" fill="#6B5040"></circle>
-        <path d="M630 99q10 10 20 0q-10 4-20 0Z" fill="#F6F1EA"></path>
-        <path d="M498 228v-68c0-18 20-30 48-30s48 12 48 30v68Z" fill="#F1F4F3"></path>
-        <circle cx="546" cy="102" r="22" fill="#E6C2A6"></circle>
-        <path d="M522 104c-2-20 10-30 24-30s27 10 24 30c-1 14-4 22-4 22l-2-24c-5-6-11-9-18-9s-14 3-18 9l-2 24s-3-8-4-22Z" fill="#7A5A40"></path>
-        <circle cx="539" cy="101" r="1.5" fill="#6B5040"></circle><circle cx="553" cy="101" r="1.5" fill="#6B5040"></circle>
-        <path d="M537 109q9 9 18 0q-9 3.6-18 0Z" fill="#F6F1EA"></path>
-        <path d="M562 228v-44c0-13 13-22 30-22s30 9 30 22v44Z" fill="#E7C7A0"></path>
-        <circle cx="592" cy="144" r="17" fill="#EAC9AE"></circle>
-        <path d="M575 142c0-12 8-19 17-19s17 7 17 19c-4-6-10-8-17-8s-13 2-17 8Z" fill="#A07A55"></path>
-        <circle cx="586" cy="143" r="1.3" fill="#6B5040"></circle><circle cx="598" cy="143" r="1.3" fill="#6B5040"></circle>
-        <path d="M585.5 149q6.5 7 13 0q-6.5 2.6-13 0Z" fill="#F6F1EA"></path>
-        <path d="M460 228v-40c0-12 12-20 28-20s28 8 28 20v40Z" fill="#B7CBB0"></path>
-        <circle cx="488" cy="150" r="16" fill="#D4A98A"></circle>
-        <path d="M472 150c-1-12 6-19 16-19s17 7 16 19c-3-5-9-8-16-8s-13 3-16 8Z" fill="#3A2C24"></path>
-        <circle cx="482" cy="150" r="1.3" fill="#6B5040"></circle><circle cx="494" cy="150" r="1.3" fill="#6B5040"></circle>
-        <path d="M481.5 156q6.5 6.5 13 0q-6.5 2.6-13 0Z" fill="#F6F1EA"></path>
-      </g>
-      <rect width="760" height="228" fill="#13707A" fill-opacity=".1"></rect>
-    </svg>
-    <i class="b-shade"></i>
-    <span class="b-arrow b-arrow--l">
-      <svg viewBox="0 0 10 16" aria-hidden="true"><path d="M7 2 2 8l5 6" fill="none" stroke="#FFFFFF" stroke-width="1.8"></path></svg>
-    </span>
-    <span class="b-arrow b-arrow--r">
-      <svg viewBox="0 0 10 16" aria-hidden="true"><path d="m3 2 5 6-5 6" fill="none" stroke="#FFFFFF" stroke-width="1.8"></path></svg>
-    </span>
-    <div class="b-caption">
-      <span class="b-welcome">{B.welcome}</span>
+    <!-- glossy pills -->
+    <div class="b-nav">
+      {B.nav.map((l, i) => <span class:list={['b-pill', i === 0 && 'is-on']}>{l}</span>)}
+    </div>
+
+    <!-- main column -->
+    <div class="b-slide">
+      <span class="b-welcome">{B.welcome}!</span>
       <span class="b-sub">{B.heroSub}</span>
       <span class="b-more">{B.heroButton}</span>
+      <span class="b-pager">{T.pager.map((n, i) => <i class:list={[i === 0 && 'is-on']}>{n}</i>)}</span>
+      <span class="b-frame">
+        <svg class="b-photo" viewBox="448 30 290 198" preserveAspectRatio="none" aria-hidden="true">
+          <rect x="392" y="0" width="368" height="228" fill="#CFE3E6"></rect>
+          <rect x="610" y="18" width="120" height="120" fill="#F4F8F8"></rect>
+          <path d="M670 18V138M610 78H730" stroke="#DCE8E8" stroke-width="4"></path>
+          <circle cx="470" cy="70" r="12" fill="#FFFFFF" fill-opacity=".4"></circle>
+          <circle cx="728" cy="178" r="16" fill="#FFFFFF" fill-opacity=".35"></circle>
+          <rect x="392" y="176" width="368" height="52" fill="#B8CDD0"></rect>
+          <path d="M586 228v-74c0-20 22-34 54-34s54 14 54 34v74Z" fill="#8FB0B8"></path>
+          <circle cx="640" cy="92" r="24" fill="#D8AE90"></circle>
+          <path d="M616 88c0-17 11-26 24-26s24 9 24 26c-6-9-14-12-24-12s-18 3-24 12Z" fill="#4A3A2E"></path>
+          <circle cx="632" cy="91" r="1.6" fill="#6B5040"></circle><circle cx="648" cy="91" r="1.6" fill="#6B5040"></circle>
+          <path d="M630 99q10 10 20 0q-10 4-20 0Z" fill="#F6F1EA"></path>
+          <path d="M498 228v-68c0-18 20-30 48-30s48 12 48 30v68Z" fill="#F1F4F3"></path>
+          <circle cx="546" cy="102" r="22" fill="#E6C2A6"></circle>
+          <path d="M522 104c-2-20 10-30 24-30s27 10 24 30c-1 14-4 22-4 22l-2-24c-5-6-11-9-18-9s-14 3-18 9l-2 24s-3-8-4-22Z" fill="#7A5A40"></path>
+          <circle cx="539" cy="101" r="1.5" fill="#6B5040"></circle><circle cx="553" cy="101" r="1.5" fill="#6B5040"></circle>
+          <path d="M537 109q9 9 18 0q-9 3.6-18 0Z" fill="#F6F1EA"></path>
+          <path d="M562 228v-44c0-13 13-22 30-22s30 9 30 22v44Z" fill="#E7C7A0"></path>
+          <circle cx="592" cy="144" r="17" fill="#EAC9AE"></circle>
+          <path d="M575 142c0-12 8-19 17-19s17 7 17 19c-4-6-10-8-17-8s-13 2-17 8Z" fill="#A07A55"></path>
+          <circle cx="586" cy="143" r="1.3" fill="#6B5040"></circle><circle cx="598" cy="143" r="1.3" fill="#6B5040"></circle>
+          <path d="M585.5 149q6.5 7 13 0q-6.5 2.6-13 0Z" fill="#F6F1EA"></path>
+          <path d="M460 228v-40c0-12 12-20 28-20s28 8 28 20v40Z" fill="#B7CBB0"></path>
+          <circle cx="488" cy="150" r="16" fill="#D4A98A"></circle>
+          <path d="M472 150c-1-12 6-19 16-19s17 7 16 19c-3-5-9-8-16-8s-13 3-16 8Z" fill="#3A2C24"></path>
+          <circle cx="482" cy="150" r="1.3" fill="#6B5040"></circle><circle cx="494" cy="150" r="1.3" fill="#6B5040"></circle>
+          <path d="M481.5 156q6.5 6.5 13 0q-6.5 2.6-13 0Z" fill="#F6F1EA"></path>
+        </svg>
+      </span>
+      <span class="b-arr b-arr--l"><svg viewBox="0 0 10 16" aria-hidden="true"><path d="M7 2 2 8l5 6" fill="none" stroke="#FFFFFF" stroke-width="2"></path></svg></span>
+      <span class="b-arr b-arr--r"><svg viewBox="0 0 10 16" aria-hidden="true"><path d="m3 2 5 6-5 6" fill="none" stroke="#FFFFFF" stroke-width="2"></path></svg></span>
     </div>
-    <span class="b-dots"><i class="is-on"></i><i></i><i></i><i></i></span>
-  </div>
 
-  <div class="b-icons">
-    {
-      B.boxes.map((t) => (
-        <div class="b-box">
-          <span class="b-icon">
-            <svg viewBox="0 0 26 28" aria-hidden="true">
-              <path
-                d="M13 4.2C10.6 2.2 7.6 1.6 5.2 2.8 2.2 4.3 1.4 8.2 2.6 12c.9 2.8 1.6 5.2 2 8.4.4 3 .9 5.6 2.6 5.6 2 0 2.2-3 2.8-6 .5-2.4 1.4-3.6 3-3.6s2.5 1.2 3 3.6c.6 3 .8 6 2.8 6 1.7 0 2.2-2.6 2.6-5.6.4-3.2 1.1-5.6 2-8.4 1.2-3.8.4-7.7-2.6-9.2C18.4 1.6 15.4 2.2 13 4.2Z"
-                fill="#FFFFFF"
-              />
-            </svg>
-          </span>
-          <span class="b-copy">
-            <span class="b-title">{t}</span>
-            <span class="b-text">{B.boxText}</span>
-            <span class="b-link">{B.boxLink}</span>
-          </span>
-        </div>
-      ))
-    }
-  </div>
+    <span class="b-intro">{T.intro}</span>
+    <span class="b-banner">{T.banner}</span>
 
-  <div class="b-forms">
-    <span class="b-forms-lead">{X.formsLead}</span>
-    <span class="b-pdf"><i>PDF</i></span>
-    <span class="b-flink">{X.forms}</span>
-    <span class="b-sep">|</span>
-    <span class="b-flink">{X.forms2}</span>
-    <span class="b-ins">{X.insurance}</span>
-  </div>
+    <div class="b-boxes">
+      {
+        B.boxes.map((t, i) => (
+          <div class:list={['b-box', `b-box--${i + 1}`]}>
+            <span class="b-box-h">{t}</span>
+            {i === 0 && (
+              <svg class="b-clip" viewBox="0 0 32 32" aria-hidden="true">
+                <g transform="rotate(-40 16 16)">
+                  <rect x="1" y="15" width="22" height="4.5" rx="2.2" fill="#1A8F99" stroke="#222222" stroke-width="1.2" />
+                  <rect x="19" y="9" width="11" height="6" fill="#FFFFFF" stroke="#222222" stroke-width="1.2" />
+                  <path d="M21.5 9v6M24.5 9v6M27.5 9v6" stroke="#8FD3DA" stroke-width="1.2" />
+                  <path d="M19 6.5c3-2.5 8-2.5 11 0" fill="none" stroke="#2B7BD6" stroke-width="3" stroke-linecap="round" />
+                  <path d="M19.5 6.5c3-1.6 7-1.6 10 0" fill="none" stroke="#FFFFFF" stroke-width="1" stroke-linecap="round" />
+                </g>
+              </svg>
+            )}
+            {i === 1 && (
+              <svg class="b-clip" viewBox="0 0 32 32" aria-hidden="true">
+                <path transform="translate(4 3) scale(0.92)" d={toothPath} fill="#FFFFFF" stroke="#222222" stroke-width="1.4" />
+                <path d={sparkle(26, 7, 5)} fill="#FFD200" stroke="#D99A00" stroke-width="0.6" />
+                <path d={sparkle(6, 25, 3.5)} fill="#FFD200" stroke="#D99A00" stroke-width="0.6" />
+                <path d="M8.5 8.5c1-1.5 2.5-2 4-1.8" fill="none" stroke="#9ADDE3" stroke-width="1.4" stroke-linecap="round" />
+              </svg>
+            )}
+            {i === 2 && (
+              <svg class="b-clip" viewBox="0 0 32 32" aria-hidden="true">
+                <path d="M9 15c0-6 3-9 7-9s7 3 7 9Z" fill="#FFFFFF" stroke="#222222" stroke-width="1.3" />
+                <path d="M12 15h8l-1.2 13h-5.6Z" fill="#B0B8C0" stroke="#222222" stroke-width="1.3" />
+                <path d="M12.3 18.5h7.4M12.6 21.5h6.8M12.9 24.5h6.2" stroke="#5F6A73" stroke-width="1" />
+              </svg>
+            )}
+            <span class="b-box-t">{B.boxText}</span>
+            <span class="b-box-l">{B.boxLink}</span>
+          </div>
+        ))
+      }
+    </div>
 
-  <div class="b-foot">{B.footer}</div>
+    <!-- cluttered right sidebar -->
+    <div class="b-side">
+      <div class="b-card">
+        <span class="b-card-h b-card-h--p">{T.hoursHead}</span>
+        <span class="b-table">
+          {
+            T.hours.map(([d, h]) => (
+              <span class="b-row">
+                <span>{d}</span>
+                <span>{h}</span>
+              </span>
+            ))
+          }
+        </span>
+      </div>
+      <div class="b-card">
+        <span class="b-card-h b-card-h--t">{T.formsHead}</span>
+        <span class="b-card-p">{T.formsText}</span>
+        <span class="b-pdfl"><span class="b-pdf"><i>PDF</i></span><u>{X.forms}</u></span>
+        <span class="b-pdfl"><span class="b-pdf"><i>PDF</i></span><u>{X.forms2}</u></span>
+      </div>
+      <span class="b-fb"><i>f</i><span>{T.facebook}</span></span>
+      <div class="b-card b-kids">
+        <svg class="b-kids-art" viewBox="0 0 46 46" aria-hidden="true">
+          <path transform="translate(9 7) scale(1.08)" d={toothPath} fill="#FFFFFF" stroke="#6B2C91" stroke-width="1.4"></path>
+          <ellipse cx="19" cy="18" rx="1.8" ry="2.4" fill="#222222"></ellipse>
+          <ellipse cx="27" cy="18" rx="1.8" ry="2.4" fill="#222222"></ellipse>
+          <path d="M18.5 22.5q4.5 5 9 0" fill="none" stroke="#222222" stroke-width="1.4" stroke-linecap="round"></path>
+        </svg>
+        <span class="b-kids-h">{T.kidsHead}</span>
+        <span class="b-kids-t">{T.kidsText}</span>
+      </div>
+      <div class="b-card b-soon">
+        <svg class="b-cone" viewBox="0 0 48 30" aria-hidden="true">
+          <path d="M11 17v11M37 17v11" stroke="#222222" stroke-width="2.4"></path>
+          <path d="M3 6h42v11H3z" fill="#FFD200" stroke="#222222" stroke-width="1.4"></path>
+          <path d="M8 6 3.5 17H9l4.5-11zM19 6l-4.5 11H20l4.5-11zM30 6l-4.5 11H31l4.5-11zM41 6l-4.5 11H42l3-7.4V6z" fill="#222222"></path>
+        </svg>
+        <span class="b-soon-t"><b>{T.galleryHead}</b>{T.gallery}</span>
+      </div>
+      <div class="b-tip">
+        <span class="b-tip-h">{T.tipHead}</span>
+        <span class="b-tip-t">{T.tip}</span>
+      </div>
+    </div>
+
+    <div class="b-foot">
+      <span>{B.footer}</span>
+      <span class="b-foot-c">{T.rights}</span>
+    </div>
+  </div>
 </div>
 
 <style>
   .b-site {
     --u: calc(100cqi / 760);
-    --b-teal: #13707a;
-    --b-grey: #3e4a4d;
-    --b-band: #eef2f2;
-    --b-text: #444444;
+    --b-teal: #0a5c63;
+    --b-purple: #6b2c91;
+    --b-trebuchet: 'Trebuchet MS', 'Lucida Grande', 'Lucida Sans Unicode', sans-serif;
+    --b-times: 'Times New Roman', Times, 'Liberation Serif', serif;
+    --b-verdana: Verdana, Geneva, Tahoma, sans-serif;
+    --b-comic: 'Comic Sans MS', 'Comic Neue', 'Chalkboard SE', 'Comic Sans', cursive;
     position: absolute;
     inset: 0;
     overflow: hidden;
-    background-color: #ffffff;
-    color: var(--b-text);
-    font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
+    /* lavender page with soap bubbles */
+    background-color: #b9a6d9;
+    background-image:
+      radial-gradient(circle, rgb(255 255 255 / 0.4) 0 calc(5 * var(--u)), rgb(255 255 255 / 0) calc(5.5 * var(--u))),
+      radial-gradient(circle, rgb(255 255 255 / 0.25) 0 calc(9 * var(--u)), rgb(255 255 255 / 0) calc(9.5 * var(--u)));
+    background-position:
+      0 0,
+      calc(24 * var(--u)) calc(30 * var(--u));
+    background-size:
+      calc(38 * var(--u)) calc(38 * var(--u)),
+      calc(52 * var(--u)) calc(60 * var(--u));
+    color: #333333;
+    font-family: Arial, Helvetica, sans-serif;
     font-stretch: 100%;
     font-weight: 400;
-    line-height: 1.25;
+    line-height: 1.2;
     letter-spacing: 0;
     text-transform: none;
   }
 
-  /* ---- top bar: hours, email, the 7px phone number, social squares ---- */
+  .b-page {
+    position: absolute;
+    top: calc(6 * var(--u));
+    bottom: 0;
+    left: calc(40 * var(--u));
+    width: calc(680 * var(--u));
+    border: 1px solid #7d62a8;
+    border-bottom: 0;
+    border-radius: calc(10 * var(--u)) calc(10 * var(--u)) 0 0;
+    background-color: #ffffff;
+  }
+
+  /* ---------- top bar ---------- */
   .b-top {
     position: absolute;
     inset: 0 0 auto;
-    height: calc(18 * var(--u));
+    height: calc(15 * var(--u));
     display: flex;
     align-items: center;
-    padding-inline: calc(40 * var(--u));
-    background-color: var(--b-grey);
+    gap: calc(8 * var(--u));
+    padding-inline: calc(12 * var(--u));
+    border-radius: calc(10 * var(--u)) calc(10 * var(--u)) 0 0;
+    background-color: #595959;
     color: #ffffff;
-    font-size: calc(7 * var(--u));
+    font-family: var(--b-verdana);
+    font-size: calc(6.5 * var(--u));
     white-space: pre;
   }
 
   .b-phone {
     margin-left: auto;
-    margin-right: calc(10 * var(--u));
-    color: #d5ddde;
+    color: #e0e0e0;
+    font-size: calc(6 * var(--u));
   }
 
   .b-social {
     display: flex;
-    gap: calc(3 * var(--u));
+    gap: calc(2 * var(--u));
   }
 
   .b-sq {
     display: grid;
     place-items: center;
-    width: calc(11 * var(--u));
-    height: calc(11 * var(--u));
-    background-color: var(--b-teal);
+    min-width: calc(10 * var(--u));
+    height: calc(10 * var(--u));
+    padding-inline: calc(1 * var(--u));
+    border-radius: calc(2 * var(--u));
+    background-color: #3b5998;
     color: #ffffff;
     font-size: calc(6.5 * var(--u));
+    font-style: normal;
     font-weight: 700;
   }
 
-  /* ---- header: clip-art tooth, teal logotype, boxed nav ---- */
+  .b-sq--t {
+    background-color: #1b6fa0;
+  }
+
+  .b-sq--g {
+    background-color: #c23321;
+  }
+
+  /* ---------- header ---------- */
   .b-head {
     position: absolute;
-    top: calc(18 * var(--u));
+    top: calc(15 * var(--u));
     left: 0;
     right: 0;
-    height: calc(54 * var(--u));
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding-inline: calc(40 * var(--u));
-    border-bottom: calc(3 * var(--u)) solid var(--b-teal);
-    background-color: #ffffff;
+    height: calc(60 * var(--u));
+    background-color: #d3f5ea;
+    background-image: linear-gradient(180deg, #e9fbf5 0%, #bdeedd 100%);
+    border-bottom: calc(2 * var(--u)) solid #8fd3c0;
+  }
+
+  .b-mascot {
+    position: absolute;
+    left: calc(12 * var(--u));
+    top: calc(5 * var(--u));
+    width: calc(50 * var(--u));
+    height: calc(50 * var(--u));
   }
 
   .b-logo {
-    display: flex;
-    align-items: center;
-    gap: calc(8 * var(--u));
-  }
-
-  .b-tooth {
-    width: calc(24 * var(--u));
-    height: calc(26 * var(--u));
-  }
-
-  .b-logotype {
-    display: flex;
-    flex-direction: column;
-    gap: calc(2 * var(--u));
-  }
-
-  .b-logo-name {
+    position: absolute;
+    left: calc(66 * var(--u));
+    top: calc(10 * var(--u));
     color: var(--b-teal);
-    font-size: calc(18 * var(--u));
+    font-family: var(--b-trebuchet);
+    font-size: calc(26 * var(--u));
     font-weight: 700;
-    letter-spacing: -0.01em;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    text-shadow:
+      calc(1.5 * var(--u)) calc(1.5 * var(--u)) 0 #ffffff,
+      calc(2.5 * var(--u)) calc(2.5 * var(--u)) 0 #9fd9cc;
+    white-space: nowrap;
   }
 
   .b-tagline {
-    color: #666666;
-    font-size: calc(7.5 * var(--u));
+    position: absolute;
+    left: calc(70 * var(--u));
+    top: calc(40 * var(--u));
+    color: var(--b-purple);
+    font-family: var(--b-comic);
+    font-size: calc(9.5 * var(--u));
+    white-space: nowrap;
   }
 
+  .b-bubble {
+    position: absolute;
+    right: calc(58 * var(--u));
+    top: calc(9 * var(--u));
+    padding: calc(5 * var(--u)) calc(9 * var(--u));
+    border: calc(1.5 * var(--u)) solid var(--b-purple);
+    border-radius: 50%;
+    background-color: #ffffff;
+    transform: rotate(4deg);
+  }
+
+  /* the bubble's tail */
+  .b-bubble::after {
+    content: '';
+    position: absolute;
+    left: calc(10 * var(--u));
+    bottom: calc(-7 * var(--u));
+    width: calc(10 * var(--u));
+    height: calc(10 * var(--u));
+    border-right: calc(1.5 * var(--u)) solid var(--b-purple);
+    border-bottom: calc(1.5 * var(--u)) solid var(--b-purple);
+    background-color: #ffffff;
+    transform: skewX(30deg) rotate(20deg);
+  }
+
+  .b-bubble-t {
+    position: relative;
+    z-index: 1;
+    display: block;
+    background-color: #ffffff;
+    color: #c2185b;
+    font-family: var(--b-comic);
+    font-size: calc(9 * var(--u));
+    font-weight: 700;
+    line-height: 1.1;
+    text-align: center;
+  }
+
+  .b-spark {
+    position: absolute;
+    right: calc(18 * var(--u));
+    top: calc(14 * var(--u));
+    width: calc(30 * var(--u));
+    height: calc(30 * var(--u));
+  }
+
+  /* ---------- glossy pills ---------- */
   .b-nav {
+    position: absolute;
+    top: calc(77 * var(--u));
+    left: calc(8 * var(--u));
+    right: calc(8 * var(--u));
+    height: calc(20 * var(--u));
+    display: flex;
+    gap: calc(3 * var(--u));
+  }
+
+  .b-pill {
     display: flex;
     align-items: center;
-    gap: calc(4 * var(--u));
-  }
-
-  .b-navl {
-    padding: calc(6 * var(--u)) calc(8 * var(--u));
-    color: var(--b-text);
+    padding-inline: calc(12 * var(--u));
+    border: 1px solid #07474d;
+    border-radius: calc(10 * var(--u));
+    background-color: #0e7c86;
+    background-image: linear-gradient(180deg, #2aa6b0 0%, #0e7c86 48%, #0a6870 52%, #0a5c63 100%);
+    color: #ffffff;
+    font-family: var(--b-trebuchet);
     font-size: calc(8 * var(--u));
     font-weight: 700;
     text-transform: uppercase;
+    text-shadow: 0 calc(1 * var(--u)) 0 #06393d;
   }
 
-  .b-navl.is-on {
-    background-color: var(--b-teal);
-    color: #ffffff;
+  .b-pill.is-on {
+    border-color: #4a1f66;
+    background-color: #7b3fa0;
+    background-image: linear-gradient(180deg, #a56bc9 0%, #7b3fa0 48%, #6a2f8c 52%, #5a2578 100%);
+    text-shadow: 0 calc(1 * var(--u)) 0 #3a1650;
   }
 
-  /* ---- the stock-photo slider ---- */
+  /* ---------- slider ---------- */
   .b-slide {
     position: absolute;
-    top: calc(72 * var(--u));
-    left: 0;
-    right: 0;
-    height: calc(228 * var(--u));
-    overflow: hidden;
-    background-color: #d3e3e5;
-    background-image: radial-gradient(ellipse 60% 90% at 84% 28%, #f7fafa 0%, #e2eded 45%, #cfe0e2 100%);
-  }
-
-  /* a stock photo, seen soft: the whole picture slightly out of focus */
-  .b-photo {
-    position: absolute;
-    inset: calc(-4 * var(--u));
-    display: block;
-    width: calc(100% + 8 * var(--u));
-    height: calc(100% + 8 * var(--u));
-    filter: blur(calc(1.5 * var(--u))) saturate(0.88);
-  }
-
-  /* window light from the right, a soft teal shade on the left */
-  .b-shade {
-    position: absolute;
-    inset: 0;
-    background-image: linear-gradient(90deg, rgb(19 112 122 / 0.22), rgb(19 112 122 / 0) 58%);
-  }
-
-  .b-arrow {
-    position: absolute;
     top: calc(101 * var(--u));
-    display: grid;
-    place-items: center;
-    width: calc(26 * var(--u));
-    height: calc(26 * var(--u));
-    border-radius: 50%;
-    background-color: #2b3538;
-  }
-
-  .b-arrow svg {
-    width: calc(7 * var(--u));
-    height: calc(11 * var(--u));
-  }
-
-  .b-arrow--l {
-    left: calc(12 * var(--u));
-  }
-
-  .b-arrow--r {
-    right: calc(14 * var(--u));
-  }
-
-  .b-caption {
-    position: absolute;
-    left: calc(56 * var(--u));
-    top: calc(44 * var(--u));
-    width: calc(300 * var(--u));
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: calc(8 * var(--u));
-    padding: calc(18 * var(--u)) calc(18 * var(--u)) calc(20 * var(--u));
-    background-color: var(--b-teal);
-    color: #ffffff;
+    left: calc(8 * var(--u));
+    width: calc(456 * var(--u));
+    height: calc(138 * var(--u));
+    overflow: hidden;
+    border: 1px solid #7fc7cc;
+    border-radius: calc(8 * var(--u));
+    background-color: #d8f3f5;
   }
 
   .b-welcome {
-    font-size: calc(19 * var(--u));
+    position: absolute;
+    left: calc(22 * var(--u));
+    top: calc(18 * var(--u));
+    width: calc(190 * var(--u));
+    color: var(--b-teal);
+    font-family: var(--b-trebuchet);
+    font-size: calc(17 * var(--u));
     font-weight: 700;
-    line-height: 1.15;
-    letter-spacing: -0.01em;
+    line-height: 1.1;
   }
 
   .b-sub {
-    font-size: calc(10 * var(--u));
+    position: absolute;
+    left: calc(22 * var(--u));
+    top: calc(62 * var(--u));
+    color: var(--b-purple);
+    font-family: Georgia, var(--b-times);
+    font-size: calc(9.5 * var(--u));
+    font-style: italic;
   }
 
   .b-more {
-    margin-top: calc(6 * var(--u));
-    padding: calc(7 * var(--u)) calc(14 * var(--u));
-    background-color: #ffffff;
-    color: var(--b-teal);
+    position: absolute;
+    left: calc(22 * var(--u));
+    top: calc(82 * var(--u));
+    padding: calc(4 * var(--u)) calc(12 * var(--u));
+    border: 1px solid #5b8f22;
+    border-radius: calc(10 * var(--u));
+    background-color: #b5e06a;
+    background-image: linear-gradient(180deg, #d4f29a 0%, #b5e06a 50%, #9fd24c 51%, #b5e06a 100%);
+    color: #1e4d0a;
+    font-family: var(--b-trebuchet);
     font-size: calc(8 * var(--u));
     font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
   }
 
-  .b-dots {
+  .b-pager {
     position: absolute;
-    left: 50%;
-    bottom: calc(12 * var(--u));
+    left: calc(22 * var(--u));
+    bottom: calc(9 * var(--u));
     display: flex;
-    gap: calc(6 * var(--u));
-    transform: translateX(-50%);
+    gap: calc(2 * var(--u));
   }
 
-  .b-dots i {
-    width: calc(7 * var(--u));
-    height: calc(7 * var(--u));
-    border-radius: 50%;
-    background-color: #9db9bd;
-  }
-
-  .b-dots i.is-on {
+  .b-pager i {
+    display: grid;
+    place-items: center;
+    width: calc(10 * var(--u));
+    height: calc(10 * var(--u));
+    border: 1px solid #7fc7cc;
     background-color: #ffffff;
+    color: #333333;
+    font-size: calc(6.5 * var(--u));
+    font-style: normal;
   }
 
-  /* ---- three identical tooth-icon boxes ---- */
-  .b-icons {
+  .b-pager i.is-on {
+    background-color: var(--b-teal);
+    color: #ffffff;
+  }
+
+  /* the stock photo, stretched into a ridge frame */
+  .b-frame {
     position: absolute;
-    top: calc(300 * var(--u));
-    left: 0;
-    right: 0;
+    left: calc(226 * var(--u));
+    top: calc(12 * var(--u));
+    width: calc(204 * var(--u));
     height: calc(112 * var(--u));
+    overflow: hidden;
+    border: calc(4 * var(--u)) ridge #c4c4c4;
+    background-color: #cfe3e6;
+  }
+
+  .b-photo {
+    position: absolute;
+    inset: calc(-3 * var(--u));
+    display: block;
+    width: calc(100% + 6 * var(--u));
+    height: calc(100% + 6 * var(--u));
+    filter: blur(calc(1.4 * var(--u))) saturate(1.35) contrast(0.92);
+  }
+
+  .b-arr {
+    position: absolute;
+    top: calc(58 * var(--u));
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    width: calc(20 * var(--u));
+    height: calc(20 * var(--u));
+    border: calc(1.5 * var(--u)) solid #ffffff;
+    border-radius: 50%;
+    background-color: #555555;
+  }
+
+  .b-arr svg {
+    width: calc(6 * var(--u));
+    height: calc(9 * var(--u));
+  }
+
+  .b-arr--l {
+    left: calc(214 * var(--u));
+  }
+
+  .b-arr--r {
+    right: calc(14 * var(--u));
+  }
+
+  /* ---------- intro + banner ---------- */
+  .b-intro {
+    position: absolute;
+    top: calc(244 * var(--u));
+    left: calc(10 * var(--u));
+    width: calc(452 * var(--u));
+    color: #333333;
+    font-family: var(--b-times);
+    font-size: calc(8.5 * var(--u));
+    line-height: 1.25;
+  }
+
+  .b-banner {
+    position: absolute;
+    top: calc(276 * var(--u));
+    left: calc(8 * var(--u));
+    width: calc(456 * var(--u));
+    height: calc(15 * var(--u));
     display: flex;
-    justify-content: space-between;
-    padding: calc(20 * var(--u)) calc(40 * var(--u)) 0;
-    background-color: var(--b-band);
+    align-items: center;
+    justify-content: center;
+    border: 1px dashed #e0a000;
+    background-color: #fff59d;
+    color: #b0120a;
+    font-family: var(--b-comic);
+    font-size: calc(7.5 * var(--u));
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  /* ---------- boxes: clashing header bars ---------- */
+  .b-boxes {
+    position: absolute;
+    top: calc(298 * var(--u));
+    left: calc(8 * var(--u));
+    width: calc(458 * var(--u));
+    display: flex;
+    align-items: flex-start;
+    gap: calc(8 * var(--u));
   }
 
   .b-box {
     display: flex;
-    align-items: flex-start;
-    gap: calc(10 * var(--u));
-    width: calc(212 * var(--u));
+    flex-direction: column;
+    align-items: center;
+    gap: calc(4 * var(--u));
+    width: calc(147 * var(--u));
+    height: calc(122 * var(--u));
+    padding-bottom: calc(6 * var(--u));
+    border: 1px solid #cfcfcf;
+    border-radius: calc(7 * var(--u)) calc(7 * var(--u)) 0 0;
+    background-color: #ffffff;
+    text-align: center;
   }
 
-  .b-icon {
-    flex: 0 0 auto;
-    display: grid;
-    place-items: center;
-    width: calc(36 * var(--u));
-    height: calc(36 * var(--u));
-    border-radius: 50%;
-    background-color: var(--b-teal);
+  .b-box--2 {
+    height: calc(130 * var(--u));
   }
 
-  .b-icon svg {
-    width: calc(16 * var(--u));
-    height: calc(17 * var(--u));
+  .b-box--3 {
+    height: calc(116 * var(--u));
+    margin-top: calc(3 * var(--u));
   }
 
-  .b-copy {
+  .b-box-h {
+    align-self: stretch;
+    padding: calc(4 * var(--u)) calc(4 * var(--u));
+    border-radius: calc(6 * var(--u)) calc(6 * var(--u)) 0 0;
+    background-color: #0e7c86;
+    background-image: linear-gradient(180deg, #1a9aa4 0%, #0e7c86 50%, #0a5c63 100%);
+    color: #ffffff;
+    font-family: var(--b-trebuchet);
+    font-size: calc(9 * var(--u));
+    font-weight: 700;
+    text-shadow: 0 calc(1 * var(--u)) 0 #06393d;
+  }
+
+  .b-box--2 .b-box-h {
+    background-color: #7b3fa0;
+    background-image: linear-gradient(180deg, #9253b8 0%, #7b3fa0 50%, #5a2578 100%);
+    text-shadow: 0 calc(1 * var(--u)) 0 #3a1650;
+  }
+
+  .b-box--3 .b-box-h {
+    background-color: #b5e06a;
+    background-image: linear-gradient(180deg, #d4f29a 0%, #b5e06a 55%, #9fd24c 100%);
+    color: #1e4d0a;
+    text-shadow: 0 calc(1 * var(--u)) 0 #e6f7c7;
+  }
+
+  .b-clip {
+    width: calc(34 * var(--u));
+    height: calc(34 * var(--u));
+  }
+
+  .b-box-t {
+    padding-inline: calc(8 * var(--u));
+    color: #333333;
+    font-family: var(--b-verdana);
+    font-size: calc(7 * var(--u));
+    line-height: 1.3;
+  }
+
+  .b-box-l {
+    color: var(--b-teal);
+    font-family: var(--b-verdana);
+    font-size: calc(7 * var(--u));
+    font-weight: 700;
+  }
+
+  /* ---------- sidebar ---------- */
+  .b-side {
+    position: absolute;
+    top: calc(101 * var(--u));
+    right: calc(8 * var(--u));
+    width: calc(198 * var(--u));
+    bottom: calc(40 * var(--u));
     display: flex;
     flex-direction: column;
     gap: calc(5 * var(--u));
-    padding-top: calc(2 * var(--u));
   }
 
-  .b-title {
-    color: #333333;
-    font-size: calc(11 * var(--u));
+  .b-card {
+    display: flex;
+    flex-direction: column;
+    gap: calc(3 * var(--u));
+    padding-bottom: calc(5 * var(--u));
+    border: 1px solid #cfcfcf;
+    border-radius: calc(6 * var(--u)) calc(6 * var(--u)) 0 0;
+    background-color: #f7f7f7;
+  }
+
+  .b-card-h {
+    padding: calc(3 * var(--u)) calc(6 * var(--u));
+    border-radius: calc(5 * var(--u)) calc(5 * var(--u)) 0 0;
+    color: #ffffff;
+    font-family: var(--b-trebuchet);
+    font-size: calc(8.5 * var(--u));
     font-weight: 700;
   }
 
-  .b-text {
-    font-size: calc(8.5 * var(--u));
-    line-height: 1.4;
+  .b-card-h--p {
+    background-color: #7b3fa0;
+    background-image: linear-gradient(180deg, #9253b8 0%, #6a2f8c 100%);
   }
 
-  .b-link {
-    color: var(--b-teal);
-    font-size: calc(8.5 * var(--u));
+  .b-card-h--t {
+    background-color: #0e7c86;
+    background-image: linear-gradient(180deg, #1a8f99 0%, #0a5c63 100%);
   }
 
-  /* ---- the forms strip: paperwork as PDF downloads ---- */
-  .b-forms {
-    position: absolute;
-    top: calc(412 * var(--u));
-    left: 0;
-    right: 0;
-    height: calc(35 * var(--u));
+  .b-table {
+    display: flex;
+    flex-direction: column;
+    padding-inline: calc(6 * var(--u));
+  }
+
+  .b-row {
+    display: flex;
+    justify-content: space-between;
+    padding-block: calc(1.5 * var(--u));
+    border-bottom: 1px dotted #b0b0b0;
+    color: #333333;
+    font-family: var(--b-verdana);
+    font-size: calc(6.5 * var(--u));
+  }
+
+  .b-card-p {
+    padding-inline: calc(6 * var(--u));
+    color: #333333;
+    font-family: var(--b-times);
+    font-size: calc(7.5 * var(--u));
+    line-height: 1.2;
+  }
+
+  .b-pdfl {
     display: flex;
     align-items: center;
-    gap: calc(5 * var(--u));
-    padding-inline: calc(40 * var(--u));
-    border-top: 1px solid #d8dfdf;
-    background-color: #ffffff;
-    font-size: calc(8 * var(--u));
-  }
-
-  .b-forms-lead {
-    font-weight: 700;
+    gap: calc(4 * var(--u));
+    padding-inline: calc(6 * var(--u));
+    color: var(--b-teal);
+    font-family: var(--b-verdana);
+    font-size: calc(7 * var(--u));
   }
 
   .b-pdf {
     display: grid;
     place-items: end center;
-    width: calc(10 * var(--u));
-    height: calc(12 * var(--u));
-    padding-bottom: calc(1.5 * var(--u));
+    width: calc(9 * var(--u));
+    height: calc(11 * var(--u));
+    padding-bottom: calc(1 * var(--u));
     background-color: #b03a2e;
   }
 
   .b-pdf i {
     color: #ffffff;
-    font-size: calc(3.8 * var(--u));
+    font-size: calc(3.6 * var(--u));
     font-style: normal;
     font-weight: 700;
   }
 
-  .b-flink {
+  .b-fb {
+    display: flex;
+    align-items: center;
+    gap: calc(5 * var(--u));
+    padding: calc(3 * var(--u)) calc(5 * var(--u));
+    background-color: #3b5998;
+    color: #ffffff;
+    font-size: calc(7 * var(--u));
+    font-weight: 700;
+  }
+
+  .b-fb i {
+    display: grid;
+    place-items: center;
+    width: calc(11 * var(--u));
+    height: calc(11 * var(--u));
+    background-color: #ffffff;
+    color: #3b5998;
+    font-family: Georgia, var(--b-times);
+    font-size: calc(9 * var(--u));
+    font-style: normal;
+    font-weight: 700;
+  }
+
+  .b-kids {
+    display: grid;
+    grid-template-columns: calc(34 * var(--u)) 1fr;
+    column-gap: calc(4 * var(--u));
+    align-items: center;
+    padding: calc(4 * var(--u)) calc(6 * var(--u));
+    border-style: dashed;
+    border-color: #c2185b;
+    border-radius: 0;
+    background-color: #fff0f6;
+  }
+
+  .b-kids-art {
+    grid-row: 1 / 3;
+    width: calc(34 * var(--u));
+    height: calc(34 * var(--u));
+  }
+
+  .b-kids-h {
+    color: #c2185b;
+    font-family: var(--b-comic);
+    font-size: calc(11 * var(--u));
+    font-weight: 700;
+  }
+
+  .b-kids-t {
+    color: var(--b-purple);
+    font-family: var(--b-comic);
+    font-size: calc(7.5 * var(--u));
+  }
+
+  .b-soon {
+    flex-direction: row;
+    align-items: center;
+    gap: calc(6 * var(--u));
+    padding: calc(4 * var(--u)) calc(6 * var(--u));
+    border-radius: 0;
+  }
+
+  .b-cone {
+    flex: 0 0 auto;
+    width: calc(44 * var(--u));
+    height: calc(28 * var(--u));
+  }
+
+  .b-soon-t {
+    display: flex;
+    flex-direction: column;
+    color: #333333;
+    font-family: var(--b-verdana);
+    font-size: calc(7 * var(--u));
+  }
+
+  .b-soon-t b {
     color: var(--b-teal);
-    text-decoration: underline;
+    font-family: var(--b-trebuchet);
+    font-size: calc(9 * var(--u));
   }
 
-  .b-sep {
-    color: #666666;
+  .b-tip {
+    display: flex;
+    flex-direction: column;
+    gap: calc(2 * var(--u));
+    padding: calc(4 * var(--u)) calc(6 * var(--u));
+    border-left: calc(3 * var(--u)) solid #8cc63f;
+    background-color: #f2fae6;
   }
 
-  .b-ins {
-    margin-left: auto;
-    color: var(--b-text);
+  .b-tip-h {
+    color: var(--b-teal);
+    font-family: var(--b-trebuchet);
+    font-size: calc(8.5 * var(--u));
+    font-weight: 700;
   }
 
+  .b-tip-t {
+    color: #333333;
+    font-family: Georgia, var(--b-times);
+    font-size: calc(7.5 * var(--u));
+    font-style: italic;
+    line-height: 1.25;
+  }
+
+  /* ---------- footer ---------- */
   .b-foot {
     position: absolute;
     inset: auto 0 0;
-    height: calc(28 * var(--u));
+    height: calc(32 * var(--u));
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    background-color: var(--b-grey);
+    gap: calc(2 * var(--u));
+    background-color: #4b3f63;
     color: #ffffff;
-    font-size: calc(7.5 * var(--u));
+    font-family: var(--b-verdana);
+    font-size: calc(6.5 * var(--u));
+    white-space: nowrap;
+  }
+
+  .b-foot-c {
+    color: #d9cff0;
   }
 </style>

@@ -18,9 +18,9 @@ import { place, studyCaption, type Concept, type ConceptAnnotation } from './typ
 
 /** Marker anchors on THIS drawing (reference units, see types.ts). */
 const anchors: Record<string, Omit<ConceptAnnotation, 'id' | 'text'>> = {
-  A1: { x: 500, y: 459, a: 's' }, // hours + phone, tiny, in the footer
-  A2: { x: 733, y: 214, a: 'c' }, // slideshow arrow
-  A3: { x: 458, y: 236, a: 's' }, // "Download menu (PDF)" button
+  A1: { x: 474, y: 449, a: 's' }, // hours + phone, tiny, in the footer
+  A2: { x: 696, y: 170, a: 'e' }, // slideshow arrow
+  A3: { x: 690, y: 292, a: 's' }, // "Download menu (PDF)" button
   A4: { x: 176, y: 0, a: 's', bar: true }, // no title / description → URL bar
   B1: { x: 386, y: 124, a: 's' }, // the promise, first screen
   B2: { x: 296, y: 322, a: 's' }, // reserve button + tonight's menu

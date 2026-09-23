@@ -19,6 +19,11 @@
  * and (desktop) one lilac leader runs from the layer's corner to its row
  * along a dashed assembly axis through the six corners.
  * Round 3: deeper Z separation, the orbit, the part numbers, the sky.
+ * Round 4: a niche switcher (.b-pick) takes apart any of the five concepts
+ * (Concept 01 is live in the DOM, the other four wait in <template>s and
+ * are cloned on first pick), and every layer is a button (.b-co-head on
+ * the legend, .b-step on the phone/tablet rail): clicking one travels the
+ * scroll to the point in the track where that layer is the lifted one.
  * No data-scene here: the stage is position:sticky.
  *
  * Desktop sets the words left (heading, then the legend) and the plate
@@ -40,11 +45,29 @@ import SplitText from '../ui/SplitText.astro';
 import Arrow from '../ui/Arrow.astro';
 import ConceptPlate from '../ConceptPlate.astro';
 import Cosmos from '../Cosmos.astro';
-import { build } from '../../data/site';
+import { build, hero } from '../../data/site';
+import { concepts } from '../../data/concepts';
 
 /* the arrow is drawn as a hairline SVG; the text keeps its words */
 const skipText = build.skip.label.replace(/\s*↓\s*$/, '');
 const layers = build.layers;
+
+/* TODO_SITE (round 4): strings for the niche switcher and the layer
+   buttons, not in site.ts yet. */
+const TODO_SITE = {
+  pick: {
+    label: 'Take apart another business',
+    prev: 'Previous business',
+    next: 'Next business',
+  },
+  hint: 'Scroll, or pick a layer',
+  stepsLabel: 'Go to a layer',
+};
+const nicheName = (id: string) => (hero.showcase.tabs as Record<string, string>)[id] ?? id;
+/* Concept 01 keeps the site.ts caption; the others follow its pattern */
+const capFor = (c: (typeof concepts)[number]) =>
+  c.id === 'halden' ? build.caption : `Concept ${c.number} is a study by Vesta for a fictional ${c.niche.toLowerCase()}. It is not client work.`;
+const first = concepts[0];
 
 /* The faint sky behind the stack: a seeded scatter (same every build), in a
    square that stays larger than the stage while it turns with the orbit. */
@@ -100,10 +123,57 @@ const stars = Array.from({ length: 140 }, (_, n) => {
           <p class="lead b-lead" data-reveal style="--i:2">{build.lead}</p>
         </header>
 
+        <div class="b-pick" data-reveal style="--i:3">
+          <p class="label b-pick-l" id="b-pick-l">{TODO_SITE.pick.label}</p>
+          <div class="b-pick-row">
+            <button class="b-pick-arr b-pick-arr--prev" type="button" data-step="-1" aria-label={TODO_SITE.pick.prev}>
+              <Arrow size={16} />
+            </button>
+            <div class="b-pick-list" role="group" aria-labelledby="b-pick-l">
+              {
+                concepts.map((c, k) => (
+                  <button
+                    class:list={['b-pick-b', k === 0 && 'is-on']}
+                    type="button"
+                    data-concept={c.id}
+                    data-name={nicheName(c.id)}
+                    data-num={c.number}
+                    data-caption={capFor(c)}
+                    aria-pressed={k === 0 ? 'true' : 'false'}
+                    tabindex={k === 0 ? 0 : -1}
+                  >
+                    <span class="b-pick-n">{c.number}</span>
+                    <span class="b-pick-name">{nicheName(c.id)}</span>
+                  </button>
+                ))
+              }
+            </div>
+            <p class="b-pick-now" aria-live="polite">
+              <span class="b-pick-now-in">
+                <span class="b-pick-now-n">{first.number}</span>
+                <span class="b-pick-now-t">{nicheName(first.id)}</span>
+              </span>
+              <span class="b-pick-dots" aria-hidden="true">
+                {concepts.map((_, k) => <i class:list={['b-pick-dot', k === 0 && 'is-on']} />)}
+              </span>
+            </p>
+            <button class="b-pick-arr b-pick-arr--next" type="button" data-step="1" aria-label={TODO_SITE.pick.next}>
+              <Arrow size={16} />
+            </button>
+          </div>
+        </div>
+
         <div class="b-view" data-reveal="fade">
           <div class="b-assembly">
-            <ConceptPlate mode="build" />
+            <ConceptPlate concept={first.id} mode="build" />
           </div>
+          {
+            concepts.slice(1).map((c) => (
+              <template data-plate={c.id}>
+                <ConceptPlate concept={c.id} mode="build" />
+              </template>
+            ))
+          }
         </div>
 
         <p class="b-count" aria-hidden="true" data-reveal="fade" style="--i:3">
@@ -112,15 +182,29 @@ const stars = Array.from({ length: 140 }, (_, n) => {
           <span class="label b-count-t">{build.counter.total}</span>
         </p>
 
+        <div class="b-steps" role="group" aria-label={TODO_SITE.stepsLabel} data-reveal="fade" style="--i:3">
+          {
+            layers.map((l, k) => (
+              <button class="b-step" type="button" data-layer={k} aria-label={`${l.index} ${l.name}`}>
+                <span class="b-step-i">{l.index}</span>
+              </button>
+            ))
+          }
+        </div>
+
         <div class="b-side" data-reveal style="--i:2">
+          <p class="label b-hint" aria-hidden="true">{TODO_SITE.hint}</p>
           <ol class="b-callouts">
             {
               layers.map((l, k) => (
                 <li class="b-co" style={`--k:${k}`}>
-                  <p class="b-co-head">
+                  <button class="b-co-head" type="button" data-layer={k}>
                     <span class="b-co-i">{l.index}</span>
                     <span class="b-co-name label">{l.name}</span>
-                  </p>
+                    <span class="b-co-go" aria-hidden="true">
+                      <Arrow size={12} />
+                    </span>
+                  </button>
                   <p class="b-co-text">{l.text}</p>
                 </li>
               ))
@@ -138,7 +222,7 @@ const stars = Array.from({ length: 140 }, (_, n) => {
           <p class="b-final">{build.final}</p>
         </div>
 
-        <p class="b-cap">{build.caption}</p>
+        <p class="b-cap" data-b-cap>{build.caption}</p>
         <a class="tlink b-skip" href={build.skip.href}>
           {skipText}
           <Arrow dir="down" />
@@ -331,7 +415,47 @@ const stars = Array.from({ length: 140 }, (_, n) => {
     display: flex;
     align-items: baseline;
     gap: 14px;
+    width: 100%;
+    min-height: 24px;
+    padding: 0;
     color: var(--starlight);
+    text-align: left;
+  }
+
+  /* the row's arrow: always there (it marks the row as a button), lilac
+     and nudged on hover / focus */
+  .b-co-go {
+    display: inline-flex;
+    align-self: center;
+    margin-left: auto;
+    color: var(--dim);
+    transition:
+      transform var(--t-ui) var(--ease-expo),
+      color var(--t-micro) linear;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .b-co-head:hover .b-co-go {
+      color: var(--lilac);
+      transform: translate3d(4px, 0, 0);
+    }
+  }
+
+  .b-co-head:focus-visible .b-co-go {
+    color: var(--lilac);
+    transform: translate3d(4px, 0, 0);
+  }
+
+  /* static: the picked layer's row */
+  .b-co.is-picked .b-co-i,
+  .b-co.is-picked .b-co-go {
+    color: var(--lilac);
+  }
+
+  .b-hint {
+    display: none;
+    margin-bottom: 14px;
+    color: var(--dim);
   }
 
   .b-co-i {
@@ -415,8 +539,248 @@ const stars = Array.from({ length: 140 }, (_, n) => {
   }
 
   .b-sr,
-  .b-leaders {
+  .b-leaders,
+  .b-steps {
     display: none;
+  }
+
+  /* ======================================================================
+     2b. the niche switcher (round 4) - every mode with JS.
+         Phones: the current business + prev / next. From 768px: the five
+         businesses as one segmented row.
+     ====================================================================== */
+  .b-pick {
+    position: relative;
+    z-index: 3;
+    min-width: 0;
+  }
+
+  :global(html:not(.js)) .b-pick {
+    display: none;
+  }
+
+  /* a void chip: the rising stack passes behind it */
+  .b-pick-l {
+    display: block;
+    width: fit-content;
+    margin-bottom: 6px;
+    padding: 4px 10px 4px 0;
+    background-color: var(--void);
+    color: var(--haze);
+  }
+
+  .b-pick-row {
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .b-pick-list {
+    display: none;
+  }
+
+  .b-pick-now {
+    order: -1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 48px;
+    padding: 0 14px;
+    border: 1px solid var(--line-dark-strong);
+    background-color: var(--void);
+  }
+
+  .b-pick-now-in {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    min-width: 0;
+    white-space: nowrap;
+  }
+
+  .b-pick-now-n,
+  .b-pick-n {
+    color: var(--lilac);
+    font-stretch: var(--wd-display);
+    font-size: 0.75rem;
+    font-weight: 620;
+    letter-spacing: 0.06em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .b-pick-now-t,
+  .b-pick-name {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    line-height: 1.2;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .b-pick-now-t {
+    display: inline-block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--starlight);
+    transform-origin: 50% 100%;
+  }
+
+  .b-pick-dots {
+    display: flex;
+    gap: 4px;
+  }
+
+  .b-pick-dot {
+    display: block;
+    width: 14px;
+    height: 2px;
+    background-color: var(--line-dark-strong);
+    transition: background-color var(--t-micro) linear;
+  }
+
+  .b-pick-dot.is-on {
+    background-color: var(--violet);
+  }
+
+  .b-pick-arr {
+    display: grid;
+    place-items: center;
+    flex: 0 0 48px;
+    width: 48px;
+    min-height: 48px;
+    border: 1px solid var(--line-dark-strong);
+    background-color: var(--void);
+    color: var(--starlight);
+    transition:
+      border-color var(--t-micro) linear,
+      background-color var(--t-micro) linear;
+  }
+
+  .b-pick-arr :global(.arrow) {
+    transition: transform var(--t-ui) var(--ease-expo);
+  }
+
+  .b-pick-arr--prev :global(.arrow) {
+    transform: scaleX(-1);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .b-pick-arr:hover {
+      border-color: var(--lilac);
+    }
+
+    .b-pick-arr--next:hover :global(.arrow) {
+      transform: translate3d(3px, 0, 0);
+    }
+
+    .b-pick-arr--prev:hover :global(.arrow) {
+      transform: translate3d(-3px, 0, 0) scaleX(-1);
+    }
+  }
+
+  .b-pick-arr:active {
+    background-color: var(--night);
+  }
+
+  /* the name flips up when the business changes */
+  .b-pick-now-t.is-flip {
+    animation: b-flip 620ms var(--ease-expo) both;
+  }
+
+  @media (min-width: 768px) {
+    .b-pick-arr,
+    .b-pick-now {
+      display: none;
+    }
+
+    .b-pick-list {
+      display: flex;
+      flex-wrap: wrap;
+    }
+
+    .b-pick-b {
+      display: flex;
+      align-items: baseline;
+      gap: 9px;
+      min-height: 46px;
+      padding: 15px 18px 13px;
+      margin-left: -1px;
+      border: 1px solid var(--line-dark-strong);
+      background-color: var(--void);
+      color: var(--haze);
+      transition:
+        color var(--t-micro) linear,
+        border-color var(--t-micro) linear,
+        background-color var(--t-micro) linear;
+    }
+
+    .b-pick-b:first-child {
+      margin-left: 0;
+    }
+
+    .b-pick-b.is-on {
+      position: relative;
+      z-index: 1;
+      border-color: var(--violet);
+      background-color: var(--violet);
+      color: var(--starlight);
+    }
+
+    .b-pick-b.is-on .b-pick-n {
+      color: var(--starlight);
+    }
+
+    .b-pick-b:focus-visible {
+      position: relative;
+      z-index: 2;
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .b-pick-b:not(.is-on):hover {
+        position: relative;
+        z-index: 1;
+        border-color: var(--lilac);
+        color: var(--starlight);
+      }
+    }
+  }
+
+  /* the layer rail (phones and tablets, live only): six numbered buttons */
+  .b-step {
+    display: grid;
+    place-items: center;
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: 56px;
+    height: 44px;
+    border: 1px solid var(--line-dark-strong);
+    background-color: var(--void);
+    color: var(--dim);
+    font-stretch: var(--wd-display);
+    font-size: 0.8125rem;
+    font-weight: 620;
+    letter-spacing: 0.04em;
+    font-variant-numeric: tabular-nums;
+    transition:
+      color var(--t-micro) linear,
+      border-color var(--t-micro) linear,
+      background-color var(--t-micro) linear;
+  }
+
+  .b-step.is-past {
+    border-color: var(--lilac);
+    color: var(--haze);
+  }
+
+  .b-step.is-on {
+    border-color: var(--violet);
+    background-color: var(--violet);
+    color: var(--starlight);
   }
 
   /* ======================================================================
@@ -456,6 +820,13 @@ const stars = Array.from({ length: 140 }, (_, n) => {
 
     .b-cap {
       grid-column: 1 / span 6;
+    }
+
+    .b-pick {
+      grid-column: 7 / -1;
+      grid-row: 1;
+      justify-self: end;
+      align-self: end;
     }
   }
 
@@ -508,9 +879,22 @@ const stars = Array.from({ length: 140 }, (_, n) => {
 
   :global(html.js:not(.motion-reduced):not(.motion-failed)) .build:not(.build--static) .b-grid {
     height: 100%;
-    grid-template-rows: auto minmax(0, 1fr) auto auto auto auto;
+    grid-template-rows: auto auto minmax(0, 1fr) auto auto auto auto;
     row-gap: 0;
     padding-block: calc(var(--nav-h) + 12px) 14px;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .build:not(.build--static) .b-pick {
+    grid-row: 2;
+    margin-top: 16px;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .build:not(.build--static) .b-steps {
+    display: flex;
+    grid-row: 4;
+    gap: 4px;
+    z-index: 3;
+    margin-bottom: 4px;
   }
 
   :global(html.js:not(.motion-reduced):not(.motion-failed)) .build:not(.build--static) .b-head {
@@ -521,16 +905,31 @@ const stars = Array.from({ length: 140 }, (_, n) => {
     margin-top: 12px;
   }
 
+  /* phones: the switcher's label introduces the stage; the lead would push
+     the stack into the rail */
+  @media (max-width: 767.98px) {
+    :global(html.js:not(.motion-reduced):not(.motion-failed)) .build:not(.build--static) .b-lead {
+      display: none;
+    }
+  }
+
+  /* below desktop the one visible row is the one being read: no arrow */
+  @media (max-width: 1099.98px) {
+    .build.is-live .b-co-go {
+      display: none;
+    }
+  }
+
   :global(html.js:not(.motion-reduced):not(.motion-failed)) .build:not(.build--static) .b-view {
-    grid-row: 2;
+    grid-row: 3;
     align-self: stretch;
     min-height: 0;
     padding: 0;
   }
 
   :global(html.js:not(.motion-reduced):not(.motion-failed)) .build:not(.build--static) .b-count {
-    display: flex;
-    grid-row: 3;
+    display: none;
+    grid-row: 4;
     justify-self: end;
     align-self: end;
     z-index: 3;
@@ -539,7 +938,7 @@ const stars = Array.from({ length: 140 }, (_, n) => {
 
   :global(html.js:not(.motion-reduced):not(.motion-failed)) .build:not(.build--static) .b-side {
     display: grid;
-    grid-row: 4;
+    grid-row: 5;
     min-height: 132px;
     align-content: start;
   }
@@ -565,13 +964,13 @@ const stars = Array.from({ length: 140 }, (_, n) => {
   }
 
   :global(html.js:not(.motion-reduced):not(.motion-failed)) .build:not(.build--static) .b-cap {
-    grid-row: 5;
+    grid-row: 6;
     margin-top: 10px;
   }
 
   :global(html.js:not(.motion-reduced):not(.motion-failed)) .build:not(.build--static) .b-skip {
     display: inline-flex;
-    grid-row: 6;
+    grid-row: 7;
     justify-self: start;
     margin-top: 6px;
   }
@@ -607,6 +1006,11 @@ const stars = Array.from({ length: 140 }, (_, n) => {
     will-change: transform;
   }
 
+  /* static: the picked layer's plane lights */
+  .build:not(.is-live) .b-assembly :global(.cp-layer.is-on)::after {
+    opacity: 1;
+  }
+
   .build.is-live .b-assembly :global(.cp-layer)::after {
     opacity: 0;
   }
@@ -626,12 +1030,20 @@ const stars = Array.from({ length: 140 }, (_, n) => {
     }
 
     :global(html.js:not(.motion-reduced):not(.motion-failed)) .build:not(.build--static) .b-grid {
-      grid-template-rows: auto minmax(0, 1fr) auto auto auto;
+      grid-template-rows: auto auto minmax(0, 1fr) auto auto auto;
       padding-block: calc(var(--nav-h) + 20px) 24px;
     }
 
     :global(html.js:not(.motion-reduced):not(.motion-failed)) .build:not(.build--static) .b-count {
+      display: flex;
+      grid-column: 6 / -1;
+      grid-row: 4;
+      margin-bottom: 4px;
+    }
+
+    :global(html.js:not(.motion-reduced):not(.motion-failed)) .build:not(.build--static) .b-steps {
       grid-column: 1 / span 5;
+      align-self: end;
     }
 
     :global(html.js:not(.motion-reduced):not(.motion-failed)) .build:not(.build--static) .b-head {
@@ -646,9 +1058,13 @@ const stars = Array.from({ length: 140 }, (_, n) => {
       grid-column: 1 / span 5;
     }
 
+    :global(html.js:not(.motion-reduced):not(.motion-failed)) .build:not(.build--static) .b-cap {
+      grid-row: 6;
+    }
+
     :global(html.js:not(.motion-reduced):not(.motion-failed)) .build:not(.build--static) .b-skip {
       grid-column: 6 / -1;
-      grid-row: 5;
+      grid-row: 6;
       justify-self: end;
       align-self: end;
     }
@@ -688,16 +1104,34 @@ const stars = Array.from({ length: 140 }, (_, n) => {
       grid-row: 1 / -1;
     }
 
+    /* the counter sits on the legend's top line, level with the hint */
     :global(html.js:not(.motion-reduced):not(.motion-failed)) .build:not(.build--static) .b-count {
-      grid-column: 10 / -1;
+      grid-column: 1 / span 4;
+      grid-row: 2;
+      justify-self: end;
+      align-self: start;
+      margin: 23px 0 0;
+    }
+
+    /* the switcher takes the top right, above where the stack rises */
+    :global(html.js:not(.motion-reduced):not(.motion-failed)) .build:not(.build--static) .b-pick {
+      grid-column: 6 / -1;
       grid-row: 1;
       justify-self: end;
       align-self: start;
       margin: 0;
     }
 
+    :global(html.js:not(.motion-reduced):not(.motion-failed)) .build:not(.build--static) .b-steps {
+      display: none;
+    }
+
+    .build.is-live .b-hint {
+      display: block;
+    }
+
     .b-count-n {
-      font-size: 3rem;
+      font-size: 2.25rem;
     }
 
     :global(html.js:not(.motion-reduced):not(.motion-failed)) .build:not(.build--static) .b-side {
@@ -810,6 +1244,14 @@ const stars = Array.from({ length: 140 }, (_, n) => {
     :global(html.js:not(.motion-reduced):not(.motion-failed)) .build:not(.build--static) .b-side {
       margin-top: 24px;
       padding-bottom: 124px;
+    }
+
+    :global(html.js:not(.motion-reduced):not(.motion-failed)) .build:not(.build--static) .b-count {
+      margin-top: -5px;
+    }
+
+    .build.is-live .b-hint {
+      margin-bottom: 10px;
     }
 
     :global(html.js:not(.motion-reduced):not(.motion-failed)) .build:not(.build--static) .b-co {

@@ -9,7 +9,13 @@
  *
  * The deck
  * - Card 0 (Home) holds the five concept plates (ConceptPlate mini). Step 01
- *   "Industry" picks one; CSS (:has) turns the plates like a turntable.
+ *   "Industry" picks one; CSS (:has) shows it, and configure.ts turns the
+ *   plates like a turntable (direction-aware, interruptible mid-turn).
+ * - Round 4: under the deck, "See 5 examples": prev/next arrows and one tab
+ *   per niche (a tiny drawing in the concept's colours, NN, niche name). The
+ *   switcher is a second face of step 01: a tab checks the Industry radio,
+ *   any Industry change repaints the tabs (aria-pressed); ←/→ Home/End work
+ *   on the tabs. With no JS the tabs are hidden and step 01 does the job.
  * - Cards 1–4 (Services, About, Contact, Locations) are drawn here, each with
  *   its own mini design, themed with the chosen concept's palette tokens
  *   (--pb … --pl, written below as one generated rule per concept).
@@ -33,7 +39,7 @@ import Arrow from '../ui/Arrow.astro';
 import WaGlyph from '../ui/WaGlyph.astro';
 import MailGlyph from '../ui/MailGlyph.astro';
 import ConceptPlate from '../ConceptPlate.astro';
-import { configure, packages, pricing, getPackage, wa, mail, type ConfigSelection } from '../../data/site';
+import { configure, hero, packages, pricing, getPackage, wa, mail, type ConfigSelection } from '../../data/site';
 import { concepts } from '../../data/concepts';
 import type { ConceptPalette } from '../../data/concepts';
 
@@ -124,6 +130,10 @@ const industry = [
   { id: 'other', label: S.industry.other, sw: '' },
 ];
 const hNav = fan.slice(1, 4);
+
+/* Round 4: the niche switcher on the preview (tabs reuse the hero's names) */
+const EX = PV.examples;
+const exName = (id: string) => (hero.showcase.tabs as Record<string, string>)[id] ?? id;
 ---
 
 <section id="configure" class="s-void section cfg" data-nav-theme="dark" aria-labelledby="configure-title" data-configure>
@@ -153,10 +163,10 @@ const hNav = fan.slice(1, 4);
 
                   <!-- card 0: Home = the five concept plates, one shown -->
                   <div class="card card--home is-front" data-card="0" style="--k:0">
-                    <div class="swap">
+                    <div class="swap" data-swap>
                       {
                         concepts.map((c) => (
-                          <div class={`si si--${c.id}`}>
+                          <div class={`si si--${c.id}`} data-si={c.id}>
                             <ConceptPlate concept={c.id} mode="mini" />
                           </div>
                         ))
@@ -322,6 +332,52 @@ const hNav = fan.slice(1, 4);
           </div>
 
           <div class="pv-foot">
+            <!-- the five examples, right on the preview; synced with step 01 -->
+            <div class="ex" data-reveal style="--d:120ms">
+              <div class="ex-head">
+                <p class="pv-cap label">
+                  <span class="stripe" aria-hidden="true"></span>
+                  <span>{PV.siteLabel}</span>
+                </p>
+                <div class="ex-nav">
+                  <span class="ex-hint label" aria-hidden="true">{EX.hint}</span>
+                  <button class="ex-arr ex-arr--prev" type="button" data-ex-step="-1" aria-label={EX.prev}>
+                    <Arrow size={16} />
+                  </button>
+                  <button class="ex-arr ex-arr--next" type="button" data-ex-step="1" aria-label={EX.next}>
+                    <Arrow size={16} />
+                  </button>
+                </div>
+              </div>
+              <div class="ex-tabs" role="group" aria-label={EX.aria} data-ex-tabs>
+                {
+                  concepts.map((c, k) => (
+                    <button
+                      class:list={['ex-b', k === 0 && 'is-on']}
+                      type="button"
+                      data-ex={c.id}
+                      aria-pressed={k === 0 ? 'true' : 'false'}
+                      style={`--tb:${c.palette.base};--ta:${c.palette.accent};--tn:${c.palette.band};--tt:${c.palette.text}`}
+                    >
+                      <i class="ex-bar" aria-hidden="true" />
+                      <span class="ex-top" aria-hidden="true">
+                        <i class="ex-th">
+                          <i class="ex-th-h" />
+                          <i class="ex-th-a" />
+                          <i class="ex-th-n" />
+                        </i>
+                        <span class="ex-n">{c.number}</span>
+                      </span>
+                      <span class="ex-name">
+                        <span class="visually-hidden">{c.number} </span>
+                        {exName(c.id)}
+                      </span>
+                    </button>
+                  ))
+                }
+              </div>
+            </div>
+
             <div class="pages" role="group" aria-label={PG.navAria} data-pages>
               <span class="pages-l label" aria-hidden="true">{PG.navLabel}</span>
               {
@@ -332,10 +388,6 @@ const hNav = fan.slice(1, 4);
                 ))
               }
             </div>
-            <p class="pv-cap label" data-reveal style="--d:160ms">
-              <span class="stripe" aria-hidden="true"></span>
-              <span>{PV.siteLabel}</span>
-            </p>
           </div>
 
           <div class="lst-wrap" data-reveal style="--d:220ms">
@@ -549,12 +601,25 @@ const hNav = fan.slice(1, 4);
   if (root && root.querySelector('[data-config]')) {
     let started = false;
     let io: IntersectionObserver | null = null;
+    /* a click on the example switcher that lands before the module is in */
+    let pending: HTMLElement | null = null;
+    const early = (e: Event) => {
+      if (root.dataset.cfgReady) return;
+      const b = (e.target as Element | null)?.closest<HTMLElement>('[data-ex], [data-ex-step]');
+      if (b) pending = b;
+    };
+    root.addEventListener('click', early);
     const start = () => {
       if (started) return;
       started = true;
       io?.disconnect();
       import('../../scripts/configure')
-        .then((m) => m.initConfigure(root))
+        .then((m) => {
+          m.initConfigure(root);
+          root.removeEventListener('click', early);
+          pending?.click();
+          pending = null;
+        })
         .catch(() => {
           /* the no-JS links stay in place */
         });
@@ -673,7 +738,14 @@ const hNav = fan.slice(1, 4);
 
     .pv-in {
       position: sticky;
-      top: calc(var(--nav-h, 76px) + 24px);
+      top: calc(var(--nav-h, 76px) + 16px);
+    }
+  }
+
+  /* short laptop screens: a slightly tighter fan buys the listing room */
+  @media (min-width: 1100px) and (max-height: 960px) {
+    .cfg-body {
+      --fan-y: 20px;
     }
   }
 
@@ -805,6 +877,13 @@ const hNav = fan.slice(1, 4);
     .cfg:has(input[name='industry'][value='fitness']:checked)
     .si--fitness {
     animation: si-in 1050ms var(--ease-expo) 180ms both;
+  }
+
+  /* once configure.ts runs, it turns the plates itself (WAAPI, direction-
+     aware, interruptible mid-turn); CSS keeps only the end states */
+  .swap[data-turn] .si {
+    transition: none !important;
+    animation: none !important;
   }
 
   @keyframes si-in {
@@ -1461,8 +1540,331 @@ const hNav = fan.slice(1, 4);
   .pv-foot {
     display: grid;
     row-gap: 14px;
-    margin-top: 18px;
+    margin-top: 16px;
     margin-left: var(--ghost-x);
+    margin-right: calc(4 * var(--fan-x));
+  }
+
+  /* ---- the five examples: caption + arrows, then one tab per niche ---- */
+  .ex {
+    display: grid;
+    row-gap: 10px;
+    min-width: 0;
+  }
+
+  .ex-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 16px;
+  }
+
+  .ex-nav {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+  }
+
+  .ex-hint {
+    margin-right: 10px;
+    color: var(--lilac);
+    background-color: var(--void);
+    text-align: right;
+  }
+
+  .ex-arr {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 1px solid var(--line-dark-strong);
+    border-radius: 0;
+    background-color: var(--void);
+    color: var(--starlight);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition:
+      border-color var(--t-micro) linear,
+      background-color var(--t-micro) linear;
+  }
+
+  .ex-arr--prev :global(.arrow) {
+    transform: scaleX(-1);
+  }
+
+  .ex-arr :global(.arrow) {
+    transition: transform 420ms var(--ease-expo);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .ex-arr:hover {
+      border-color: var(--lilac);
+      background-color: var(--steel);
+    }
+
+    .ex-arr--next:hover :global(.arrow) {
+      transform: translate3d(3px, 0, 0);
+    }
+
+    .ex-arr--prev:hover :global(.arrow) {
+      transform: scaleX(-1) translate3d(3px, 0, 0);
+    }
+  }
+
+  .ex-arr:active {
+    background-color: var(--steel);
+  }
+
+  .ex-arr:focus-visible {
+    outline: 2px solid var(--starlight);
+    outline-offset: 2px;
+  }
+
+  /* first time the switcher comes into view, the next arrow nudges twice */
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .ex.is-in .ex-arr--next :global(.arrow) {
+    animation: ex-nudge 1400ms var(--ease-expo) 900ms 1 both;
+  }
+
+  @keyframes ex-nudge {
+    0%,
+    100% {
+      transform: none;
+    }
+    18%,
+    52% {
+      transform: translate3d(5px, 0, 0);
+    }
+    35%,
+    70% {
+      transform: none;
+    }
+  }
+
+  /* the tabs: a hairline-divided strip; each tab is as wide as it needs and
+     the lines fill up, so all five sit in one row wherever they fit */
+  .ex-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1px;
+    border: 1px solid var(--line-dark);
+    background-color: var(--line-dark);
+  }
+
+  .ex-b {
+    position: relative;
+    isolation: isolate;
+    display: grid;
+    align-content: center;
+    row-gap: 7px;
+    flex: 1 1 0;
+    min-width: max-content;
+    min-height: 64px;
+    padding: 12px 14px 11px;
+    border: 0;
+    border-radius: 0;
+    background-color: var(--void);
+    color: var(--haze);
+    text-align: left;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: color var(--t-micro) linear;
+  }
+
+  /* the chosen tab: a steel plate hinges in, a lilac bar draws on top */
+  .ex-b::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-color: var(--steel);
+    transform: perspective(500px) rotateX(-30deg) scaleY(0);
+    transform-origin: 50% 0%;
+    transition: transform 520ms var(--ease-expo);
+  }
+
+  .ex-bar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 2px;
+    background-color: var(--lilac);
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 520ms var(--ease-expo);
+  }
+
+  .ex-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* a tiny drawing of each site in its own colours */
+  .ex-th {
+    position: relative;
+    display: block;
+    flex: 0 0 auto;
+    width: 26px;
+    height: 17px;
+    overflow: hidden;
+    background-color: var(--tb);
+    outline: 1px solid var(--line-dark-strong);
+    outline-offset: 0;
+    transition: transform 520ms var(--ease-expo);
+  }
+
+  .ex-th-h,
+  .ex-th-a,
+  .ex-th-n {
+    position: absolute;
+    display: block;
+  }
+
+  .ex-th-h {
+    left: 3px;
+    top: 3px;
+    width: 11px;
+    height: 2px;
+    background-color: var(--tt);
+  }
+
+  .ex-th-a {
+    left: 3px;
+    top: 7px;
+    width: 7px;
+    height: 3px;
+    background-color: var(--ta);
+  }
+
+  .ex-th-n {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 4px;
+    background-color: var(--tn);
+  }
+
+  .ex-n {
+    color: var(--dim);
+    font-stretch: var(--wd-display);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    font-variant-numeric: lining-nums tabular-nums;
+    transition: color var(--t-micro) linear;
+  }
+
+  .ex-name {
+    font-size: 0.875rem;
+    font-weight: 550;
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+
+  .ex-b[aria-pressed='true'] {
+    color: var(--starlight);
+    cursor: default;
+  }
+
+  .ex-b[aria-pressed='true']::before,
+  .ex-b[aria-pressed='true'] .ex-bar {
+    transform: none;
+  }
+
+  .ex-b[aria-pressed='true'] .ex-n {
+    color: var(--lilac);
+  }
+
+  .ex-b[aria-pressed='true'] .ex-th {
+    transform: translate3d(0, -1px, 0) scale(1.12);
+    transform-origin: left center;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .ex-b:not([aria-pressed='true']):hover {
+      color: var(--starlight);
+    }
+
+    .ex-b:not([aria-pressed='true']):hover .ex-bar {
+      transform: scaleX(0.3);
+    }
+  }
+
+  .ex-b:focus-visible {
+    z-index: 1;
+    outline: 2px solid var(--starlight);
+    outline-offset: -2px;
+  }
+
+  /* phones: tighter tabs keep the strip at three over two down to 320 */
+  @media (max-width: 419px) {
+    .ex-b {
+      padding: 10px 10px 9px;
+    }
+
+    .ex-top {
+      gap: 6px;
+    }
+
+    .ex-name {
+      font-size: 0.8125rem;
+    }
+  }
+
+  @media (max-width: 359px) {
+    .ex-nav {
+      flex: 1 1 100%;
+    }
+
+    .ex-hint {
+      margin-right: auto;
+      letter-spacing: 0.1em;
+      text-align: left;
+    }
+
+    .ex-arr {
+      width: 40px;
+      height: 40px;
+    }
+
+    .ex-b {
+      padding-inline: 8px;
+    }
+
+    .ex-name {
+      font-size: 0.75rem;
+    }
+  }
+
+  /* desktop: the sticky preview (deck, switcher, listing) must fit one
+     laptop screen, so the switcher and the listing tighten up there */
+  @media (min-width: 1100px) {
+    .ex {
+      row-gap: 8px;
+    }
+
+    .ex-arr {
+      width: 40px;
+      height: 40px;
+    }
+
+    .ex-b {
+      row-gap: 6px;
+      min-height: 58px;
+      padding: 10px 14px 9px;
+    }
+  }
+
+  /* no JS: step 01 of the form is the switcher; the buttons would be inert */
+  :global(html:not(.js)) .ex-nav,
+  :global(html:not(.js)) .ex-tabs {
+    display: none;
   }
 
   .pages {
@@ -1576,6 +1978,16 @@ const hNav = fan.slice(1, 4);
     text-wrap: balance;
   }
 
+  @media (min-width: 1100px) {
+    .lst-wrap {
+      margin-top: 26px;
+    }
+
+    .pv-cap--lst {
+      margin-bottom: 10px;
+    }
+  }
+
   .lst {
     display: grid;
     padding: 20px 20px 22px;
@@ -1586,6 +1998,12 @@ const hNav = fan.slice(1, 4);
   @media (min-width: 768px) {
     .lst {
       padding: 24px 28px 26px;
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .lst {
+      padding: 20px 26px 22px;
     }
   }
 
@@ -2210,6 +2628,9 @@ const hNav = fan.slice(1, 4);
   :global(html.motion-reduced) .dl-bar,
   :global(html.motion-reduced) .dl-t1w,
   :global(html.motion-reduced) .opt::before,
+  :global(html.motion-reduced) .ex-b::before,
+  :global(html.motion-reduced) .ex-bar,
+  :global(html.motion-reduced) .ex-th,
   :global(html.motion-reduced) .ind::before {
     transition: none !important;
   }

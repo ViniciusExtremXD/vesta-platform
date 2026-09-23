@@ -1,13 +1,17 @@
 ---
 /**
- * Concept 03 BEFORE — Trattoria Ombra (fictional) on a plausible 2016
- * restaurant template. Dated, not a parody: a dark "photo" background, a
- * script logo, a flag-coloured stripe and a red nav bar with a green active
- * tab, a slideshow with a black caption box and a "Download menu (PDF)"
- * button, three identical boxes with placeholder photos, and the hours and
- * phone number in 7-px type in the footer. Every text pair passes AA on its
- * own opaque fill. Contract: ../README.md. Sizes in --u (one reference px
- * of the 760 × 475 drawing).
+ * Concept 03 BEFORE — Trattoria Ombra (fictional) on a plausible 2008-era
+ * restaurant template (© 2016): a dark oxblood column on a red-and-cream checked
+ * tablecloth page, a background-music toggle, a gold script logo between a
+ * clip-art wine bottle and grapes, a flag stripe, a bevelled red nav with a
+ * green active tab, a cluttered left sidebar (daily specials, mailing-list
+ * form, a "Gift Certificates" starburst), a blurry low-res slideshow in a
+ * gold ridge frame, a parchment "Welcome to…!" panel whose one button is a
+ * 2.4 MB PDF menu, three boxes with placeholder photos, and the hours and
+ * phone number in 6.5px type in the footer. Dated and poor, not a parody.
+ * Every text pair passes AA on its own opaque fill. Findings A1–A4 and
+ * their anchors: src/data/concepts/restaurant.ts. Contract: ../README.md.
+ * Sizes in --u (one reference px of the 760 × 475 drawing).
  */
 import { restaurant, ombra } from '../../../data/concepts/restaurant';
 
@@ -17,162 +21,302 @@ export interface Props {
 const { class: cls = '' } = Astro.props;
 
 const B = restaurant.before;
+
+/* drawing-only strings (period copy, fictional business) */
+const T = {
+  music: 'Music: On | Off',
+  specialsHead: 'Daily Specials',
+  specials: [
+    ['Tuesday', 'Lasagna Night'],
+    ['Wednesday', 'Half-Price Wine'],
+    ['Thursday', 'Osso Buco'],
+    ['Sunday', 'Family Dinner'],
+  ],
+  listHead: 'Join the Mailing List!',
+  listLabel: 'Email:',
+  submit: 'Submit',
+  burst: ['Gift Certificates', 'Available!'],
+  hiringHead: 'Now Hiring!',
+  hiring: 'Experienced servers, bussers and a line cook. Apply in person!',
+  photoCap: 'Photo 1 of 5 — Main Dining Room',
+  intro:
+    'Enjoy homemade pasta, fine wines and a warm family atmosphere. Perfect for date night, birthdays and special occasions!',
+  pdfSize: '(PDF, 2.4 MB)',
+  soon: ['Image', 'coming soon'],
+  rights: '© 2016 Trattoria Ombra. All Rights Reserved. · Site Map',
+};
+
+/* the slideshow "photo": a 70 × 20 thumbnail of the dining room blown up
+   to 500 px, drawn as run-length pixel rows and softened in CSS */
+const lamps = [14, 35, 56];
+const px = (x: number, y: number): string => {
+  if (y >= 17) return y === 17 ? '#2e1c12' : '#24160e';
+  for (const l of lamps) {
+    if (x === l && y <= 3) return '#140c06';
+    if (y >= 4 && y <= 5 && Math.abs(x - l) <= 2) return '#1a100a';
+    const dx = (x - l) / 5;
+    const dy = (y - 7) / 2.2;
+    if (y >= 6 && dx * dx + dy * dy <= 1) return dx * dx + dy * dy <= 0.3 ? '#f0b760' : '#b87436';
+  }
+  if (x >= 61 && x <= 68 && y >= 2 && y <= 10) return x === 64 || y === 6 ? '#2a1a10' : '#51607a';
+  if ((x >= 6 && x <= 22) || (x >= 27 && x <= 44) || (x >= 49 && x <= 65)) {
+    if (y === 13) return '#e8dcc0';
+    if (y >= 14 && y <= 16) return y % 2 ? '#9a1c1f' : '#86181b';
+    if (y === 12 && (x === 14 || x === 35 || x === 57)) return '#f2c14e';
+  }
+  if (y >= 11) return y % 2 ? '#3a2213' : '#331e10';
+  return y % 3 === 0 ? '#4a2c1a' : '#55331e';
+};
+const runs: { x: number; y: number; w: number; c: string }[] = [];
+for (let y = 0; y < 20; y++) {
+  let start = 0;
+  for (let x = 1; x <= 70; x++) {
+    if (x === 70 || px(x, y) !== px(start, y)) {
+      runs.push({ x: start, y, w: x - start, c: px(start, y) });
+      start = x;
+    }
+  }
+}
+
+const burst = Array.from({ length: 24 }, (_, i) => {
+  const a = (i / 24) * Math.PI * 2;
+  const r = i % 2 ? 26 : 34;
+  return `${(40 + Math.cos(a) * r * 1.15).toFixed(1)},${(34 + Math.sin(a) * r * 0.9).toFixed(1)}`;
+}).join(' ');
 ---
 
 <div class:list={['b-site', cls]} aria-hidden="true">
-  <div class="b-top">
-    <span class="b-mail">{B.topBar}</span>
-    <span class="b-social"><i></i><i></i><i></i></span>
-  </div>
-  <div class="b-head">
-    <span class="b-logo">{B.logo}</span>
-    <span class="b-tag">{ombra.beforeTagline}</span>
-  </div>
-  <div class="b-nav">
-    {B.nav.map((l, i) => <span class:list={['b-navl', i === 0 && 'is-on']}>{l}</span>)}
-  </div>
-  <div class="b-hero">
-    <svg class="b-photo" viewBox="0 0 760 202" preserveAspectRatio="none" aria-hidden="true">
-      <rect width="760" height="202" fill="#2A1F19"></rect>
-      <path d="M0 0h96v150H0zM214 0h112v150H214zM444 0h112v150H444zM664 0h96v150H664z" fill="#241A15"></path>
-      <path d="M96 58h118M326 58h118M556 58h108" stroke="#3A2C23" stroke-width="3"></path>
-      <path
-        d="M112 58V38h6v-8h4v8h6v20M140 58V34h5v-9h4v9h5v24M232 58V40h6v-8h4v8h6v18M360 58V36h5v-9h4v9h5v22M386 58V42h6v-7h4v7h6v16M582 58V37h6v-8h4v8h6v21M612 58V41h5v-8h4v8h5v17"
-        fill="#1A1310"></path>
-      <path d="M170 0v54" stroke="#4B3A2E" stroke-width="1.5"></path>
-      <path d="M159 68l5-14h12l5 14z" fill="#3A2C23"></path>
-      <ellipse cx="170" cy="76" rx="30" ry="16" fill="#7A5230" fill-opacity=".28"></ellipse>
-      <ellipse cx="170" cy="70" rx="7" ry="3" fill="#C08A52" fill-opacity=".6"></ellipse>
-      <path d="M402 0v44" stroke="#4B3A2E" stroke-width="1.5"></path>
-      <path d="M391 58l5-14h12l5 14z" fill="#3A2C23"></path>
-      <ellipse cx="402" cy="66" rx="30" ry="16" fill="#7A5230" fill-opacity=".28"></ellipse>
-      <ellipse cx="402" cy="60" rx="7" ry="3" fill="#C08A52" fill-opacity=".6"></ellipse>
-      <path d="M610 0v58" stroke="#4B3A2E" stroke-width="1.5"></path>
-      <path d="M599 72l5-14h12l5 14z" fill="#3A2C23"></path>
-      <ellipse cx="610" cy="80" rx="30" ry="16" fill="#7A5230" fill-opacity=".28"></ellipse>
-      <ellipse cx="610" cy="74" rx="7" ry="3" fill="#C08A52" fill-opacity=".6"></ellipse>
-      <path d="M0 150h760v52H0z" fill="#17110E"></path>
-      <path d="M40 150h680" stroke="#3A2C23" stroke-width="2"></path>
-      <path d="M150 150v-16h8v16M168 150v-22h6v22M548 150v-18h8v18M566 150v-12h8v12" fill="none" stroke="#4B3A2E" stroke-width="2"></path>
-    </svg>
-    <svg class="b-arrow b-arrow--l" viewBox="0 0 10 16" aria-hidden="true"><path d="M7 2 2 8l5 6" fill="none" stroke="#FFFFFF" stroke-width="1.6"></path></svg>
-    <svg class="b-arrow b-arrow--r" viewBox="0 0 10 16" aria-hidden="true"><path d="m3 2 5 6-5 6" fill="none" stroke="#FFFFFF" stroke-width="1.6"></path></svg>
-    <div class="b-copy">
-      <span class="b-welcome">{B.welcome}</span>
-      <span class="b-sub">{B.heroSub}</span>
-      <span class="b-pdf">
-        <svg viewBox="0 0 12 14" aria-hidden="true">
-          <path d="M1.5 1h6l3 3v9h-9z M7.5 1v3h3" fill="none" stroke="#FFFFFF" stroke-width="1.1"></path>
-        </svg>
-        {B.heroButton}
-      </span>
+  <span class="b-music">♫ {T.music}</span>
+  <div class="b-page">
+    <!-- header: bottle, gold script logo, grapes -->
+    <div class="b-head">
+      <svg class="b-wine" viewBox="0 0 40 50" aria-hidden="true">
+        <path d="M11 2h6v10c0 3 4 5 4 10v25H7V22c0-5 4-7 4-10z" fill="#1E5A2A" stroke="#000000" stroke-width="1.4"></path>
+        <path d="M8 27h12v11H8z" fill="#F3E5C0" stroke="#000000" stroke-width="0.8"></path>
+        <path d="M10 30h8M10 33h6" stroke="#8B1A1A" stroke-width="1.2"></path>
+        <path d="M12 6v14" stroke="#4E9A5E" stroke-width="1.4" stroke-linecap="round"></path>
+        <path d="M25 22h12c0 8-2 12-6 12s-6-4-6-12z" fill="#FFFFFF" fill-opacity=".25" stroke="#000000" stroke-width="1.2"></path>
+        <path d="M25.6 26h10.8c-.4 5-2 7.4-5.4 7.4s-5-2.4-5.4-7.4z" fill="#9A1018"></path>
+        <path d="M31 34v10M26 46h10" stroke="#000000" stroke-width="1.4" stroke-linecap="round"></path>
+      </svg>
+      <span class="b-logo">{B.logo}</span>
+      <span class="b-tag">{ombra.beforeTagline}</span>
+      <svg class="b-grapes" viewBox="0 0 40 50" aria-hidden="true">
+        <path d="M20 10c0-5 3-8 7-8" fill="none" stroke="#5A3D1E" stroke-width="2"></path>
+        <path d="M22 8c6-6 14-4 16 2-6 3-12 2-16-2z" fill="#3E8E3A" stroke="#000000" stroke-width="1"></path>
+        <g fill="#6A2A7A" stroke="#000000" stroke-width="0.9">
+          <circle cx="12" cy="16" r="4.5"></circle><circle cx="21" cy="15" r="4.5"></circle><circle cx="30" cy="17" r="4.5"></circle>
+          <circle cx="16" cy="24" r="4.5"></circle><circle cx="25" cy="24" r="4.5"></circle>
+          <circle cx="12" cy="31" r="4.5"></circle><circle cx="21" cy="32" r="4.5"></circle>
+          <circle cx="17" cy="39" r="4.5"></circle><circle cx="20" cy="46" r="3.5"></circle>
+        </g>
+        <path d="M10.5 14.5l1.5-1M19.5 13.5l1.5-1M14.5 22.5l1.5-1" stroke="#D7A6E0" stroke-width="1.2" stroke-linecap="round"></path>
+      </svg>
     </div>
     <span class="b-flag"><i></i><i></i><i></i></span>
-    <span class="b-dots"><i class="is-on"></i><i></i><i></i><i></i><i></i></span>
+
+    <!-- bevelled red nav -->
+    <div class="b-nav">
+      {B.nav.map((l, i) => <span class:list={['b-navl', i === 0 && 'is-on']}>{l}</span>)}
+    </div>
+
+    <!-- cluttered left sidebar -->
+    <div class="b-side">
+      <span class="b-side-h">{T.specialsHead}</span>
+      <span class="b-specials">
+        {
+          T.specials.map(([d, s]) => (
+            <span class="b-sp">
+              <b>{d}</b> – {s}
+            </span>
+          ))
+        }
+      </span>
+      <span class="b-rule"></span>
+      <span class="b-list-h">{T.listHead}</span>
+      <span class="b-field"><span class="b-lab">{T.listLabel}</span><i></i></span>
+      <span class="b-submit">{T.submit}</span>
+      <span class="b-burst">
+        <svg viewBox="0 0 80 68" aria-hidden="true"><polygon points={burst} fill="#FFDD00" stroke="#9A1018" stroke-width="1.6"></polygon></svg>
+        <span class="b-burst-t">{T.burst[0]}<br />{T.burst[1]}</span>
+      </span>
+      <span class="b-hire"><b>{T.hiringHead}</b> {T.hiring}</span>
+    </div>
+
+    <!-- slideshow: a dark, soft, low-res photo -->
+    <div class="b-show">
+      <svg class="b-pic" viewBox="0 0 70 20" preserveAspectRatio="none" shape-rendering="crispEdges" aria-hidden="true">
+        {runs.map((r) => <rect x={r.x} y={r.y} width={r.w + 0.04} height="1.04" fill={r.c} />)}
+      </svg>
+      <span class="b-arr b-arr--l"><svg viewBox="0 0 10 16" aria-hidden="true"><path d="M7 2 2 8l5 6" fill="none" stroke="#2A0A0A" stroke-width="2.4"></path></svg></span>
+      <span class="b-arr b-arr--r"><svg viewBox="0 0 10 16" aria-hidden="true"><path d="m3 2 5 6-5 6" fill="none" stroke="#2A0A0A" stroke-width="2.4"></path></svg></span>
+      <span class="b-pcap">{T.photoCap}</span>
+    </div>
+
+    <!-- parchment welcome panel: the only button is a PDF -->
+    <div class="b-welcome-box">
+      <span class="b-welcome">{B.welcome}!</span>
+      <span class="b-sub">{B.heroSub}</span>
+      <span class="b-intro">{T.intro}</span>
+      <span class="b-pdfrow">
+        <span class="b-pdf">
+          <svg viewBox="0 0 12 14" aria-hidden="true">
+            <path d="M1.5 1h6l3 3v9h-9z" fill="#FFFFFF" stroke="#000000" stroke-width="0.8"></path>
+            <path d="M3 9.5h6v2H3z" fill="#C41E25"></path>
+          </svg>
+          {B.heroButton}
+        </span>
+        <span class="b-size">{T.pdfSize}</span>
+      </span>
+    </div>
+
+    <!-- three boxes with placeholder photos -->
+    <div class="b-boxes">
+      {
+        B.boxes.map((t, i) => (
+          <div class:list={['b-box', `b-box--${i + 1}`]}>
+            <span class="b-ph">
+              {i === 0 && (
+                <svg viewBox="0 0 40 30" aria-hidden="true">
+                  <ellipse cx="20" cy="18" rx="17" ry="8" fill="#FFFFFF" stroke="#000000" stroke-width="1.2" />
+                  <ellipse cx="20" cy="16.5" rx="10" ry="4.5" fill="#F2C14E" stroke="#8A5A1A" stroke-width="0.8" />
+                  <path d="M12 16c3-3 5 2 8-1s5 2 8-1M13 18c3-2 6 1 9-1s4 1 6-1" fill="none" stroke="#C9922C" stroke-width="0.9" />
+                  <circle cx="17" cy="15" r="1.8" fill="#9A1018" />
+                  <circle cx="23" cy="17" r="1.6" fill="#9A1018" />
+                  <path d="M26 13l3-2" stroke="#3E8E3A" stroke-width="1.6" stroke-linecap="round" />
+                </svg>
+              )}
+              {i === 1 && (
+                <span class="b-soon">
+                  <svg viewBox="0 0 20 14" aria-hidden="true">
+                    <path d="M1 3h5l1.5-2h5L14 3h5v10H1z" fill="#BDBDBD" stroke="#555555" stroke-width="1" />
+                    <circle cx="10" cy="8" r="3" fill="#E6E6E6" stroke="#555555" stroke-width="1" />
+                  </svg>
+                  <span class="b-soon-t">{T.soon[0]}<br />{T.soon[1]}</span>
+                </span>
+              )}
+              {i === 2 && (
+                <svg viewBox="0 0 40 30" aria-hidden="true">
+                  <path d="M12 18c-5 0-7-4-5-7s6-3 7-1c0-4 3-7 6-7s6 3 6 7c1-2 5-2 7 1s0 7-5 7z" fill="#FFFFFF" stroke="#000000" stroke-width="1.2" />
+                  <path d="M13 18h14v8H13z" fill="#FFFFFF" stroke="#000000" stroke-width="1.2" />
+                  <path d="M16 20v5M20 20v5M24 20v5" stroke="#BDBDBD" stroke-width="1" />
+                </svg>
+              )}
+            </span>
+            <span class="b-title">{t}</span>
+            <span class="b-text">{B.boxText}</span>
+            <span class="b-link">{B.boxLink}</span>
+          </div>
+        ))
+      }
+    </div>
+
+    <!-- the hours and phone number, buried -->
+    <div class="b-foot">
+      <span class="b-foot-h">{B.footer}</span>
+      <span class="b-foot-c">{T.rights}</span>
+    </div>
   </div>
-  <div class="b-boxes">
-    {
-      B.boxes.map((t) => (
-        <div class="b-box">
-          <span class="b-ph">
-            <svg viewBox="0 0 24 18" aria-hidden="true">
-              <path d="M2 16 9 8l5 5 3-3 5 6z" fill="#5A4A3F" />
-              <circle cx="17" cy="5" r="2.2" fill="#5A4A3F" />
-            </svg>
-          </span>
-          <span class="b-title">{t}</span>
-          <span class="b-text">{B.boxText}</span>
-          <span class="b-link">{B.boxLink}</span>
-        </div>
-      ))
-    }
-  </div>
-  <div class="b-foot">{B.footer}</div>
 </div>
 
 <style>
   .b-site {
     --u: calc(100cqi / 760);
-    --b-bg: #1b1512;
-    --b-text: #ede6da;
-    --b-red: #9e1b22;
-    --b-green: #1e6b3a;
-    --b-panel: #231b17;
+    --b-gold: #f2c14e;
+    --b-cream: #e8dcc0;
+    --b-oxblood: #2a0a0a;
+    --b-parch: #f3e5c0;
+    --b-times: 'Times New Roman', Times, 'Liberation Serif', serif;
+    --b-script: 'Monotype Corsiva', 'Brush Script MT', 'Segoe Script', 'Snell Roundhand', 'Apple Chancery', cursive;
     position: absolute;
     inset: 0;
     overflow: hidden;
-    background-color: var(--b-bg);
-    color: var(--b-text);
-    font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
+    /* the page behind the column: a checked tablecloth */
+    background-color: #b01e23;
+    background-image: repeating-conic-gradient(#b01e23 0 25%, #f3e5c0 0 50%);
+    background-size: calc(20 * var(--u)) calc(20 * var(--u));
+    color: var(--b-cream);
+    font-family: Arial, Helvetica, sans-serif;
     font-stretch: 100%;
     font-weight: 400;
-    line-height: 1.25;
+    line-height: 1.2;
     letter-spacing: 0;
     text-transform: none;
   }
 
-  /* ---------- top bar ---------- */
-  .b-top {
+  .b-music {
     position: absolute;
-    inset: 0 0 auto;
-    height: calc(18 * var(--u));
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding-inline: calc(16 * var(--u));
-    background-color: #0f0b09;
+    top: calc(2 * var(--u));
+    right: calc(30 * var(--u));
+    z-index: 1;
+    padding: calc(1 * var(--u)) calc(4 * var(--u));
+    background-color: #000000;
+    color: var(--b-cream);
+    font-size: calc(6.5 * var(--u));
+    white-space: nowrap;
   }
 
-  .b-mail {
-    color: #bdb2a4;
-    font-size: calc(7 * var(--u));
+  .b-page {
+    position: absolute;
+    top: calc(14 * var(--u));
+    bottom: 0;
+    left: calc(30 * var(--u));
+    width: calc(700 * var(--u));
+    border-inline: calc(2 * var(--u)) solid #b8962e;
+    background-color: var(--b-oxblood);
   }
 
-  .b-social {
-    display: flex;
-    gap: calc(4 * var(--u));
-  }
-
-  .b-social i {
-    width: calc(9 * var(--u));
-    height: calc(9 * var(--u));
-    background-color: #4b3a2e;
-  }
-
-  /* ---------- script logo, centred ---------- */
+  /* ---------- header ---------- */
   .b-head {
     position: absolute;
-    top: calc(18 * var(--u));
-    left: 0;
-    right: 0;
-    height: calc(68 * var(--u));
+    inset: 0 0 auto;
+    height: calc(62 * var(--u));
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: calc(2 * var(--u));
-    background-color: var(--b-bg);
+    gap: calc(1 * var(--u));
+    background-color: #2a0a0a;
+    background-image: linear-gradient(180deg, #4a1212 0%, #2a0a0a 100%);
+  }
+
+  .b-wine,
+  .b-grapes {
+    position: absolute;
+    top: calc(8 * var(--u));
+    width: calc(38 * var(--u));
+    height: calc(48 * var(--u));
+  }
+
+  .b-wine {
+    left: calc(150 * var(--u));
+  }
+
+  .b-grapes {
+    right: calc(150 * var(--u));
   }
 
   .b-logo {
-    color: #f4ecdf;
-    font-family: 'Brush Script MT', 'Segoe Script', 'Snell Roundhand', 'Apple Chancery', cursive;
-    font-size: calc(33 * var(--u));
-    font-weight: 400;
+    color: var(--b-gold);
+    font-family: var(--b-script);
+    font-size: calc(34 * var(--u));
     line-height: 1;
+    text-shadow: calc(2 * var(--u)) calc(2 * var(--u)) 0 #000000;
+    white-space: nowrap;
   }
 
   .b-tag {
-    color: #cfc4b6;
-    font-size: calc(7 * var(--u));
-    letter-spacing: 0.3em;
-    text-transform: uppercase;
+    color: var(--b-cream);
+    font-family: var(--b-times);
+    font-size: calc(8 * var(--u));
+    font-style: italic;
+    letter-spacing: 0.25em;
+    white-space: nowrap;
   }
 
-  /* the flag stripe: green / white / red */
   .b-flag {
     position: absolute;
-    top: 0;
+    top: calc(62 * var(--u));
     left: 0;
     right: 0;
     height: calc(4 * var(--u));
@@ -181,7 +325,7 @@ const B = restaurant.before;
 
   .b-flag i {
     flex: 1;
-    background-color: var(--b-green);
+    background-color: #1e6b3a;
   }
 
   .b-flag i:nth-child(2) {
@@ -189,203 +333,422 @@ const B = restaurant.before;
   }
 
   .b-flag i:nth-child(3) {
-    background-color: var(--b-red);
+    background-color: #b3141c;
   }
 
-  /* ---------- red nav, green active tab ---------- */
+  /* ---------- bevelled nav ---------- */
   .b-nav {
     position: absolute;
-    top: calc(86 * var(--u));
+    top: calc(66 * var(--u));
     left: 0;
     right: 0;
-    height: calc(30 * var(--u));
+    height: calc(20 * var(--u));
     display: flex;
-    align-items: stretch;
     justify-content: center;
-    background-color: var(--b-red);
+    border-top: 1px solid #e0575c;
+    border-bottom: 1px solid #4a0508;
+    background-color: #9a1018;
+    background-image: linear-gradient(180deg, #b3141c 0%, #7a0c12 100%);
   }
 
   .b-navl {
     display: flex;
     align-items: center;
     padding-inline: calc(12 * var(--u));
+    border-right: 1px solid #d9a441;
     color: #ffffff;
-    font-size: calc(8 * var(--u));
+    font-family: var(--b-times);
+    font-size: calc(8.5 * var(--u));
     font-weight: 700;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
+    text-shadow: calc(1 * var(--u)) calc(1 * var(--u)) 0 #3a0508;
+  }
+
+  .b-navl:first-child {
+    border-left: 1px solid #d9a441;
   }
 
   .b-navl.is-on {
-    background-color: var(--b-green);
+    background-color: #1e6b3a;
+    background-image: linear-gradient(180deg, #2a8a4c 0%, #1e6b3a 50%, #14502a 100%);
   }
 
-  /* ---------- slideshow ---------- */
-  .b-hero {
+  /* ---------- sidebar ---------- */
+  .b-side {
     position: absolute;
-    top: calc(116 * var(--u));
-    left: 0;
-    right: 0;
-    height: calc(202 * var(--u));
-    background-color: #2a1f19;
+    top: calc(92 * var(--u));
+    left: calc(6 * var(--u));
+    width: calc(150 * var(--u));
+    bottom: calc(42 * var(--u));
+    display: flex;
+    flex-direction: column;
+    gap: calc(4 * var(--u));
+    padding: calc(6 * var(--u));
+    border: calc(3 * var(--u)) double #b8962e;
+    background-color: #1f1512;
   }
 
-  .b-photo {
+  .b-side-h {
+    color: var(--b-gold);
+    font-family: var(--b-script);
+    font-size: calc(15 * var(--u));
+    line-height: 1;
+  }
+
+  .b-specials {
+    display: flex;
+    flex-direction: column;
+    gap: calc(3 * var(--u));
+  }
+
+  .b-sp {
+    color: var(--b-cream);
+    font-family: var(--b-times);
+    font-size: calc(7.5 * var(--u));
+  }
+
+  .b-sp b {
+    color: var(--b-gold);
+  }
+
+  .b-rule {
+    height: 1px;
+    margin-block: calc(3 * var(--u));
+    background-color: #b8962e;
+  }
+
+  .b-list-h {
+    color: var(--b-gold);
+    font-family: var(--b-times);
+    font-size: calc(8.5 * var(--u));
+    font-weight: 700;
+  }
+
+  .b-field {
+    display: flex;
+    align-items: center;
+    gap: calc(3 * var(--u));
+  }
+
+  .b-lab {
+    color: var(--b-cream);
+    font-size: calc(6.5 * var(--u));
+  }
+
+  .b-field i {
+    flex: 1;
+    height: calc(10 * var(--u));
+    border: 1px solid;
+    border-color: #7a7a7a #dcdcdc #dcdcdc #7a7a7a;
+    background-color: #ffffff;
+  }
+
+  .b-submit {
+    align-self: flex-start;
+    padding: calc(1.5 * var(--u)) calc(6 * var(--u));
+    border: calc(1.5 * var(--u)) outset #f2f2f2;
+    background-color: #dddddd;
+    color: #222222;
+    font-size: calc(7 * var(--u));
+  }
+
+  .b-burst {
+    position: relative;
+    align-self: center;
+    width: calc(96 * var(--u));
+    height: calc(80 * var(--u));
+    margin-top: calc(10 * var(--u));
+    transform: rotate(-9deg);
+  }
+
+  .b-burst svg {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
   }
 
-  .b-arrow {
+  .b-burst-t {
     position: absolute;
-    top: calc(80 * var(--u));
-    width: calc(22 * var(--u));
-    height: calc(38 * var(--u));
-    padding: calc(10 * var(--u)) calc(6 * var(--u));
-    background-color: #0f0b09;
-  }
-
-  .b-arrow--l {
-    left: calc(14 * var(--u));
-  }
-
-  .b-arrow--r {
-    right: calc(16 * var(--u));
-  }
-
-  .b-copy {
-    position: absolute;
-    inset: calc(34 * var(--u)) calc(196 * var(--u)) auto;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: calc(7 * var(--u));
-    padding: calc(16 * var(--u)) calc(12 * var(--u)) calc(18 * var(--u));
-    background-color: #120d0b;
+    left: 50%;
+    top: 50%;
+    padding: 0 calc(1 * var(--u));
+    background-color: #ffdd00;
+    color: #a50c22;
+    font-size: calc(7.5 * var(--u));
+    font-weight: 700;
+    line-height: 1.15;
     text-align: center;
+    white-space: nowrap;
+    transform: translate(-50%, -50%);
+  }
+
+  .b-hire {
+    margin-top: auto;
+    padding: calc(4 * var(--u)) calc(5 * var(--u));
+    border: 1px dashed #d9a441;
+    background-color: #2a0a0a;
+    color: var(--b-cream);
+    font-family: var(--b-times);
+    font-size: calc(7.5 * var(--u));
+    line-height: 1.25;
+  }
+
+  .b-hire b {
+    color: var(--b-gold);
+    font-size: calc(9 * var(--u));
+  }
+
+  /* ---------- slideshow ---------- */
+  .b-show {
+    position: absolute;
+    top: calc(92 * var(--u));
+    left: calc(164 * var(--u));
+    width: calc(526 * var(--u));
+    height: calc(142 * var(--u));
+    overflow: hidden;
+    border: calc(3 * var(--u)) ridge #d9a441;
+    background-color: #3a2213;
+  }
+
+  .b-pic {
+    position: absolute;
+    inset: calc(-3 * var(--u));
+    display: block;
+    width: calc(100% + 6 * var(--u));
+    height: calc(100% + 6 * var(--u));
+    filter: blur(calc(2.6 * var(--u))) saturate(1.2);
+  }
+
+  .b-arr {
+    position: absolute;
+    top: calc(50 * var(--u));
+    display: grid;
+    place-items: center;
+    width: calc(16 * var(--u));
+    height: calc(24 * var(--u));
+    border: calc(2 * var(--u)) outset #f5dc8a;
+    background-color: #d9a441;
+  }
+
+  .b-arr svg {
+    width: calc(6 * var(--u));
+    height: calc(10 * var(--u));
+  }
+
+  .b-arr--l {
+    left: calc(6 * var(--u));
+  }
+
+  .b-arr--r {
+    right: calc(6 * var(--u));
+  }
+
+  .b-pcap {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    padding: calc(2 * var(--u)) calc(6 * var(--u));
+    background-color: #000000;
+    color: var(--b-cream);
+    font-family: var(--b-times);
+    font-size: calc(7 * var(--u));
+    font-style: italic;
+  }
+
+  /* ---------- parchment welcome panel ---------- */
+  .b-welcome-box {
+    position: absolute;
+    top: calc(240 * var(--u));
+    left: calc(164 * var(--u));
+    width: calc(526 * var(--u));
+    height: calc(88 * var(--u));
+    display: grid;
+    grid-template-columns: 1fr calc(178 * var(--u));
+    grid-template-rows: auto auto 1fr;
+    column-gap: calc(12 * var(--u));
+    padding: calc(8 * var(--u)) calc(12 * var(--u));
+    border: 1px solid #b8962e;
+    outline: 1px solid #8a6d1e;
+    outline-offset: calc(-4 * var(--u));
+    background-color: var(--b-parch);
+    color: #333333;
   }
 
   .b-welcome {
-    color: #ffffff;
-    font-size: calc(21 * var(--u));
+    color: #8b1a1a;
+    font-family: var(--b-times);
+    font-size: calc(19 * var(--u));
     font-weight: 700;
+    line-height: 1.1;
     white-space: nowrap;
   }
 
   .b-sub {
-    color: var(--b-text);
-    font-size: calc(9.5 * var(--u));
+    grid-column: 1;
+    margin-top: calc(2 * var(--u));
+    color: #5a3d1e;
+    font-family: var(--b-times);
+    font-size: calc(9 * var(--u));
+    font-style: italic;
+  }
+
+  .b-intro {
+    grid-column: 1;
+    margin-top: calc(4 * var(--u));
+    color: #333333;
+    font-family: var(--b-times);
+    font-size: calc(8 * var(--u));
+    line-height: 1.25;
+  }
+
+  .b-pdfrow {
+    grid-column: 2;
+    grid-row: 1 / 4;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: calc(3 * var(--u));
   }
 
   .b-pdf {
     display: flex;
     align-items: center;
-    gap: calc(6 * var(--u));
-    margin-top: calc(6 * var(--u));
-    padding: calc(7 * var(--u)) calc(14 * var(--u));
-    background-color: var(--b-red);
+    gap: calc(5 * var(--u));
+    padding: calc(6 * var(--u)) calc(10 * var(--u));
+    border: calc(2 * var(--u)) outset #e06b6f;
+    background-color: #a8161d;
+    background-image: linear-gradient(180deg, #c41e25 0%, #8b1016 100%);
     color: #ffffff;
-    font-size: calc(8.5 * var(--u));
+    font-size: calc(9 * var(--u));
     font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    text-shadow: calc(1 * var(--u)) calc(1 * var(--u)) 0 #4a0508;
+    white-space: nowrap;
   }
 
   .b-pdf svg {
-    width: calc(9 * var(--u));
-    height: calc(11 * var(--u));
+    width: calc(10 * var(--u));
+    height: calc(12 * var(--u));
   }
 
-  .b-dots {
-    position: absolute;
-    left: 50%;
-    bottom: calc(14 * var(--u));
-    display: flex;
-    gap: calc(5 * var(--u));
-    transform: translateX(-50%);
+  .b-size {
+    color: #5a3d1e;
+    font-family: var(--b-times);
+    font-size: calc(7 * var(--u));
   }
 
-  .b-dots i {
-    width: calc(6 * var(--u));
-    height: calc(6 * var(--u));
-    border-radius: 50%;
-    background-color: #6b5e54;
-  }
-
-  .b-dots i.is-on {
-    background-color: #ffffff;
-  }
-
-  /* ---------- three identical boxes ---------- */
+  /* ---------- boxes ---------- */
   .b-boxes {
     position: absolute;
-    top: calc(318 * var(--u));
-    left: 0;
-    right: 0;
-    height: calc(126 * var(--u));
+    top: calc(334 * var(--u));
+    left: calc(164 * var(--u));
+    width: calc(528 * var(--u));
     display: flex;
-    justify-content: center;
-    gap: calc(18 * var(--u));
-    padding-top: calc(12 * var(--u));
-    background-color: var(--b-bg);
+    align-items: flex-start;
+    gap: calc(8 * var(--u));
   }
 
   .b-box {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: calc(4 * var(--u));
-    width: calc(204 * var(--u));
-    height: calc(104 * var(--u));
-    padding-bottom: calc(8 * var(--u));
-    border: 1px solid #4a3b32;
-    background-color: var(--b-panel);
-    text-align: center;
+    display: grid;
+    grid-template-columns: calc(52 * var(--u)) 1fr;
+    grid-template-rows: auto auto 1fr;
+    column-gap: calc(6 * var(--u));
+    row-gap: calc(2 * var(--u));
+    width: calc(170 * var(--u));
+    height: calc(86 * var(--u));
+    padding: calc(5 * var(--u));
+    border: calc(3 * var(--u)) double #b8962e;
+    background-color: #1f1512;
+  }
+
+  .b-box--2 {
+    margin-top: calc(4 * var(--u));
+    height: calc(80 * var(--u));
+  }
+
+  .b-box--3 {
+    width: calc(166 * var(--u));
+    height: calc(90 * var(--u));
   }
 
   .b-ph {
+    grid-row: 1 / 4;
     display: grid;
     place-items: center;
-    align-self: stretch;
-    height: calc(40 * var(--u));
-    margin-bottom: calc(3 * var(--u));
+    height: calc(46 * var(--u));
+    border: 1px solid #5a4a3f;
     background-color: #3a2e27;
   }
 
   .b-ph svg {
-    width: calc(20 * var(--u));
-    height: calc(15 * var(--u));
+    width: calc(40 * var(--u));
+    height: calc(30 * var(--u));
+  }
+
+  .b-soon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: calc(2 * var(--u));
+    align-self: stretch;
+    justify-self: stretch;
+    overflow: hidden;
+    background-color: #dddddd;
+  }
+
+  .b-soon svg {
+    width: calc(16 * var(--u));
+    height: calc(11 * var(--u));
+  }
+
+  .b-soon-t {
+    color: #444444;
+    font-size: calc(5.5 * var(--u));
+    text-align: center;
   }
 
   .b-title {
-    color: #f4ecdf;
-    font-family: 'Brush Script MT', 'Segoe Script', 'Snell Roundhand', 'Apple Chancery', cursive;
-    font-size: calc(15 * var(--u));
+    color: var(--b-gold);
+    font-family: var(--b-script);
+    font-size: calc(14 * var(--u));
     line-height: 1;
   }
 
   .b-text {
-    color: #cfc4b6;
+    color: var(--b-cream);
+    font-family: var(--b-times);
     font-size: calc(7.5 * var(--u));
+    line-height: 1.2;
   }
 
   .b-link {
-    color: #e0b862;
+    color: var(--b-gold);
+    font-family: var(--b-times);
     font-size: calc(7.5 * var(--u));
     text-decoration: underline;
   }
 
-  /* ---------- the hours, buried ---------- */
+  /* ---------- footer ---------- */
   .b-foot {
     position: absolute;
     inset: auto 0 0;
-    height: calc(31 * var(--u));
+    height: calc(34 * var(--u));
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    background-color: #0f0b09;
-    color: #bdb2a4;
-    font-size: calc(7 * var(--u));
+    gap: calc(2 * var(--u));
+    border-top: calc(2 * var(--u)) solid #b8962e;
+    background-color: #0b0806;
+    color: #a89f94;
+    font-size: calc(6.5 * var(--u));
+    white-space: nowrap;
+  }
+
+  .b-foot-c {
+    font-size: calc(6 * var(--u));
   }
 </style>

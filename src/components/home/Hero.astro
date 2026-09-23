@@ -15,9 +15,12 @@
  *   .hs-card[data-x-host]          the live plate; --x lives here so the
  *                                  tags riding the URL bar follow the blade
  *   template[data-card]            the other four plates, cloned on demand
- *   .hs-tabs[role=tablist]         Roofing · Dental · Restaurant · Law ·
+ *   .hs-sw[data-switcher]          ROUND4: "See 5 example sites" + counter,
+ *                                  then [‹] tabs [›]. Tabs (role=tab):
+ *                                  Roofing · Dental · Restaurant · Law ·
  *                                  Fitness, each with a progress bar (a CSS
- *                                  animation of --hs-dwell; its end advances)
+ *                                  animation of --hs-dwell; its end advances).
+ *                                  Every switch is interruptible (compare.ts).
  *   .hs-cap                        "Concept NN · A study by Vesta" /
  *                                  "Fictional business, not client work"
  *
@@ -53,6 +56,7 @@ const split = (caption: string): [string, string] => {
 const first = concepts[0];
 const [capA, capB] = split(first.caption);
 const tabName = (id: string) => (hero.showcase.tabs as Record<string, string>)[id] ?? id;
+const total = String(concepts.length).padStart(2, '0');
 ---
 
 <section id={hero.id} class="s-void hero" data-nav-theme="dark" data-hero-exit>
@@ -144,30 +148,45 @@ const tabName = (id: string) => (hero.showcase.tabs as Record<string, string>)[i
             }
           </div>
 
-          <div class="hs-tabs" role="tablist" aria-label={hero.showcase.label}>
-            {
-              concepts.map((c, k) => (
-                <button
-                  class:list={['hs-tab', k === 0 && 'is-current']}
-                  type="button"
-                  role="tab"
-                  id={`hs-tab-${c.id}`}
-                  data-concept={c.id}
-                  aria-selected={k === 0 ? 'true' : 'false'}
-                  aria-controls="hs-deck"
-                  tabindex={k === 0 ? 0 : -1}
-                  style={`--k:${k}`}
-                >
-                  <span class="hs-track" aria-hidden="true">
-                    <i class="hs-fill" />
-                  </span>
-                  <span class="hs-tab-t">
-                    <span class="hs-num">{c.number}</span>
-                    <span class="hs-name">{tabName(c.id)}</span>
-                  </span>
-                </button>
-              ))
-            }
+          <div class="hs-sw" data-switcher>
+            <div class="hs-sw-head">
+              <p class="label hs-sw-title"><i class="hs-sw-node" aria-hidden="true"></i>{hero.showcase.title}</p>
+              <p class="label hs-sw-count" aria-hidden="true">
+                <span class="hs-sw-name" data-sw-name>{tabName(first.id)}</span>
+                <span class="hs-sw-n"><span data-sw-n>{first.number}</span><span class="hs-sw-of"> / {total}</span></span>
+              </p>
+            </div>
+            <div class="hs-bar">
+              <button class="hs-arrow hs-arrow--prev" type="button" data-step="-1" aria-label={hero.showcase.prev} aria-controls="hs-deck">
+                <Arrow size={20} />
+              </button>
+              <div class="hs-tabs" role="tablist" aria-label={hero.showcase.label}>
+                {
+                  concepts.map((c, k) => (
+                    <button
+                      class:list={['hs-tab', k === 0 && 'is-current']}
+                      type="button"
+                      role="tab"
+                      id={`hs-tab-${c.id}`}
+                      data-concept={c.id}
+                      aria-selected={k === 0 ? 'true' : 'false'}
+                      aria-controls="hs-deck"
+                      tabindex={k === 0 ? 0 : -1}
+                      style={`--k:${k}`}
+                    >
+                      <span class="hs-track" aria-hidden="true">
+                        <i class="hs-fill" />
+                      </span>
+                      <span class="hs-num">{c.number}</span>
+                      <span class="hs-name">{tabName(c.id)}</span>
+                    </button>
+                  ))
+                }
+              </div>
+              <button class="hs-arrow hs-arrow--next" type="button" data-step="1" aria-label={hero.showcase.next} aria-controls="hs-deck">
+                <Arrow size={20} />
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -283,7 +302,7 @@ const tabName = (id: string) => (hero.showcase.tabs as Record<string, string>)[i
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    gap: 12px 20px;
+    gap: 12px 16px;
     margin-top: 26px;
   }
 
@@ -296,6 +315,18 @@ const tabName = (id: string) => (hero.showcase.tabs as Record<string, string>)[i
     grid-column: 1 / -1;
   }
 
+  /* the smallest phones: Email gets its own full row, packages under it */
+  @media (max-width: 359px) {
+    .hero__ctaw--mail {
+      grid-column: 1 / -1;
+    }
+
+    .hero__ctaw--sec {
+      grid-column: 1 / -1;
+      margin-top: -4px;
+    }
+  }
+
   .hero__micro {
     display: none;
     margin-top: 24px;
@@ -306,6 +337,7 @@ const tabName = (id: string) => (hero.showcase.tabs as Record<string, string>)[i
   /* primary CTA: arrives as a void button with a violet edge, then fills */
   .hero__cta {
     width: 100%;
+    padding-inline: 20px;
   }
 
   .hero__cta-edge {
@@ -344,6 +376,7 @@ const tabName = (id: string) => (hero.showcase.tabs as Record<string, string>)[i
   /* Email: the secondary, an outline on void (opaque for the contrast gate) */
   .hero__mail {
     width: 100%;
+    padding-inline: 16px;
     background-color: var(--void);
     background-clip: padding-box;
   }
@@ -616,66 +649,239 @@ const tabName = (id: string) => (hero.showcase.tabs as Record<string, string>)[i
     transition: opacity 900ms linear;
   }
 
-  /* ---------- tabs -------------------------------------------------------- */
-  .hs-tabs {
+  /* ---------- the switcher ------------------------------------------------ */
+  /* Round 4: a labelled instrument bar right under the plate — heading
+     "See 5 example sites" + counter, then [‹] five niche tabs [›]. The
+     current tab is a deep-violet key with a caret pointing at the plate.
+     Wide container: every tab shows numeral + niche name. Narrow (phones,
+     1100–1180px): numerals only, the current niche named in the head. */
+  .hs-sw {
     order: 2;
-    display: flex;
-    justify-content: space-between;
-    gap: 6px;
-    margin-top: 18px;
+    margin-top: 22px;
+    container: hs-sw / inline-size;
   }
 
-  :global(html:not(.js)) .hs-tabs {
+  :global(html:not(.js)) .hs-sw {
     display: none;
+  }
+
+  :global(html:not(.motion-reduced)) .hs-sw {
+    --rise: 14px;
+    animation: rise-in 900ms var(--ease-expo) 1250ms both;
+  }
+
+  .hs-sw-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+
+  .hs-sw-title,
+  .hs-sw-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 8px 3px 0;
+    background-color: var(--void);
+    color: var(--starlight);
+    font-size: 11.5px;
+    letter-spacing: 0.14em;
+    line-height: 1.3;
+    white-space: nowrap;
+  }
+
+  .hs-sw-count {
+    padding: 4px 0 3px 8px;
+    color: var(--haze);
+  }
+
+  .hs-sw-node {
+    display: block;
+    flex: 0 0 auto;
+    width: 7px;
+    height: 7px;
+    background-color: var(--violet);
+  }
+
+  :global(html:not(.motion-reduced)) .hs-sw-node {
+    animation: hs-node 2.4s var(--ease-mech) 2.2s infinite;
+  }
+
+  @keyframes hs-node {
+    0%,
+    60%,
+    100% {
+      transform: none;
+    }
+    30% {
+      transform: rotate(90deg) scale(1.3);
+    }
+  }
+
+  .hs-sw-name {
+    display: none;
+    color: var(--starlight);
+  }
+
+  .hs-sw-n {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .hs-sw-n > span:first-child {
+    color: var(--starlight);
+  }
+
+  /* the bar: one bordered strip, cells split by hairlines */
+  .hs-bar {
+    display: flex;
+    align-items: stretch;
+    border: 1px solid var(--line-dark-strong);
+    background-color: var(--night);
+  }
+
+  .hs-arrow {
+    position: relative;
+    display: grid;
+    flex: 0 0 56px;
+    place-items: center;
+    min-height: 56px;
+    background-color: var(--night);
+    color: var(--starlight);
+    cursor: pointer;
+    transition: background-color var(--t-micro) linear;
+  }
+
+  .hs-arrow--prev {
+    border-right: 1px solid var(--line-dark-strong);
+  }
+
+  .hs-arrow--next {
+    border-left: 1px solid var(--line-dark-strong);
+  }
+
+  .hs-arrow--prev :global(.arrow) {
+    rotate: 180deg;
+  }
+
+  .hs-arrow :global(.arrow) {
+    transition: transform var(--t-ui) var(--ease-expo);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .hs-arrow:hover {
+      background-color: var(--plate);
+    }
+
+    .hs-arrow--next:hover :global(.arrow) {
+      transform: translateX(4px);
+    }
+
+    .hs-arrow--prev:hover :global(.arrow) {
+      transform: translateX(-4px);
+    }
+  }
+
+  .hs-arrow:active :global(.arrow) {
+    transform: scale(0.86);
+  }
+
+  .hs-arrow:focus-visible,
+  .hs-tab:focus-visible {
+    outline: 2px solid var(--starlight);
+    outline-offset: -4px;
+  }
+
+  .hs-tabs {
+    display: flex;
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   .hs-tab {
     position: relative;
     display: flex;
+    flex: 1 1 auto;
     flex-direction: column;
-    gap: 10px;
+    justify-content: center;
+    gap: 5px;
     min-width: 0;
-    min-height: 44px;
-    padding: 0 0 8px;
-    color: var(--dim);
+    min-height: 56px;
+    padding: 6px 10px 3px;
+    background-color: var(--night);
+    color: var(--haze);
     text-align: left;
     cursor: pointer;
-    transition: color var(--t-micro) linear;
+    transition:
+      background-color var(--t-micro) linear,
+      color var(--t-micro) linear;
+  }
+
+  .hs-tab + .hs-tab {
+    border-left: 1px solid var(--line-dark);
   }
 
   :global(html:not(.motion-reduced)) .hs-tab {
+    --rise: 10px;
     animation: rise-in 800ms var(--ease-expo) calc(1400ms + var(--k) * 70ms) both;
   }
 
   .hs-tab.is-current {
+    background-color: var(--violet-deep);
     color: var(--starlight);
   }
 
+  /* the caret: the current key points up at the plate */
+  .hs-tab.is-current::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: -8px;
+    width: 14px;
+    height: 8px;
+    margin-left: -7px;
+    background-color: var(--violet-deep);
+    clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  }
+
+  :global(html:not(.motion-reduced)) .hs-tab.is-current::after {
+    animation: hs-caret 520ms var(--ease-expo) both;
+  }
+
+  @keyframes hs-caret {
+    from {
+      transform: translateY(8px);
+    }
+  }
+
   @media (hover: hover) and (pointer: fine) {
-    .hs-tab:hover {
+    .hs-tab:not(.is-current):hover {
+      background-color: var(--plate);
       color: var(--starlight);
     }
   }
 
-  .hs-tab:focus-visible {
-    outline: 2px solid var(--starlight);
-    outline-offset: 3px;
+  /* progress along the top edge of the current key */
+  .hs-track {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: block;
+    height: 3px;
+    overflow: hidden;
   }
 
-  .hs-track {
-    position: relative;
-    display: block;
-    width: 100%;
-    height: 2px;
-    overflow: hidden;
-    background-color: var(--line-dark-strong);
+  .hs-tab.is-current .hs-track {
+    background-color: var(--violet);
   }
 
   .hs-fill {
     position: absolute;
     inset: 0;
     display: block;
-    background-color: var(--violet);
+    background-color: var(--lilac);
     transform: scaleX(0);
     transform-origin: left center;
   }
@@ -699,36 +905,37 @@ const tabName = (id: string) => (hero.showcase.tabs as Record<string, string>)[i
     }
   }
 
-  .hs-tab-t {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    font-size: 11px;
+  .hs-num,
+  .hs-name {
+    display: block;
     font-weight: 600;
-    letter-spacing: 0.12em;
     line-height: 1.2;
     text-transform: uppercase;
     white-space: nowrap;
   }
 
-  @media (max-width: 359px) {
-    .hs-tab-t {
-      font-size: 10px;
-      letter-spacing: 0.06em;
-    }
-  }
-
   .hs-num {
-    display: none;
+    color: var(--dim);
+    font-size: 11px;
+    letter-spacing: 0.12em;
     font-variant-numeric: tabular-nums;
   }
 
-  /* the name flips up when its tab becomes current */
+  .hs-tab:not(.is-current):hover .hs-num {
+    color: var(--haze);
+  }
+
+  .hs-tab.is-current .hs-num {
+    color: var(--lilac);
+  }
+
   .hs-name {
-    display: inline-block;
+    font-size: 12px;
+    letter-spacing: 0.1em;
     transform-origin: 50% 100%;
   }
 
+  /* the name flips up when its tab becomes current */
   :global(html:not(.motion-reduced)) .hs-tab.is-current .hs-name {
     animation: hs-name-flip 700ms var(--ease-expo);
   }
@@ -736,6 +943,57 @@ const tabName = (id: string) => (hero.showcase.tabs as Record<string, string>)[i
   @keyframes hs-name-flip {
     from {
       transform: perspective(300px) translate3d(0, 60%, 0) rotateX(-80deg);
+    }
+  }
+
+  /* narrow: numerals only; the head names the current niche */
+  @container hs-sw (max-width: 530px) {
+    .hs-name {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+    }
+
+    .hs-tab {
+      flex: 1 1 0;
+      align-items: center;
+      padding: 3px 0 0;
+    }
+
+    .hs-num {
+      font-size: 14px;
+      letter-spacing: 0.08em;
+    }
+
+    /* the tabs already carry the numerals: the head names the niche */
+    .hs-sw-name {
+      display: inline;
+    }
+
+    .hs-sw-n {
+      display: none;
+    }
+
+    .hs-arrow {
+      flex-basis: 52px;
+    }
+  }
+
+  @container hs-sw (max-width: 300px) {
+    .hs-arrow {
+      flex-basis: 44px;
+    }
+
+    .hs-sw-title,
+    .hs-sw-count {
+      font-size: 11px;
+      letter-spacing: 0.08em;
+    }
+
+    .hs-sw-title {
+      gap: 8px;
     }
   }
 
@@ -772,10 +1030,22 @@ const tabName = (id: string) => (hero.showcase.tabs as Record<string, string>)[i
       margin-top: 32px;
     }
 
+    /* WhatsApp + Email side by side (they wrap as whole buttons, never
+       shrink), "See packages" always on its own line under them */
     .hero__ctas {
       display: flex;
       flex-wrap: wrap;
-      gap: 14px 14px;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .hero__ctaw {
+      flex: none;
+    }
+
+    .hero__ctaw--sec {
+      flex-basis: 100%;
+      margin-top: -2px;
     }
 
     .hero__cta,
@@ -783,8 +1053,13 @@ const tabName = (id: string) => (hero.showcase.tabs as Record<string, string>)[i
       width: auto;
     }
 
-    .hero__ctaw--sec {
-      margin-left: 4px;
+    /* a touch narrower than .btn so the pair shares one line from 1100px */
+    .hero__cta {
+      padding-inline: 24px;
+    }
+
+    .hero__mail {
+      padding-inline: 22px;
     }
 
     .hero__micro {
@@ -800,18 +1075,8 @@ const tabName = (id: string) => (hero.showcase.tabs as Record<string, string>)[i
       transform: perspective(1600px) translate3d(calc(var(--hx, 0) * 40px), calc(var(--hx, 0) * -160px), calc(var(--hx, 0) * 160px));
     }
 
-    .hs-num {
-      display: inline;
-      color: var(--dim);
-    }
-
-    .hs-tabs {
+    .hs-sw {
       margin-right: var(--gut);
-      gap: 16px;
-    }
-
-    .hs-tab {
-      flex: 1 1 0;
     }
   }
 
@@ -843,21 +1108,14 @@ const tabName = (id: string) => (hero.showcase.tabs as Record<string, string>)[i
       margin-top: 40px;
     }
 
-    .hero__ctas {
-      flex-wrap: nowrap;
-      gap: 12px;
-    }
-
-    .hero__ctaw--sec {
-      margin-left: 12px;
-    }
-
     /* the deck rises beside the H1's last (short) line, so the whole
        object — plate and tabs — floats inside the first screen */
     .hero__stage {
       grid-column: 7 / -1;
       grid-row: 2;
-      margin-top: calc(var(--t-d1) * -1.02);
+      /* wide screens lift it further, so the switcher under the plate
+         stays inside the first screen (1440×900) */
+      margin-top: calc(var(--t-d1) * -1.02 - clamp(0px, (100vw - 1100px) * 0.14, 52px));
       margin-right: -24px;
       --pose: rotateY(calc(-14deg + var(--hx, 0) * 14deg)) rotateX(calc(5deg - var(--hx, 0) * 5deg));
       transform-origin: 30% 20%;
@@ -865,19 +1123,21 @@ const tabName = (id: string) => (hero.showcase.tabs as Record<string, string>)[i
     }
 
     .hs-deck {
-      padding-top: 26px;
+      padding-top: 18px;
     }
 
-    .hs-tabs {
-      margin-top: 22px;
+    .hs-sw {
+      margin-top: 14px;
       margin-right: 24px;
     }
 
     /* caption on a leader line, hung off the deck's top-left corner */
+    /* above the deck, so the ghost cards never cut its second line */
     .hs-cap {
       position: absolute;
+      z-index: 4;
       left: 34px;
-      bottom: calc(100% - 4px);
+      bottom: calc(100% + 2px);
       margin: 0;
       padding: 5px 10px 4px;
     }
@@ -901,7 +1161,7 @@ const tabName = (id: string) => (hero.showcase.tabs as Record<string, string>)[i
       left: -34px;
       top: calc(5px + 0.75em);
       width: 1px;
-      height: calc(100% - 5px - 0.75em + 30px);
+      height: calc(100% - 5px - 0.75em + 36px);
     }
   }
 </style>

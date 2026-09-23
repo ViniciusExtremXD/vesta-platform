@@ -6,13 +6,17 @@
  * Studio · Contact (WhatsApp, Email, LinkedIn) as hairline rows that draw
  * in from the left, row by row; 4 Vesta in 3D (<Asteroid>) beside the
  * orbit of 4 Vesta drawn to scale between Mars and Jupiter; then the
- * owner's logo lockup, large, with Back to top. No build line, no legal
+ * closing brand moment (ROUND4 §1): the owner's lockup redrawn as live
+ * vector (<LogoMark>: the plane settles in 3D, the orbit draws itself, the
+ * star ignites and breathes, dust drifts along the ring, pointer tilt) over
+ * the name set very large in a hairline outline that traces itself and is
+ * cropped by the page's end; Back to top beside it. No build line, no legal
  * line, no Motion toggle (owner, ROUND3).
  *
  * Depth: the inner wrapper is a [data-scene] (it swings up out of a tilted,
- * deeper plane as the footer scrolls in). The lockup rises from below the
- * fold as the last screen arrives (scroll-linked, transform-only), flips up
- * on its baseline when revealed, and tilts toward the pointer.
+ * deeper plane as the footer scrolls in). The lockup and the outlined name
+ * rise from below the fold at two rates as the last screen arrives
+ * (scroll-linked, transform-only).
  *
  * The orbit diagram: semi-major axes and eccentricities from site.ts
  * (footer.orbit). Each orbit is a true Kepler ellipse with the Sun at one
@@ -34,6 +38,7 @@ import Asteroid from './Asteroid.astro';
 import Arrow from './ui/Arrow.astro';
 import WaGlyph from './ui/WaGlyph.astro';
 import MailGlyph from './ui/MailGlyph.astro';
+import LogoMark from './ui/LogoMark.astro';
 
 /* ------------------------------------------------------ the orbit diagram */
 
@@ -157,6 +162,15 @@ const orbitData = JSON.stringify({
 
 const fmtAu = (a: number) => `${a.toFixed(2)} AU`;
 const tr = (x: number, y: number) => `translate(${(sunX + x).toFixed(2)}px, ${(sunY + y).toFixed(2)}px)`;
+
+/* ------------------------------------------------------ the closing name */
+
+/** The outlined name behind the lockup, in viewBox units: the text is pinned
+ *  to the full measure (textLength); the frame holds just the caps. */
+const GHOST_W = 1000;
+const GHOST_FS = 272;
+const GHOST_BASE = 204;
+const GHOST_H = 208;
 
 /* ------------------------------------------------------------- columns */
 
@@ -331,13 +345,25 @@ const backToTop = footer.backToTop.replace(/\s*↑\s*$/, '');
     <span class="foot-rule rule" data-reveal="draw" aria-hidden="true"></span>
 
     <div class="foot-end">
+      <!-- the name, outlined and very large, cropped by the page's end; it
+           traces itself and rises with the last screen -->
+      <svg
+        class="foot-ghost"
+        viewBox={`0 0 ${GHOST_W} ${GHOST_H}`}
+        preserveAspectRatio="xMidYMin meet"
+        aria-hidden="true"
+        focusable="false"
+        data-reveal="fade"
+        data-foot-ghost
+      >
+        <text x="0" y={GHOST_BASE} font-size={GHOST_FS} textLength={GHOST_W} lengthAdjust="spacing">VESTA</text>
+      </svg>
+
       <div class="foot-brand" data-reveal data-wordmark>
         <div class="foot-lift">
-          <div class="foot-flip">
-            <a class="foot-lockup" href={url('/')} aria-label="Vesta, home" data-tilt="7">
-              <Logo alt="" height={240} />
-            </a>
-          </div>
+          <a class="foot-lockup" href={url('/')} aria-label="Vesta, home">
+            <LogoMark class="foot-logo" />
+          </a>
         </div>
       </div>
       <a class="foot-top small" href="#top" data-back-to-top data-reveal="fade" style="--d:200ms">
@@ -722,18 +748,82 @@ const backToTop = footer.backToTop.replace(/\s*↑\s*$/, '');
   }
 
   .foot-end {
+    position: relative;
+    container-type: inline-size;
     display: flex;
     flex-wrap: wrap;
     align-items: flex-end;
     justify-content: space-between;
     gap: var(--s-24) var(--s-48);
-    padding-block: clamp(2.5rem, 1.5rem + 4vw, 5rem) calc(var(--s-32) + env(safe-area-inset-bottom));
+    /* room under the lockup for the visible part of the outlined name:
+       12.5% of the measure (padding % is of the width), which is 60% of
+       the name's height (its frame is 0.208 of the measure) */
+    padding-block: clamp(3rem, 2rem + 4vw, 5.5rem) calc(12.5% + var(--s-24) + env(safe-area-inset-bottom));
+  }
+
+  /* the outlined name: full measure, only its upper part above the fold of
+     the page's end (the footer clips the rest) */
+  .foot-ghost {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: 0;
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+    pointer-events: none;
+    translate: 0 calc(100% - 12.5cqi + var(--gy, 0px));
+  }
+
+  /* a hairline outline: the stroke is painted under a void fill, so only its
+     outer half shows and the variable font's overlapping contours stay hidden */
+  .foot-ghost text {
+    fill: var(--void);
+    stroke: #43386a;
+    stroke-width: 3px;
+    paint-order: stroke fill;
+    vector-effect: non-scaling-stroke;
+    font-family: var(--font-sans, Arial, sans-serif);
+    font-weight: 800;
+    font-stretch: 125%;
+    font-variation-settings: 'wdth' 125;
+    /* dashes are screen px (non-scaling stroke), so size them to the name's
+       width (cqi of .foot-end): the longest contour, the S, is about 1.1×
+       the width; 1.5× leaves margin and the trace still uses the duration */
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .foot-ghost:not(.is-in) text {
+    stroke-dasharray: 150cqi 150cqi;
+    stroke-dashoffset: 150cqi;
+  }
+
+  /* the trace ends on an undashed outline, whatever a contour's length */
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .foot-ghost.is-in text {
+    animation: foot-trace 3200ms cubic-bezier(0.45, 0.05, 0.2, 1) 300ms both;
+  }
+
+  @keyframes foot-trace {
+    0% {
+      stroke-dasharray: 150cqi 150cqi;
+      stroke-dashoffset: 150cqi;
+    }
+    99.9% {
+      stroke-dasharray: 150cqi 150cqi;
+      stroke-dashoffset: 0;
+    }
+    100% {
+      stroke-dasharray: none;
+      stroke-dashoffset: 0;
+    }
   }
 
   /* rises 40px over 1200ms expo (the verify gate measures this curve) */
   .foot-brand[data-reveal] {
+    position: relative;
+    z-index: 1;
     flex: 0 1 auto;
-    width: min(100%, 680px);
+    width: clamp(250px, 24vw + 135px, 540px);
     min-width: 0;
     transition-duration: 1200ms, 1200ms;
   }
@@ -745,35 +835,24 @@ const backToTop = footer.backToTop.replace(/\s*↑\s*$/, '');
   /* scroll-linked: the lockup surfaces from below as the last screen
      arrives (the script writes --dy; transform-only) */
   .foot-lift {
-    perspective: 1200px;
-    perspective-origin: 30% 100%;
     transform: translate3d(0, var(--dy, 0px), 0);
-  }
-
-  /* …and flips up on its baseline, out of depth, when revealed */
-  .foot-flip {
-    transform-origin: 50% 100%;
-    transition:
-      transform 1800ms var(--ease-expo) 120ms,
-      opacity 600ms linear 120ms;
-  }
-
-  :global(html.js:not(.motion-reduced):not(.motion-failed)) .foot-brand:not(.is-in) .foot-flip {
-    opacity: 0;
-    transform: translate3d(0, 18%, -220px) rotateX(-70deg);
   }
 
   .foot-lockup {
     display: block;
+    /* the mark's debris ring reaches past the frame; keep the hit area on it */
+    padding: 6px 0;
     text-decoration: none;
   }
 
-  .foot-lockup :global(.brand-logo) {
-    width: 100%;
-    height: auto;
+  .foot-lockup:focus-visible {
+    outline: 1px solid var(--lilac);
+    outline-offset: 8px;
   }
 
   .foot-top {
+    position: relative;
+    z-index: 1;
     display: inline-flex;
     align-items: center;
     gap: 10px;
@@ -898,13 +977,16 @@ const backToTop = footer.backToTop.replace(/\s*↑\s*$/, '');
   :global(html.motion-reduced) .frow,
   :global(html.motion-reduced) .frow::after,
   :global(html.motion-reduced) .foot-rows::before,
-  :global(html.motion-reduced) .foot-rows > li::after,
-  :global(html.motion-reduced) .foot-flip {
+  :global(html.motion-reduced) .foot-rows > li::after {
     transition: none;
   }
 
   :global(html.motion-reduced) .foot-lift {
     transform: none;
+  }
+
+  :global(html.motion-reduced) .foot-ghost {
+    translate: 0 calc(100% - 12.5cqi);
   }
 </style>
 
@@ -929,12 +1011,14 @@ const backToTop = footer.backToTop.replace(/\s*↑\s*$/, '');
   const brandEl = document.querySelector<HTMLElement>('[data-wordmark]');
   const foot = brandEl?.closest<HTMLElement>('footer');
   const lift = brandEl?.querySelector<HTMLElement>('.foot-lift');
-  if (brandEl && foot && lift) initLift(brandEl, foot, lift);
+  const ghost = foot?.querySelector<SVGSVGElement>('[data-foot-ghost]') ?? null;
+  if (brandEl && foot && lift) initLift(brandEl, foot, lift, ghost);
 
-  function initLift(brandEl: HTMLElement, foot: HTMLElement, lift: HTMLElement): void {
+  function initLift(brandEl: HTMLElement, foot: HTMLElement, lift: HTMLElement, ghost: SVGSVGElement | null): void {
     let dist = 0;
     let range = 1;
     let full = 0;
+    let ghostH = 0;
     let near = false;
     let written = -1;
 
@@ -946,6 +1030,7 @@ const backToTop = footer.backToTop.replace(/\s*↑\s*$/, '');
         dist = r.bottom - vh;
         range = Math.max(240, Math.min(vh * 0.7, 640));
         full = brandEl.offsetHeight;
+        ghostH = ghost ? ghost.getBoundingClientRect().height : 0;
       },
       write() {
         const still = vestibular();
@@ -955,6 +1040,8 @@ const backToTop = footer.backToTop.replace(/\s*↑\s*$/, '');
         written = key;
         const eased = 1 - Math.pow(1 - p, 3);
         lift.style.setProperty('--dy', `${((1 - eased) * full * 0.55).toFixed(1)}px`);
+        // the outlined name surfaces a little later and further
+        if (ghost) ghost.style.setProperty('--gy', `${((1 - eased) * ghostH * 0.45).toFixed(1)}px`);
       },
     });
   }

@@ -3,8 +3,9 @@
    Loaded on demand by Configurator.astro. Every visual state that depends on
    the choices is CSS (:has); this module writes the TEXT (names, URLs, the
    build-sheet rows, the WhatsApp + mailto hrefs, the sticky-bar summary),
-   runs the page-deck shuffle, and adds the micro-motion (sheet flips, the
-   preview bump). Input is coalesced into one rAF. No storage, no network.
+   runs the page-deck shuffle and the example switcher on the preview (a
+   second face of the Industry step), and adds the micro-motion (sheet flips,
+   the preview bump). Input is coalesced into one rAF. No storage, no network.
    All strings arrive pre-derived from src/data/site.ts in a JSON block.
    ========================================================================= */
 
@@ -281,10 +282,139 @@ export function initConfigure(root: HTMLElement): void {
   });
   pageBtns.forEach((b) => b.addEventListener('click', () => bringForward(Number(b.dataset.page))));
 
+  /* ============================================================ examples */
+  /* The switcher on the preview is a second face of step 01: a tab or an
+     arrow checks the Industry radio (so CSS picks the plate and the sheet,
+     message and listing follow), and any Industry change repaints the tabs.
+     The turn itself runs here (WAAPI, transform/opacity): direction-aware
+     (next turns one way, previous the other) and interruptible — a new pick
+     mid-turn starts from wherever each plate is, never from a blank frame. */
+  const swapEl = q('[data-swap]');
+  const plates = new Map(qa('[data-si]').map((el) => [el.dataset.si || '', el]));
+  const exBtns = qa<HTMLButtonElement>('[data-ex]');
+  const exIds = exBtns.map((b) => b.dataset.ex || '');
+  const exTabs = q('[data-ex-tabs]');
+  /** the concept the preview is showing (none / Other fall back to 01) */
+  const shownId = () => {
+    const ind = form.querySelector<HTMLInputElement>('input[name="industry"]:checked')?.value || '';
+    return exIds.includes(ind) ? ind : exIds[0];
+  };
+  let shown = shownId();
+  let wantDir = 0;
+
+  const paintEx = () => {
+    exBtns.forEach((b) => {
+      const on = b.dataset.ex === shown;
+      b.classList.toggle('is-on', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  };
+
+  const OUT = (d: number) => `rotateY(${64 * d}deg) translate3d(${12 * d}%, 0, -120px)`;
+  const IN = (d: number) => `rotateY(${-72 * d}deg) translate3d(${-14 * d}%, 0, -160px)`;
+  const turning = new Map<HTMLElement, Animation[]>();
+  if (swapEl && canAnimate) swapEl.dataset.turn = '';
+
+  const turn = (from: string, to: string, dir: number) => {
+    if (!swapEl || !canAnimate) return;
+    /* where every plate is right now: mid-turn plates report their live
+       pose; the rest are at rest (the old one shown, the others hidden) */
+    const now = new Map<HTMLElement, { t: string; o: number; moving: boolean }>();
+    /* a pick that lands mid-turn answers at once: no beat before the fades */
+    const rush = turning.size > 0;
+    plates.forEach((el, id) => {
+      const run = turning.get(el);
+      if (run) {
+        const cs = getComputedStyle(el);
+        now.set(el, { t: cs.transform, o: parseFloat(cs.opacity) || 0, moving: true });
+        run.forEach((a) => a.cancel());
+        turning.delete(el);
+      } else if (id === from) now.set(el, { t: 'none', o: 1, moving: false });
+    });
+    if (still()) return;
+    const keep = (el: HTMLElement, list: Animation[]) => {
+      turning.set(el, list);
+      Promise.all(list.map((a) => a.finished))
+        .then(() => turning.get(el) === list && turning.delete(el))
+        .catch(() => {
+          /* cancelled by a newer pick */
+        });
+    };
+    now.forEach((p, el) => {
+      if (el === plates.get(to)) return;
+      /* leaving: swing out to the far side, fading after a beat */
+      keep(el, [
+        el.animate([{ transform: p.t, visibility: 'visible' }, { transform: OUT(dir), visibility: 'visible' }], {
+          duration: 620,
+          easing: p.moving ? EXPO : QUINT,
+        }),
+        el.animate([{ opacity: p.o }, { opacity: 0 }], {
+          duration: Math.max(120, (rush ? 300 : 360) * p.o),
+          delay: rush ? 0 : 160,
+          fill: 'backwards',
+        }),
+      ]);
+    });
+    const el = plates.get(to);
+    if (!el) return;
+    const p = now.get(el);
+    const delay = rush || p ? 0 : 140;
+    keep(el, [
+      el.animate([{ transform: p ? p.t : IN(dir) }, { transform: 'none' }], { duration: 1050, delay, easing: EXPO, fill: 'backwards' }),
+      el.animate([{ opacity: p ? p.o : 0 }, { opacity: 1 }], { duration: rush ? 260 : 420, delay, fill: 'backwards' }),
+    ]);
+  };
+
+  /* runs synchronously inside the change event of step 01 */
+  const onIndustry = () => {
+    const next = shownId();
+    if (next === shown) return;
+    const dir = wantDir || (exIds.indexOf(next) < exIds.indexOf(shown) ? -1 : 1);
+    wantDir = 0;
+    turn(shown, next, dir);
+    shown = next;
+    paintEx();
+  };
+
+  const pick = (id: string, dir = 0) => {
+    const input = form.querySelector<HTMLInputElement>(`input[name="industry"][value="${id}"]`);
+    if (!input || input.checked) return;
+    wantDir = dir;
+    input.checked = true;
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+
+  const stepBy = (d: number) => {
+    const i = exIds.indexOf(shown);
+    const n = exIds.length;
+    pick(exIds[(((i + d) % n) + n) % n], d < 0 ? -1 : 1);
+  };
+
+  exBtns.forEach((b) => b.addEventListener('click', () => pick(b.dataset.ex || '')));
+  qa<HTMLButtonElement>('[data-ex-step]').forEach((b) =>
+    b.addEventListener('click', () => stepBy(Number(b.dataset.exStep) || 1))
+  );
+  /* ←/→ (and Home/End) on the tabs move the pick and the focus together */
+  exTabs?.addEventListener('keydown', (e) => {
+    const k = e.key;
+    const n = exIds.length;
+    const i = exIds.indexOf(shown);
+    const to =
+      k === 'ArrowRight' ? (i + 1) % n : k === 'ArrowLeft' ? (i - 1 + n) % n : k === 'Home' ? 0 : k === 'End' ? n - 1 : -1;
+    if (to < 0) return;
+    e.preventDefault();
+    const forward = k === 'ArrowRight' || k === 'End';
+    pick(exIds[to], forward ? 1 : -1);
+    exBtns[to]?.focus();
+  });
+
   /* the preview answers every choice with a small 3D nod */
+  let nodding: Animation | null = null;
   const nod = () => {
     if (!armed || !bump || still() || !canAnimate) return;
-    bump.animate(
+    /* rapid picks: let the running nod finish rather than snapping it */
+    if (nodding && nodding.playState === 'running') return;
+    nodding = bump.animate(
       [
         { transform: 'none' },
         { transform: 'perspective(1400px) translate3d(0, -10px, 40px) rotateX(5deg) rotateY(-3deg)', offset: 0.35 },
@@ -357,8 +487,9 @@ export function initConfigure(root: HTMLElement): void {
 
   form.addEventListener('input', schedule);
   form.addEventListener('change', (e) => {
-    schedule();
     const t = e.target as HTMLInputElement | null;
+    if (t && t.name === 'industry') onIndustry();
+    schedule();
     if (t && t.type !== 'text') nod();
   });
   form.addEventListener('submit', (e) => {
@@ -398,6 +529,7 @@ export function initConfigure(root: HTMLElement): void {
   }
 
   paint();
+  paintEx();
   write();
   armed = true;
 }

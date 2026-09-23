@@ -534,6 +534,10 @@ export const hero = {
   /** The five-niche switcher under the hero plate (order = concepts 01–05). */
   showcase: {
     label: 'Concept studies by niche',
+    /** Round 4: the switcher's visible heading, and its prev/next buttons. */
+    title: 'See 5 example sites',
+    prev: 'Previous example',
+    next: 'Next example',
     tabs: { halden: 'Roofing', dental: 'Dental', restaurant: 'Restaurant', law: 'Law', fitness: 'Fitness' },
   },
 };
@@ -1256,6 +1260,14 @@ export const configure = {
     fanPages: ['Home', 'Services', 'About', 'Contact', 'Locations'],
     /** Rebuild slides out a hairline ghost plate with this tag. */
     ghostLabel: 'Before',
+    /** Round 4: the niche switcher on the preview, synced with the Industry step
+     *  (tab names reuse `hero.showcase.tabs`). */
+    examples: {
+      hint: 'See 5 examples',
+      aria: 'Example sites by niche',
+      prev: 'Previous example',
+      next: 'Next example',
+    },
     /** Round 2: the clickable page deck (Complete Website). */
     pages: {
       navLabel: 'Pages',
@@ -1878,7 +1890,7 @@ export const conceptPage = {
       `A study by Vesta: a fictional ${niche.toLowerCase()} in ${city} and its website, before and after a rebuild. Not client work.`,
     facts: { niche: 'Niche', city: 'City', domain: 'Domain', phone: 'Phone', status: 'Status' },
     status: 'Fictional',
-    before: { kicker: 'The 2016 template', title: 'Before' },
+    before: { kicker: 'The old template', title: 'Before' },
     after: { kicker: 'Rebuilt by Vesta', title: 'After' },
     findings: 'Findings',
     layers: { kicker: 'How it is built', title: 'The six layers', more: 'What each layer does' },

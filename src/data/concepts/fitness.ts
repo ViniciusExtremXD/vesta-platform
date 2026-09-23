@@ -5,8 +5,9 @@
  * signal orange; Mona Sans pushed to its narrowest width (wdth 75) and
  * heaviest weights, set in big uppercase; a slash geometry (the diagonal
  * cut, the stripe, the logo) and a 45 lb bumper plate as the only art.
- * The before is a loud 2016 gym template: neon green on black, a stock
- * "No pain, no gain" banner, a blinking "Join now", and the class schedule
+ * The before is a loud late-2000s gym template last touched in 2016: flames,
+ * red gel tabs, a purple banner with a low-res photo, "No pain, no gain!!!",
+ * a blinking "Join now", placeholder gallery boxes, and the class schedule
  * and price list posted as images.
  *
  * Drawn by src/components/concepts/fitness/ (Before.astro, Layers.astro).
@@ -17,10 +18,10 @@ import { place, studyCaption, type Concept, type ConceptAnnotation } from './typ
 
 /** Marker anchors on this plate's own geometry. */
 const anchors: Record<string, Omit<ConceptAnnotation, 'id' | 'text'>> = {
-  A1: { x: 170, y: 356, a: 'c' }, // the schedule screenshot
-  A2: { x: 404, y: 356, a: 'c' }, // the price list as an image
-  A3: { x: 442, y: 190, a: 's' }, // the blinking "Join now!"
-  A4: { x: 548, y: 462, a: 's' }, // phone number, footer only
+  A1: { x: 150, y: 340, a: 'c' }, // the schedule screenshot
+  A2: { x: 332, y: 343, a: 'c' }, // the price list as an image
+  A3: { x: 410, y: 203, a: 's' }, // the blinking "Join now!"
+  A4: { x: 216, y: 456, a: 's' }, // phone number, tiny, footer only
   B1: { x: 410, y: 118, a: 's' }, // the promise, first screen
   B2: { x: 382, y: 254, a: 's' }, // book + call buttons
   B3: { x: 112, y: 316, a: 's' }, // the week of classes, as text
@@ -98,7 +99,7 @@ export const fitness: Concept = {
         A1: 'The schedule is a screenshot: unreadable on a phone, invisible to Google.',
         A2: 'Prices locked inside an image of a table.',
         A3: 'A blinking "Join now" and no free first visit.',
-        A4: 'Phone number only in the footer.',
+        A4: 'Phone number only in the footer, in tiny type.',
       },
       anchors
     ),

@@ -1,9 +1,9 @@
 /* =========================================================================
    Vesta — "Take one apart" (SPEC §6.3)
-   Scroll progress through the Build track drives the exploded view of
-   Concept 01. Registered into the ONE shared rAF loop (motion.ts); an
-   IntersectionObserver (rootMargin 100%) gates the work, so offscreen the
-   handler returns before touching layout.
+   Scroll progress through the Build track drives the exploded view of the
+   concept on the stage. Registered into the ONE shared rAF loop
+   (motion.ts); an IntersectionObserver (rootMargin 100%) gates the work,
+   so offscreen the handler returns before touching layout.
 
    Per frame
      read   track rect, stage rect, six right-hand layer corners (the part
@@ -11,16 +11,27 @@
             (the leader lines)
      write  --e1 / --spread on .b-assembly, --lift on each .cp-layer, the
             camera orbit --orb / --el on the section (CSS turns all of it
-            into transforms), .is-active on the legend row, the counter
-            digit, six part-number positions, six leader paths, .is-in on
-            the final line.
+            into transforms), .is-active on the legend row, the rail and the
+            counter digit, six part-number positions, six leader paths, .is-in
+            on the final line.
+
+   Round 4
+     · the niche switcher (.b-pick): Concept 01 is live in the DOM, the
+       other four wait in <template data-plate>; a pick clones one on first
+       use (then keeps it), swaps it onto the stage, re-binds the six layers
+       and docks them in. Instant and interruptible: a second pick mid-dock
+       cancels the first. ←/→ (and Home/End) move along the five.
+     · every layer is a button (legend rows, the phone/tablet rail): live,
+       it travels the page to the point in the track where that layer is
+       the lifted one — the highlight, counter and leader follow the scroll
+       on the way; static, it lights that layer's plane.
 
    Static mode (.build--static, or html.motion-reduced / motion-failed /
    no JS) is pure CSS: exploded, every callout listed. This script only
    stops writing and clears what it wrote.
    ========================================================================= */
 
-import { addFrame, requestFrame, isReduced, vestibular } from './motion';
+import { addFrame, requestFrame, isReduced, vestibular, travelTo } from './motion';
 
 const N = 6;
 const DESKTOP = 1100;
@@ -31,43 +42,73 @@ const smooth = (t: number): number => {
   return x * x * (3 - 2 * x);
 };
 
+/* the scrub map. Layer i lifts over p ∈ [L0 + i·STEP, L0 + i·STEP + SPAN]
+   and is the one being read once its lift passes 0.5; past DONE the stack
+   docks again. */
+const L0 = 0.15;
+const STEP = 0.07;
+const SPAN = 0.25;
+const DONE = 0.88;
+/* where to park the scroll to read layer i: its lift ≈ 0.8 while the next
+   one is still under 0.5; the last one fully up, well before DONE */
+const parkAt = (i: number): number => (i < N - 1 ? L0 + i * STEP + SPAN * 0.72 : 0.76);
+
 export function initScrub(): void {
   const root = document.querySelector<HTMLElement>('[data-scrub]');
   if (!root) return;
   const track = root.querySelector<HTMLElement>('.b-track');
   const stage = root.querySelector<HTMLElement>('.b-stage');
+  const view = root.querySelector<HTMLElement>('.b-view');
   const assembly = root.querySelector<HTMLElement>('.b-assembly');
   const svg = root.querySelector<SVGSVGElement>('.b-leaders');
   const digit = root.querySelector<HTMLElement>('[data-count-n]');
   const final = root.querySelector<HTMLElement>('.b-final');
-  const list = root.querySelector<HTMLElement>('.b-callouts');
   if (!track || !stage || !assembly) return;
 
-  const layers: HTMLElement[] = [];
-  for (let i = 0; i < N; i++) {
-    const el = assembly.querySelector<HTMLElement>(`.cp-l${i + 1}`);
-    if (!el) return;
-    layers.push(el);
-  }
   const rows = Array.from(root.querySelectorAll<HTMLElement>('.b-co'));
+  const texts = Array.from(root.querySelectorAll<HTMLElement>('.b-co-text'));
+  const steps = Array.from(root.querySelectorAll<HTMLElement>('.b-step'));
   const tags = Array.from(root.querySelectorAll<HTMLElement>('.b-tag'));
   const paths = svg ? Array.from(svg.querySelectorAll<SVGPathElement>('.b-ld')) : [];
   const terms = svg ? Array.from(svg.querySelectorAll<SVGRectElement>('.b-term')) : [];
   const axis = svg?.querySelector<SVGPathElement>('.b-axis') ?? null;
 
-  /* two 1px probes per layer. Top-left: with the stage's rotateZ (−20° to
+  /* ---- the plate on the stage, and its six layers ------------------------
+     two 1px probes per layer. Top-left: with the stage's rotateZ (−20° to
      −52° through the orbit) that corner is the layer's leftmost vertex, so
      the six stack into one column — where the leaders start. Bottom-right:
-     the rightmost vertex — where the part numbers hang. */
-  const probe = (layer: HTMLElement, css: string): HTMLElement => {
+     the rightmost vertex — where the part numbers hang. A plate keeps its
+     probes when it leaves the stage, so a second visit re-uses them. */
+  const probe = (layer: HTMLElement, css: string, kind: string): HTMLElement => {
+    const got = layer.querySelector<HTMLElement>(`:scope > i[data-probe="${kind}"]`);
+    if (got) return got;
     const a = document.createElement('i');
     a.setAttribute('aria-hidden', 'true');
+    a.dataset.probe = kind;
     a.style.cssText = `position:absolute;${css};width:1px;height:1px;pointer-events:none;`;
     layer.appendChild(a);
     return a;
   };
-  const anchors = layers.map((layer) => probe(layer, 'left:0;top:0'));
-  const corners = layers.map((layer) => probe(layer, 'right:0;bottom:0'));
+
+  let plate = assembly.querySelector<HTMLElement>('.cp');
+  if (!plate) return;
+  let layers: HTMLElement[] = [];
+  let anchors: HTMLElement[] = [];
+  let corners: HTMLElement[] = [];
+
+  const bind = (fig: HTMLElement): boolean => {
+    const ls: HTMLElement[] = [];
+    for (let i = 0; i < N; i++) {
+      const el = fig.querySelector<HTMLElement>(`.cp-l${i + 1}`);
+      if (!el) return false;
+      ls.push(el);
+    }
+    layers = ls;
+    anchors = ls.map((l) => probe(l, 'left:0;top:0', 'a'));
+    corners = ls.map((l) => probe(l, 'right:0;bottom:0', 'c'));
+    return true;
+  };
+  if (!bind(plate)) return;
 
   const html = document.documentElement;
   const isStatic = () => root.classList.contains('build--static') || html.classList.contains('motion-failed') || vestibular();
@@ -81,6 +122,7 @@ export function initScrub(): void {
   let active = -1;
   let done = false;
   let shown = 1;
+  let picked = -1;
   let vbW = 0;
   let vbH = 0;
   const lifts = new Array<number>(N).fill(0);
@@ -92,16 +134,21 @@ export function initScrub(): void {
   const ty = new Array<number>(N).fill(0);
   let dirtyGeo = true;
 
+  /* static: which layer's plane is lit (a legend click) */
+  const applyPicked = (): void => {
+    if (live) return;
+    layers.forEach((l, i) => l.classList.toggle('is-on', i === picked));
+    rows.forEach((r, i) => r.classList.toggle('is-picked', i === picked));
+  };
+
   const setLive = (on: boolean) => {
     if (live === on) return;
     live = on;
     root.classList.toggle('is-live', on);
     /* the visual legend hides inactive text; screen readers get the full
-       list (.b-sr) while live */
-    if (list) {
-      if (on) list.setAttribute('aria-hidden', 'true');
-      else list.removeAttribute('aria-hidden');
-    }
+       list (.b-sr) while live. The row buttons stay reachable. */
+    texts.forEach((t) => (on ? t.setAttribute('aria-hidden', 'true') : t.removeAttribute('aria-hidden')));
+    rows.forEach((r) => r.classList.remove('is-picked'));
     if (!on) {
       assembly.style.removeProperty('--e1');
       assembly.style.removeProperty('--spread');
@@ -115,6 +162,10 @@ export function initScrub(): void {
         l.classList.remove('is-on');
       });
       rows.forEach((r) => r.classList.remove('is-active'));
+      steps.forEach((s) => {
+        s.classList.remove('is-on', 'is-past');
+        s.removeAttribute('aria-current');
+      });
       paths.forEach((pa) => pa.classList.remove('is-on'));
       terms.forEach((t) => t.classList.remove('is-on'));
       root.classList.remove('is-open', 'is-scrubbing', 'is-done');
@@ -122,6 +173,10 @@ export function initScrub(): void {
       lastP = -2;
       active = -1;
       done = false;
+      picked = -1;
+    } else {
+      layers.forEach((l) => l.classList.remove('is-on'));
+      active = -9;
     }
   };
 
@@ -198,6 +253,167 @@ export function initScrub(): void {
     stage.addEventListener('pointerleave', () => aim(0, 0));
   }
 
+  /* ---- layer buttons ------------------------------------------------------ */
+  /* Lenis (fine pointers) re-targets a running scroll cleanly, so travelTo
+     is used there. Without it, travelTo's fallback tween can't be
+     interrupted (two rapid clicks fight), so the native smooth scroll —
+     which a newer call replaces — carries the page instead. */
+  const scrollToY = (y: number): void => {
+    const top = Math.max(0, Math.round(y));
+    if (isReduced() || html.classList.contains('lenis')) travelTo(top);
+    else window.scrollTo({ top, behavior: 'smooth' });
+  };
+
+  const goLayer = (i: number): void => {
+    if (i < 0 || i >= N) return;
+    if (live) {
+      const r = track.getBoundingClientRect();
+      const span = r.height - window.innerHeight;
+      if (span <= 0) return;
+      scrollToY(window.scrollY + r.top + parkAt(i) * span);
+      return;
+    }
+    picked = i;
+    applyPicked();
+    /* static: bring the plate into view when it's off screen */
+    const v = (view ?? assembly).getBoundingClientRect();
+    if (v.bottom < 0 || v.top > window.innerHeight) travelTo(view ?? assembly);
+  };
+
+  root.addEventListener('click', (e) => {
+    const b = (e.target as HTMLElement | null)?.closest<HTMLElement>('[data-layer]');
+    if (!b || !root.contains(b)) return;
+    goLayer(Number(b.dataset.layer));
+  });
+
+  /* ---- the niche switcher ------------------------------------------------- */
+  const picks = Array.from(root.querySelectorAll<HTMLButtonElement>('.b-pick-b'));
+  const dots = Array.from(root.querySelectorAll<HTMLElement>('.b-pick-dot'));
+  const nowN = root.querySelector<HTMLElement>('.b-pick-now-n');
+  const nowT = root.querySelector<HTMLElement>('.b-pick-now-t');
+  const cap = root.querySelector<HTMLElement>('[data-b-cap]');
+  const plates = new Map<string, HTMLElement>();
+  let current = plate.dataset.concept ?? picks[0]?.dataset.concept ?? '';
+  plates.set(current, plate);
+  let docking: Animation[] = [];
+
+  const plateFor = (id: string): HTMLElement | null => {
+    const got = plates.get(id);
+    if (got) return got;
+    const tpl = root.querySelector<HTMLTemplateElement>(`template[data-plate="${id}"]`);
+    const fig = tpl?.content.firstElementChild?.cloneNode(true) as HTMLElement | undefined;
+    if (!fig) return null;
+    plates.set(id, fig);
+    return fig;
+  };
+
+  /* the new stack docks in: each layer rises out of the plane below it,
+     bottom first. Opacity + the individual `translate` property, so the
+     scrub's transform on each layer is left alone. */
+  const dock = (): void => {
+    docking.forEach((a) => a.cancel());
+    docking = [];
+    if (isReduced() || typeof layers[0]?.animate !== 'function') return;
+    layers.forEach((l, i) => {
+      docking.push(
+        l.animate(
+          [
+            { opacity: 0, translate: '0 0 -160px' },
+            { opacity: 1, translate: '0 0 0' },
+          ],
+          { duration: 820, delay: i * 60, easing: 'cubic-bezier(.16,1,.3,1)', fill: 'backwards' }
+        )
+      );
+    });
+    /* the part numbers and leaders ride the docking layers: ask the shared
+       loop for a frame until the last one has landed */
+    const mine = docking;
+    const follow = (): void => {
+      if (mine !== docking) return;
+      requestFrame();
+      if (mine.some((a) => a.pending || a.playState === 'running')) requestAnimationFrame(follow);
+    };
+    requestAnimationFrame(follow);
+  };
+
+  const choose = (k: number, focus = false): void => {
+    const b = picks[k];
+    const id = b?.dataset.concept;
+    if (!b || !id) return;
+    picks.forEach((x, i) => {
+      const on = i === k;
+      x.classList.toggle('is-on', on);
+      x.setAttribute('aria-pressed', on ? 'true' : 'false');
+      x.tabIndex = on ? 0 : -1;
+    });
+    dots.forEach((d, i) => d.classList.toggle('is-on', i === k));
+    if (focus) b.focus();
+    if (id === current) return;
+
+    const next = plateFor(id);
+    if (!next || !plate) return;
+    const old = plate;
+    old.replaceWith(next);
+    if (!bind(next)) {
+      /* a drawing without its six layers: put the old one back */
+      next.replaceWith(old);
+      bind(old);
+      return;
+    }
+    plate = next;
+    current = id;
+
+    if (nowN) nowN.textContent = b.dataset.num ?? '';
+    if (nowT) {
+      nowT.textContent = b.dataset.name ?? '';
+      nowT.classList.remove('is-flip');
+      if (!isReduced()) {
+        void nowT.offsetWidth;
+        nowT.classList.add('is-flip');
+      }
+    }
+    if (cap && b.dataset.caption) cap.textContent = b.dataset.caption;
+
+    /* the incoming stack takes the current lifts at once, then the frame
+       loop re-measures probes, tags and leaders */
+    if (live) {
+      for (let i = 0; i < N; i++) layers[i].style.setProperty('--lift', lifts[i].toFixed(4));
+      layers.forEach((l) => l.classList.remove('is-on'));
+      active = -9;
+    } else {
+      applyPicked();
+    }
+    dirtyGeo = true;
+    lastP = -2;
+    dock();
+    requestFrame();
+  };
+
+  const at = (): number => Math.max(0, picks.findIndex((x) => x.classList.contains('is-on')));
+
+  picks.forEach((b, k) => {
+    b.addEventListener('click', () => choose(k));
+    b.addEventListener('keydown', (e) => {
+      const n = picks.length;
+      let to = -1;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') to = (k + 1) % n;
+      else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') to = (k - 1 + n) % n;
+      else if (e.key === 'Home') to = 0;
+      else if (e.key === 'End') to = n - 1;
+      if (to < 0) return;
+      e.preventDefault();
+      choose(to, true);
+    });
+  });
+
+  root.querySelectorAll<HTMLElement>('.b-pick-arr').forEach((a) => {
+    a.addEventListener('click', () => {
+      const n = picks.length;
+      if (!n) return;
+      choose((at() + Number(a.dataset.step || 1) + n) % n);
+    });
+  });
+
   let skip = true;
 
   addFrame({
@@ -250,12 +466,12 @@ export function initScrub(): void {
       const moved = Math.abs(p - lastP) >= 1e-5;
       lastP = p;
 
-      const out = 1 - smooth((p - 0.88) / 0.12);
-      const e1 = smooth(p / 0.15) * out;
+      const out = 1 - smooth((p - DONE) / 0.12);
+      const e1 = smooth(p / L0) * out;
       let top = -1;
       let sum = 0;
       for (let i = 0; i < N; i++) {
-        lifts[i] = smooth((p - 0.15 - i * 0.07) / 0.25) * out;
+        lifts[i] = smooth((p - L0 - i * STEP) / SPAN) * out;
         sum += i * lifts[i];
         if (lifts[i] > 0.5) top = i;
       }
@@ -284,7 +500,7 @@ export function initScrub(): void {
         tag.classList.toggle('is-up', lifts[i] > 0.62 && e1 > 0.5);
       }
 
-      const isDone = p > 0.88;
+      const isDone = p > DONE;
       const nextActive = isDone ? -1 : Math.max(top, 0);
       root.classList.toggle('is-scrubbing', p > 0.015);
       root.classList.toggle('is-open', e1 > 0.35);
@@ -302,6 +518,13 @@ export function initScrub(): void {
         paths.forEach((pa, i) => pa.classList.toggle('is-on', i === active));
         terms.forEach((t, i) => t.classList.toggle('is-on', i === active));
         tags.forEach((t, i) => t.classList.toggle('is-on', i === active));
+        const reached = done ? N : active;
+        steps.forEach((s, i) => {
+          s.classList.toggle('is-on', i === active);
+          s.classList.toggle('is-past', i < reached && i !== active);
+          if (i === active) s.setAttribute('aria-current', 'step');
+          else s.removeAttribute('aria-current');
+        });
       }
 
       const n = done ? N : Math.max(active, 0) + 1;

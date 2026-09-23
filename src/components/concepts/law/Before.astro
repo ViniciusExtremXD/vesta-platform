@@ -1,13 +1,20 @@
 ---
 /**
  * Concept 04 BEFORE — Marlowe & Pike Injury Law (fictional) on a plausible
- * 2014 law-firm template. Dated, not a parody: Arial, navy header, gold nav
- * band, gavel clip art in a double-ruled box, a shouted slogan over a wall
- * of justified text, a stock handshake, and the only contact form at the
- * bottom of the page (no phone number anywhere on screen). Every text pair
- * passes AA on its own fill.
+ * late-2000s small-firm template, last touched in 2014. Dated and poor, not a
+ * parody: a fixed-width white page centred on a linen wallpaper, a navy-to-
+ * maroon banner with scales-of-justice clip art, a Times New Roman firm name
+ * with a drop shadow, a glossy gold tab bar, a red-on-yellow ticker, three
+ * crowded columns (practice list, visitor counter, stale news, an
+ * "under construction" note), a low-res skyline photo, a wall of grey
+ * Verdana, a shouted "Welcome…!!!" and the only contact form cut off by the
+ * fold (no phone number anywhere on screen). Mixed Times / Verdana / Arial.
+ * Every text pair passes AA on its own fill (text on a gradient sits on the
+ * gradient's darkest or lightest stop that still passes, and the element's
+ * background-color is that stop).
  * Rendered by ConceptPlate.astro through the registry (../registry.ts);
- * sizes use --u (one reference px of the 760-wide drawing).
+ * sizes use --u (one reference px of the 760-wide drawing). Renders twice in
+ * hero mode: no ids.
  */
 import { law, lawDrawing } from '../../../data/concepts/law';
 
@@ -18,97 +25,224 @@ const { class: cls = '' } = Astro.props;
 
 const B = law.before;
 const X = lawDrawing.before;
+
+/* drawing-only strings (the dated site's own clutter) */
+const L = {
+  welcome: 'Welcome to Marlowe & Pike Injury Law!!!',
+  util: ['Home', 'Site Map', 'Bookmark This Page'],
+  navExtra: ['Links', 'FAQ'],
+  ticker: ['Hablamos Español', 'Free Consultation', 'No Fee Unless You Win', 'Serving Atlanta and All of Georgia'],
+  practiceMore: ['Truck Accidents', 'Dog Bites', 'Nursing Home Abuse'],
+  visitors: 'Visitors:',
+  counter: '004127',
+  updated: 'Last updated: 12/02/2014',
+  photoCap: 'Downtown Atlanta',
+  newsTitle: 'Legal News',
+  news: [
+    ['11/24/2014', 'Holiday Office Closing'],
+    ['08/04/2014', 'Firm Moves to Suite 400'],
+    ['04/15/2014', 'Spring Newsletter Now Available'],
+  ],
+  construction: 'Case Results page under construction. Check back soon!',
+  submit: 'Submit',
+};
+const practice = [...X.practice, ...L.practiceMore];
+
+/* low-res stock photo: a 20 × 14 skyline, drawn as runs of pixels */
+const pal: Record<string, string> = {
+  a: '#6F8FB8', b: '#86A3C6', c: '#A3B9D4', d: '#BCCBDD',
+  g: '#4C5A6E', h: '#5F6D82', y: '#D8C98A', k: '#39424F',
+};
+const sky = [
+  'aaaaaaaaaaaaaaaaaaaa',
+  'aaaaaaaaaaaaaaaaaaaa',
+  'bbbbbbbbbbbbhbbbbbbb',
+  'bbbbbbbbbbbhhhbbbbbb',
+  'cccccgccccchhhcccccc',
+  'cccccgccccchyhcccgcc',
+  'ddddgggdddhhhhhddggd',
+  'ddkkgygddkhyhhhdgggd',
+  'dkkkgggkkkhhhyhkgygk',
+  'kkykgygkkkhhhhhkgggk',
+  'kkkkgggkykhyhhhkgygk',
+  'kkykgggkkkhhhhhkgggk',
+  'kkkkkkkkkkkkkkkkkkkk',
+  'kkkkkkkkkkkkkkkkkkkk',
+];
+const runs = (rows: string[]) =>
+  rows.flatMap((row, y) => {
+    const out: { x: number; y: number; w: number; f: string }[] = [];
+    let x = 0;
+    while (x < row.length) {
+      let w = 1;
+      while (row[x + w] === row[x]) w++;
+      out.push({ x, y, w, f: pal[row[x]] });
+      x += w;
+    }
+    return out;
+  });
+const skyline = runs(sky);
+
+/* starburst: 18 spikes on an ellipse (viewBox 100 × 64) */
+const burst = Array.from({ length: 36 }, (_, i) => {
+  const a = (i / 36) * Math.PI * 2;
+  const r = i % 2 ? 0.78 : 1;
+  return `${(50 + Math.cos(a) * 49 * r).toFixed(1)},${(32 + Math.sin(a) * 31 * r).toFixed(1)}`;
+}).join(' ');
 ---
 
 <div class:list={['b-site', cls]} aria-hidden="true">
-  <div class="b-top">
-    <span>{X.topLeft}</span>
-    <span>{B.topBar}</span>
-  </div>
-  <div class="b-head">
-    <span class="b-logo">
-      <span class="b-logo-name">{B.logo}</span>
-      <span class="b-logo-sub">{B.heroSub}</span>
-    </span>
-    <span class="b-free">{X.headRight}</span>
-  </div>
-  <div class="b-nav">
-    {B.nav.map((l, i) => <span class:list={['b-navl', i === 0 && 'is-on']}>{l}</span>)}
-  </div>
+  <div class="b-page">
+    <div class="b-util">
+      <span>{B.topBar}</span>
+      <span>{L.util.join(' | ')}</span>
+    </div>
 
-  <div class="b-gavel">
-    <svg viewBox="0 0 160 96" aria-hidden="true">
-      <rect x="62" y="78" width="72" height="11" fill="#5E3B20"></rect>
-      <rect x="70" y="71" width="56" height="8" fill="#855632"></rect>
-      <path d="M22 76 88 36l5 8-66 40Z" fill="#8A5A33"></path>
-      <path d="M22 76 88 36l1.6 2.6-66 40Z" fill="#B07A4B"></path>
-      <g transform="rotate(-31 100 30)">
-        <rect x="88" y="6" width="24" height="48" fill="#6B4426"></rect>
-        <rect x="88" y="11" width="24" height="5" fill="#C8B27A"></rect>
-        <rect x="88" y="44" width="24" height="5" fill="#C8B27A"></rect>
-        <rect x="91" y="6" width="3" height="48" fill="#8F6038"></rect>
-      </g>
-    </svg>
-    <span class="b-gavel-cap">{X.gavelCaption}</span>
-  </div>
+    <div class="b-banner">
+      <svg class="b-scales" viewBox="0 0 60 56" aria-hidden="true">
+        <path d="M29 6h2v40h-2Z" fill="#E3C06A"></path>
+        <circle cx="30" cy="5" r="3" fill="#E3C06A"></circle>
+        <path d="M8 12h44v2.4H8Z" fill="#E3C06A"></path>
+        <path d="M9 14 3 30M9 14l6 16M51 14l-6 16M51 14l6 16" stroke="#B08A34" stroke-width="0.9" fill="none"></path>
+        <path d="M1 30h16c-1 5-4 7-8 7s-7-2-8-7ZM43 30h16c-1 5-4 7-8 7s-7-2-8-7Z" fill="#E3C06A"></path>
+        <path d="M22 46h16l3 6H19Z" fill="#B08A34"></path>
+      </svg>
+      <span class="b-name">
+        <span class="b-firm">{B.logo}</span>
+        <span class="b-atty">Injury Law &nbsp;·&nbsp; {B.heroSub}</span>
+        <span class="b-serve">{X.topLeft}</span>
+      </span>
+      <svg class="b-cols" viewBox="0 0 90 74" aria-hidden="true">
+        <g fill="#34467C">
+          <path d="M6 8h26v5H6ZM8 64h22v6H8ZM52 8h26v5H52ZM54 64h22v6H54Z"></path>
+          <path d="M10 13h3v51h-3ZM15.5 13h3v51h-3ZM21 13h3v51h-3ZM26 13h2v51h-2ZM56 13h3v51h-3ZM61.5 13h3v51h-3ZM67 13h3v51h-3ZM72 13h2v51h-2Z"></path>
+          <path d="M0 8 42 0l42 8Z"></path>
+        </g>
+      </svg>
+    </div>
 
-  <div class="b-main">
-    <span class="b-h1">{B.welcome}</span>
-    <span class="b-wall">{B.boxText}</span>
-    <span class="b-wall">{X.wall2}</span>
-    <span class="b-more">{B.heroButton}</span>
-  </div>
+    <div class="b-nav">
+      {[...B.nav, ...L.navExtra].map((l, i) => <span class:list={['b-tab', i === 0 && 'is-on']}>{l}</span>)}
+    </div>
 
-  <div class="b-side">
-    <svg class="b-photo" viewBox="0 0 180 120" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-      <rect width="180" height="120" fill="#BCC6D1"></rect>
-      <rect x="8" y="6" width="50" height="62" fill="#CFD7E0"></rect>
-      <rect x="64" y="6" width="50" height="62" fill="#CFD7E0"></rect>
-      <rect x="120" y="6" width="52" height="62" fill="#CFD7E0"></rect>
-      <path d="M0 74h180" stroke="#AEB8C4" stroke-width="3"></path>
-      <path d="M0 86 58 70l9 23L0 118Z" fill="#23324D"></path>
-      <path d="M55 70 66 66l10 23-10 4Z" fill="#F2F2F2"></path>
-      <path d="M180 78 121 66l-8 23 67 22Z" fill="#5E6672"></path>
-      <path d="M124 65 114 62l-9 23 10 4Z" fill="#F2F2F2"></path>
-      <path d="M72 70c12-8 28-9 40-4l1 20c-12 7-29 9-43 4Z" fill="#D2A083"></path>
-      <path d="M85 71c6 4 9 10 9 17M93 69c6 4 9 10 9 16M101 68c4 4 6 10 6 16M76 75c6-4 14-5 20-1" fill="none" stroke="#A9765B" stroke-width="1.3"></path>
-    </svg>
-    <span class="b-photo-cap">{X.photoCaption}</span>
-  </div>
+    <div class="b-ticker">
+      <span class="b-ticker-run">
+        {[0, 1].map(() => L.ticker.map((t) => <span>*** {t} </span>))}
+      </span>
+    </div>
 
-  <div class="b-practice">
-    <b>{X.practiceLead}</b>
-    {X.practice.map((p, i) => <span>{i > 0 ? `| ${p}` : p}</span>)}
-  </div>
+    <div class="b-burst">
+      <svg viewBox="0 0 100 64" preserveAspectRatio="none" aria-hidden="true">
+        <polygon points={burst} fill="#FFE600" stroke="#C00000" stroke-width="1.2"></polygon>
+      </svg>
+      <span class="b-burst-t">{X.headRight}!</span>
+    </div>
 
-  <div class="b-form">
-    <span class="b-form-title">{X.formTitle}</span>
-    <span class="b-form-lead">{X.formLead}</span>
-    <span class="b-fields">
-      {X.fields.slice(0, 3).map((f) => <span class="b-field"><span class="b-flabel">{f}</span><i></i></span>)}
-    </span>
-    <span class="b-field b-field--area"><span class="b-flabel">{X.fields[3]}</span><i></i></span>
-  </div>
+    <!-- left: practice list, hours, visitor counter -->
+    <div class="b-lside">
+      <div class="b-box">
+        <span class="b-boxh">{B.nav[2]}</span>
+        <span class="b-list">
+          {practice.map((p, i) => <span class:list={['b-li', i === 2 && 'is-seen']}>» <u>{p}</u></span>)}
+        </span>
+      </div>
+      <div class="b-box">
+        <span class="b-boxh b-boxh--navy">{X.hoursTitle}</span>
+        <span class="b-hours">{X.hours.map((h) => <span>{h}</span>)}</span>
+      </div>
+      <span class="b-count">
+        <span class="b-count-l">{L.visitors}</span>
+        <span class="b-digits">{L.counter.split('').map((d) => <b>{d}</b>)}</span>
+      </span>
+      <span class="b-updated">{L.updated}</span>
+    </div>
 
-  <div class="b-hours">
-    <span class="b-hours-title">{X.hoursTitle}</span>
-    {X.hours.map((h) => <span>{h}</span>)}
+    <!-- main: welcome, slogan, photo + wall -->
+    <div class="b-main">
+      <span class="b-h1">{L.welcome}</span>
+      <span class="b-slogan">{B.welcome}</span>
+      <span class="b-copy">
+        <span class="b-photo">
+          <svg viewBox="0 0 20 14" preserveAspectRatio="none" shape-rendering="crispEdges" aria-hidden="true">
+            {skyline.map((p) => <rect x={p.x} y={p.y} width={p.w + 0.05} height="1.05" fill={p.f} />)}
+          </svg>
+          <span class="b-photo-cap">{L.photoCap}</span>
+        </span>
+        <span class="b-wall">{B.boxText}</span>
+        <span class="b-wall">{X.wall2}</span>
+      </span>
+      <span class="b-more">{B.heroButton}</span>
+    </div>
+
+    <!-- the only contact form, pinned where the fold cuts it -->
+    <div class="b-form">
+      <span class="b-hr"></span>
+      <span class="b-form-title">{X.formTitle}</span>
+      <span class="b-form-lead">{X.formLead}</span>
+      <span class="b-fields">
+        {X.fields.slice(0, 3).map((f) => <span class="b-field"><span class="b-flabel">{f}</span><i></i></span>)}
+      </span>
+      <span class="b-field b-field--area"><span class="b-flabel">{X.fields[3]}</span><i></i></span>
+    </div>
+
+    <!-- right: gavel box, stale news, under construction -->
+    <div class="b-rside">
+      <div class="b-gavel">
+        <svg viewBox="0 0 160 96" aria-hidden="true">
+          <rect x="62" y="78" width="72" height="11" fill="#5E3B20"></rect>
+          <rect x="70" y="71" width="56" height="8" fill="#855632"></rect>
+          <path d="M22 76 88 36l5 8-66 40Z" fill="#8A5A33"></path>
+          <path d="M22 76 88 36l1.6 2.6-66 40Z" fill="#B07A4B"></path>
+          <g transform="rotate(-31 100 30)">
+            <rect x="88" y="6" width="24" height="48" fill="#6B4426"></rect>
+            <rect x="88" y="11" width="24" height="5" fill="#C8B27A"></rect>
+            <rect x="88" y="44" width="24" height="5" fill="#C8B27A"></rect>
+            <rect x="91" y="6" width="3" height="48" fill="#8F6038"></rect>
+          </g>
+        </svg>
+        <span class="b-gavel-cap">{X.gavelCaption}</span>
+      </div>
+      <span class="b-call">{X.photoCaption}</span>
+      <div class="b-box b-news">
+        <span class="b-boxh b-boxh--navy">{L.newsTitle}</span>
+        {
+          L.news.map(([d, t]) => (
+            <span class="b-item">
+              <b>{d}</b>
+              <u>{t}</u>
+            </span>
+          ))
+        }
+      </div>
+      <div class="b-uc">
+        <span class="b-uc-stripe"></span>
+        <span class="b-uc-body">
+          <svg viewBox="0 0 16 18" aria-hidden="true">
+            <path d="M8 0 14 16H2Z" fill="#F07A10"></path>
+            <path d="M5.6 6.5h4.8l1 3H4.6ZM3.8 12h8.4l.9 2.4H2.9Z" fill="#FFFFFF"></path>
+            <path d="M0 16h16v2H0Z" fill="#333333"></path>
+          </svg>
+          <span>{L.construction}</span>
+        </span>
+      </div>
+    </div>
   </div>
 </div>
 
 <style>
   .b-site {
     --u: calc(100cqi / 760);
-    --b-navy: #1f3a5f;
-    --b-navy-2: #0f2340;
-    --b-gold: #c8b27a;
-    --b-text: #333333;
+    --b-navy: #1b2a5c;
+    --b-maroon: #6b1414;
+    --b-link: #0033cc;
     position: absolute;
     inset: 0;
     overflow: hidden;
-    background-color: #ffffff;
-    color: var(--b-text);
-    font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
+    /* the linen wallpaper around the fixed-width page (imagery, not UI) */
+    background-color: #d6cbae;
+    background-image: repeating-linear-gradient(45deg, #cdc1a0 0 calc(2 * var(--u)), transparent calc(2 * var(--u)) calc(6 * var(--u)));
+    color: #333333;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
     font-stretch: 100%;
     font-weight: 400;
     line-height: 1.25;
@@ -116,238 +250,403 @@ const X = lawDrawing.before;
     text-transform: none;
   }
 
-  .b-top {
+  .b-page {
     position: absolute;
+    inset-block: 0;
+    left: calc(46 * var(--u));
+    width: calc(668 * var(--u));
+    border-inline: 1px solid #8f8466;
+    background-color: #ffffff;
+  }
+
+  .b-page > * {
+    position: absolute;
+  }
+
+  /* ---------- utility strip: the only contact detail, 6px tall ---------- */
+  .b-util {
     inset: 0 0 auto;
-    height: calc(18 * var(--u));
+    height: calc(13 * var(--u));
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding-inline: calc(24 * var(--u));
-    background-color: var(--b-navy-2);
-    color: #ffffff;
-    font-size: calc(7.5 * var(--u));
+    padding-inline: calc(8 * var(--u));
+    border-bottom: 1px solid #c9bc98;
+    background-color: #f2ecdc;
+    color: var(--b-navy);
+    font-size: calc(6.2 * var(--u));
   }
 
-  .b-head {
-    position: absolute;
-    top: calc(18 * var(--u));
+  /* ---------- banner ---------- */
+  .b-banner {
+    top: calc(13 * var(--u));
     left: 0;
     right: 0;
-    height: calc(56 * var(--u));
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding-inline: calc(24 * var(--u));
-    background-color: var(--b-navy);
-    color: #ffffff;
+    height: calc(74 * var(--u));
+    background-color: #2a1f4a;
+    background-image: linear-gradient(90deg, #1b2a5c, #2b2f63 45%, #6b1414);
   }
 
-  .b-logo {
+  .b-scales {
+    position: absolute;
+    left: calc(14 * var(--u));
+    top: calc(9 * var(--u));
+    width: calc(60 * var(--u));
+    height: calc(56 * var(--u));
+  }
+
+  .b-name {
+    position: absolute;
+    left: calc(82 * var(--u));
+    top: calc(10 * var(--u));
     display: flex;
     flex-direction: column;
-    gap: calc(3 * var(--u));
+    gap: calc(2 * var(--u));
   }
 
-  .b-logo-name {
-    font-size: calc(21 * var(--u));
+  .b-firm {
+    color: #ebcb73;
+    font-family: 'Times New Roman', Times, serif;
+    font-size: calc(29 * var(--u));
     font-weight: 700;
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
+    line-height: 1;
+    text-shadow: calc(1.5 * var(--u)) calc(1.5 * var(--u)) 0 #000000;
   }
 
-  .b-logo-sub {
-    color: var(--b-gold);
-    font-size: calc(8 * var(--u));
-    font-weight: 700;
-    letter-spacing: 0.3em;
-    text-transform: uppercase;
+  .b-atty {
+    color: #ffffff;
+    font-family: 'Times New Roman', Times, serif;
+    font-size: calc(11 * var(--u));
+    font-style: italic;
   }
 
-  .b-free {
-    padding: calc(6 * var(--u)) calc(12 * var(--u));
-    border: 2px solid var(--b-gold);
-    color: var(--b-gold);
-    font-size: calc(10 * var(--u));
-    font-weight: 700;
-    text-transform: uppercase;
+  .b-serve {
+    color: #d9d9d9;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: calc(7 * var(--u));
   }
 
-  .b-nav {
+  .b-cols {
     position: absolute;
-    top: calc(74 * var(--u));
+    left: calc(398 * var(--u));
+    top: 0;
+    width: calc(90 * var(--u));
+    height: calc(74 * var(--u));
+  }
+
+  /* ---------- glossy gold tabs ---------- */
+  .b-nav {
+    top: calc(87 * var(--u));
     left: 0;
     right: 0;
-    height: calc(22 * var(--u));
+    height: calc(19 * var(--u));
     display: flex;
     align-items: stretch;
-    padding-inline: calc(24 * var(--u));
-    background-color: var(--b-gold);
+    border-bottom: 1px solid #8c7330;
+    background-color: #d8b95e;
+    background-image: linear-gradient(#f6e7ae, #e2c678 48%, #cfad4c 52%, #c4a043);
   }
 
-  .b-navl {
+  .b-tab {
     display: flex;
     align-items: center;
-    padding-inline: calc(11 * var(--u));
-    border-right: 1px solid #a8925a;
-    color: var(--b-navy);
-    font-size: calc(8 * var(--u));
+    padding-inline: calc(10 * var(--u));
+    border-left: 1px solid #fff3c8;
+    border-right: 1px solid #8c7330;
+    color: #5a0f0f;
+    font-size: calc(7.3 * var(--u));
     font-weight: 700;
-    text-transform: uppercase;
   }
 
-  .b-navl.is-on {
-    background-color: var(--b-navy);
+  .b-tab.is-on {
+    background-color: #1b2a5c;
+    background-image: linear-gradient(#3b4f8c, #1b2a5c 55%);
     color: #ffffff;
   }
 
-  /* ---------- main: gavel | slogan + wall | stock photo ---------- */
-  .b-gavel {
-    position: absolute;
-    left: calc(24 * var(--u));
-    top: calc(110 * var(--u));
-    width: calc(180 * var(--u));
-    height: calc(150 * var(--u));
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: calc(8 * var(--u));
-    border: calc(4 * var(--u)) double var(--b-gold);
-    background-color: #f5efdf;
-  }
-
-  .b-gavel svg {
-    width: calc(128 * var(--u));
-    height: calc(78 * var(--u));
-  }
-
-  .b-gavel-cap {
-    color: var(--b-navy);
-    font-size: calc(10 * var(--u));
+  /* ---------- red-on-yellow ticker (drifts in hero mode) ---------- */
+  .b-ticker {
+    top: calc(106 * var(--u));
+    left: 0;
+    right: 0;
+    height: calc(12 * var(--u));
+    overflow: hidden;
+    border-bottom: 1px solid #d4c020;
+    background-color: #ffef5a;
+    color: #b00000;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: calc(7 * var(--u));
     font-weight: 700;
-    text-transform: uppercase;
+    white-space: nowrap;
   }
 
-  .b-main {
+  .b-ticker-run {
+    display: inline-flex;
+    gap: calc(8 * var(--u));
+    padding-top: calc(2 * var(--u));
+    padding-left: calc(8 * var(--u));
+  }
+
+  :global(.cp--hero) .b-ticker-run {
+    animation: blaw-tick 26s linear infinite;
+  }
+
+  :global(.cp.is-offscreen) .b-ticker-run,
+  :global(.cp.is-paused) .b-ticker-run {
+    animation-play-state: paused;
+  }
+
+  @keyframes blaw-tick {
+    to {
+      transform: translate3d(-50%, 0, 0);
+    }
+  }
+
+  /* ---------- starburst, hanging off the banner onto the tabs ---------- */
+  .b-burst {
+    top: calc(54 * var(--u));
+    left: calc(540 * var(--u));
+    width: calc(112 * var(--u));
+    height: calc(64 * var(--u));
+    display: grid;
+    place-items: center;
+    transform: rotate(-9deg);
+  }
+
+  .b-burst svg {
     position: absolute;
-    left: calc(222 * var(--u));
-    top: calc(108 * var(--u));
-    width: calc(316 * var(--u));
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .b-burst-t {
+    position: relative;
+    max-width: calc(66 * var(--u));
+    background-color: #ffe600;
+    color: #b00000;
+    font-family: 'Arial Black', Arial, sans-serif;
+    font-size: calc(9 * var(--u));
+    font-weight: 900;
+    line-height: 1.05;
+    text-align: center;
+  }
+
+  /* ---------- shared sidebar boxes ---------- */
+  .b-lside,
+  .b-rside,
+  .b-main,
+  .b-form {
+    top: calc(124 * var(--u));
     display: flex;
     flex-direction: column;
-    gap: calc(6 * var(--u));
+  }
+
+  .b-lside {
+    left: calc(8 * var(--u));
+    width: calc(142 * var(--u));
+    gap: calc(7 * var(--u));
+  }
+
+  .b-box {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #b7a98a;
+    background-color: #f4efe1;
+  }
+
+  .b-boxh {
+    padding: calc(3 * var(--u)) calc(6 * var(--u));
+    background-color: #5a0f0f;
+    background-image: linear-gradient(#8e1b1b, #5a0f0f);
+    color: #ffffff;
+    font-size: calc(7.6 * var(--u));
+    font-weight: 700;
+  }
+
+  .b-boxh--navy {
+    background-color: #1b2a5c;
+    background-image: linear-gradient(#34487f, #1b2a5c);
+    font-family: 'Times New Roman', Times, serif;
+    font-size: calc(9 * var(--u));
+  }
+
+  .b-list {
+    display: flex;
+    flex-direction: column;
+    padding: calc(4 * var(--u)) calc(6 * var(--u));
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: calc(7.2 * var(--u));
+    line-height: 1.55;
+  }
+
+  .b-li {
+    color: #8e1b1b;
+  }
+
+  .b-li u {
+    color: var(--b-link);
+  }
+
+  .b-li.is-seen u {
+    color: #551a8b;
+  }
+
+  .b-lside > .b-box + .b-box {
+    width: calc(128 * var(--u));
+  }
+
+  .b-hours {
+    display: flex;
+    flex-direction: column;
+    padding: calc(4 * var(--u)) calc(6 * var(--u));
+    font-family: 'Times New Roman', Times, serif;
+    font-size: calc(8.4 * var(--u));
+    line-height: 1.3;
+  }
+
+  .b-count {
+    display: flex;
+    align-items: center;
+    gap: calc(4 * var(--u));
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: calc(6.8 * var(--u));
+  }
+
+  .b-digits {
+    display: flex;
+    gap: 1px;
+  }
+
+  .b-digits b {
+    padding: calc(1 * var(--u)) calc(2 * var(--u));
+    background-color: #000000;
+    color: #7cfc00;
+    font-size: calc(8 * var(--u));
+  }
+
+  .b-updated {
+    color: #595959;
+    font-size: calc(6 * var(--u));
+  }
+
+  /* ---------- main column ---------- */
+  .b-main,
+  .b-form {
+    left: calc(158 * var(--u));
+    width: calc(306 * var(--u));
+    gap: calc(5 * var(--u));
+  }
+
+  .b-form {
+    top: calc(334 * var(--u));
   }
 
   .b-h1 {
-    margin-bottom: calc(2 * var(--u));
-    color: var(--b-navy);
-    font-size: calc(19 * var(--u));
+    color: #7a1a1a;
+    font-family: 'Times New Roman', Times, serif;
+    font-size: calc(17 * var(--u));
     font-weight: 700;
-    line-height: 1.12;
+    line-height: 1.08;
+  }
+
+  .b-slogan {
+    padding-bottom: calc(4 * var(--u));
+    border-bottom: calc(2 * var(--u)) solid #c9a646;
+    color: var(--b-navy);
+    font-family: 'Times New Roman', Times, serif;
+    font-size: calc(11 * var(--u));
+    font-style: italic;
+    font-weight: 700;
+    text-align: center;
+  }
+
+  .b-copy {
+    display: block;
+  }
+
+  .b-photo {
+    float: left;
+    display: flex;
+    flex-direction: column;
+    gap: calc(2 * var(--u));
+    margin: calc(2 * var(--u)) calc(8 * var(--u)) calc(2 * var(--u)) 0;
+    padding: calc(3 * var(--u));
+    border: 1px solid #999999;
+    background-color: #ffffff;
+  }
+
+  .b-photo svg {
+    display: block;
+    width: calc(100 * var(--u));
+    height: calc(70 * var(--u));
+  }
+
+  .b-photo-cap {
+    color: #555555;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: calc(6 * var(--u));
+    text-align: center;
   }
 
   .b-wall {
-    font-size: calc(7.6 * var(--u));
-    line-height: 1.45;
+    display: block;
+    margin-bottom: calc(5 * var(--u));
+    color: #5e5e5e;
+    font-size: calc(6.9 * var(--u));
+    line-height: 1.42;
     text-align: justify;
   }
 
   .b-more {
-    color: var(--b-navy);
-    font-size: calc(8 * var(--u));
+    margin-top: calc(-3 * var(--u));
+    color: var(--b-link);
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: calc(7.5 * var(--u));
     font-weight: 700;
+    text-align: right;
     text-decoration: underline;
   }
 
-  .b-side {
-    position: absolute;
-    left: calc(556 * var(--u));
-    top: calc(110 * var(--u));
-    width: calc(180 * var(--u));
-    border: 1px solid #c9ced6;
-    background-color: #ffffff;
-  }
-
-  .b-photo {
-    display: block;
-    width: 100%;
-    height: calc(120 * var(--u));
-  }
-
-  .b-photo-cap {
-    display: block;
-    padding: calc(7 * var(--u)) calc(8 * var(--u));
-    background-color: var(--b-navy);
-    color: #ffffff;
-    font-size: calc(8 * var(--u));
-    font-weight: 700;
-  }
-
-  .b-practice {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: calc(298 * var(--u));
-    height: calc(28 * var(--u));
-    display: flex;
-    align-items: center;
-    gap: calc(6 * var(--u));
-    padding-inline: calc(24 * var(--u));
-    border-block: 1px solid #d5d9df;
-    background-color: #eef0f3;
-    color: var(--b-navy);
-    font-size: calc(8.5 * var(--u));
-    white-space: nowrap;
-  }
-
-  .b-practice b {
-    color: var(--b-text);
-  }
-
-  /* ---------- the only contact form, below the fold ---------- */
-  .b-form {
-    position: absolute;
-    left: calc(24 * var(--u));
-    top: calc(346 * var(--u));
-    width: calc(520 * var(--u));
-    display: flex;
-    flex-direction: column;
-    gap: calc(5 * var(--u));
+  .b-hr {
+    height: 0;
+    border-top: 1px dotted #999999;
   }
 
   .b-form-title {
     color: var(--b-navy);
-    font-size: calc(14 * var(--u));
+    font-family: 'Times New Roman', Times, serif;
+    font-size: calc(13 * var(--u));
     font-weight: 700;
   }
 
   .b-form-lead {
-    font-size: calc(8 * var(--u));
+    font-size: calc(6.8 * var(--u));
   }
 
   .b-fields {
     display: flex;
-    gap: calc(10 * var(--u));
-    margin-top: calc(4 * var(--u));
+    gap: calc(8 * var(--u));
   }
 
   .b-field {
     display: flex;
     flex: 1;
     flex-direction: column;
-    gap: calc(3 * var(--u));
+    gap: calc(2 * var(--u));
   }
 
   .b-flabel {
-    font-size: calc(7.5 * var(--u));
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: calc(6.8 * var(--u));
     font-weight: 700;
   }
 
+  /* Windows-classic inset fields */
   .b-field i {
     display: block;
-    height: calc(18 * var(--u));
-    border: 1px solid #a9b0ba;
+    height: calc(15 * var(--u));
+    border: calc(2 * var(--u)) inset #d4d0c8;
     background-color: #ffffff;
   }
 
@@ -355,24 +654,98 @@ const X = lawDrawing.before;
     height: calc(60 * var(--u));
   }
 
-  .b-hours {
-    position: absolute;
-    left: calc(566 * var(--u));
-    top: calc(346 * var(--u));
-    width: calc(170 * var(--u));
-    display: flex;
-    flex-direction: column;
-    gap: calc(4 * var(--u));
-    padding: calc(10 * var(--u)) calc(12 * var(--u));
-    border: 1px solid #d5d9df;
-    background-color: #f7f8fa;
-    font-size: calc(8 * var(--u));
+  /* ---------- right column ---------- */
+  .b-rside {
+    left: calc(472 * var(--u));
+    width: calc(188 * var(--u));
+    gap: calc(6 * var(--u));
+    padding-top: calc(4 * var(--u));
   }
 
-  .b-hours-title {
-    margin-bottom: calc(2 * var(--u));
+  .b-gavel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: calc(2 * var(--u));
+    padding: calc(4 * var(--u));
+    border: calc(4 * var(--u)) double #c8b27a;
+    background-color: #f5efdf;
+  }
+
+  .b-gavel svg {
+    width: calc(96 * var(--u));
+    height: calc(58 * var(--u));
+  }
+
+  .b-gavel-cap {
     color: var(--b-navy);
-    font-size: calc(10 * var(--u));
+    font-family: 'Times New Roman', Times, serif;
+    font-size: calc(9.5 * var(--u));
     font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .b-call {
+    margin-top: calc(-6 * var(--u));
+    padding: calc(4 * var(--u)) calc(6 * var(--u));
+    background-color: var(--b-navy);
+    color: #ffffff;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: calc(7.4 * var(--u));
+    font-weight: 700;
+    text-align: center;
+  }
+
+  /* sloppy: the news box is narrower and nudged off the column edge */
+  .b-news {
+    margin-inline: calc(5 * var(--u)) calc(-3 * var(--u));
+    background-color: #ffffff;
+  }
+
+  .b-item {
+    display: flex;
+    flex-direction: column;
+    padding: calc(3 * var(--u)) calc(6 * var(--u));
+    border-top: 1px dashed #cccccc;
+    font-size: calc(6.6 * var(--u));
+  }
+
+  .b-item b {
+    color: #b00000;
+    font-size: calc(6 * var(--u));
+  }
+
+  .b-item u {
+    color: var(--b-link);
+  }
+
+  .b-uc {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #c9b400;
+  }
+
+  .b-uc-stripe {
+    height: calc(6 * var(--u));
+    background-color: #ffd400;
+    background-image: repeating-linear-gradient(-45deg, #1a1a1a 0 calc(4 * var(--u)), #ffd400 calc(4 * var(--u)) calc(8 * var(--u)));
+  }
+
+  .b-uc-body {
+    display: flex;
+    align-items: center;
+    gap: calc(6 * var(--u));
+    padding: calc(4 * var(--u)) calc(6 * var(--u));
+    background-color: #fff6bf;
+    color: #1a1a1a;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: calc(6.8 * var(--u));
+    font-weight: 700;
+  }
+
+  .b-uc-body svg {
+    flex: 0 0 auto;
+    width: calc(14 * var(--u));
+    height: calc(16 * var(--u));
   }
 </style>

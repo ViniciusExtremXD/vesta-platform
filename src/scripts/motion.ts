@@ -566,14 +566,22 @@ export function travelTo(target: HTMLElement | number): void {
     lenis.scrollTo(top, { duration, easing: easeInOutExpo, force: true });
     return;
   }
+  // a newer travel (or the visitor's own wheel/touch) cancels this one
+  const id = ++travelId;
   const from = window.scrollY;
   const start = performance.now();
   const step = (now: number) => {
+    if (id !== travelId) return;
     const t = Math.min(1, (now - start) / (duration * 1000));
     window.scrollTo({ top: from + (top - from) * easeInOutExpo(t), behavior: 'instant' as ScrollBehavior });
     if (t < 1) requestAnimationFrame(step);
   };
   requestAnimationFrame(step);
+}
+
+let travelId = 0;
+for (const ev of ['wheel', 'touchstart', 'keydown'] as const) {
+  window.addEventListener(ev, () => travelId++, { passive: true });
 }
 
 function initSmoothScroll(): void {
