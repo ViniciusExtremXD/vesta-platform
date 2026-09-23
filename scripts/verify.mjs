@@ -266,6 +266,10 @@ const IN_PAGE = {
       'data-cover',
       'data-sticky-cta',
       'data-wa-intent',
+      'data-tilt',
+      'data-expand',
+      'data-niche',
+      'data-cards',
     ];
 
     const covered = (el) => {

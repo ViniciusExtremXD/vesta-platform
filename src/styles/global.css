@@ -884,32 +884,35 @@ html.js:not(.motion-reduced):not(.motion-failed) [data-reveal='wipe']:not(.is-in
 
 /* mask — words rise out of a clipped line. Markup from SplitText.astro:
    <h2 data-split><span class="wm"><span class="w" style="--i:0">Word</span></span> … */
+/* each word flips up out of its line: a rise plus a 3D hinge at the baseline */
 [data-split] .wm {
   display: inline-block;
   overflow: clip;
   padding-block: 0.14em;
   margin-block: -0.14em;
   vertical-align: top;
+  perspective: 600px;
 }
 
 [data-split] .w {
   display: inline-block;
+  transform-origin: 50% 100%;
   transition:
-    transform var(--t-mask) var(--ease-expo),
-    opacity 300ms linear;
-  transition-delay: calc(min(var(--i, 0) * 50ms, 700ms) + var(--d, 0ms));
+    transform 1300ms var(--ease-expo),
+    opacity 360ms linear;
+  transition-delay: calc(min(var(--i, 0) * 60ms, 840ms) + var(--d, 0ms));
 }
 
 html.js:not(.motion-reduced):not(.motion-failed) [data-split]:not(.is-in) .w {
   opacity: 0;
-  transform: translate3d(0, 112%, 0);
+  transform: translate3d(0, 115%, 0) rotateX(-68deg);
 }
 
 /* load choreography for page heads (CSS-only, so LCP never waits on JS) */
 @keyframes word-rise {
   from {
     opacity: 0;
-    transform: translate3d(0, 112%, 0);
+    transform: translate3d(0, 115%, 0) rotateX(-68deg);
   }
   22% {
     opacity: 1;
@@ -958,7 +961,12 @@ html:not(.motion-reduced) [data-load-split] .w {
   animation-delay: calc(var(--d, 0ms) + min(var(--i, 0) * 55ms, 700ms));
 }
 
+[data-load-split] .w {
+  transform-origin: 50% 100%;
+}
+
 [data-load-split] .wm {
+  perspective: 600px;
   display: inline-block;
   overflow: clip;
   padding-block: 0.14em;
@@ -1035,4 +1043,48 @@ html.motion-failed [data-magnetic] {
 html.motion-reduced::view-transition-old(root),
 html.motion-reduced::view-transition-new(root) {
   animation: none;
+}
+
+/* ---------- 12. smooth scroll (Lenis, fine pointers only) --------------- */
+
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: clip;
+}
+
+/* JS anchors travel on an eased curve (motion.ts); the native smooth jump
+   stays only as the no-JS fallback. */
+html.js {
+  scroll-behavior: auto;
+}
+
+/* ---------- 13. pointer tilt ([data-tilt], fine pointers) --------------- */
+/* motion.ts writes --tilt-x / --tilt-y (degrees) while the pointer is over
+   the element and eases them back to 0 on leave. Strength: data-tilt="6". */
+
+[data-tilt] {
+  transform: perspective(1100px) rotateX(var(--tilt-y, 0deg)) rotateY(var(--tilt-x, 0deg));
+  transition: transform 700ms var(--ease-expo);
+  transform-style: preserve-3d;
+}
+
+[data-tilt].is-tilting {
+  transition-duration: 120ms;
+}
+
+html.motion-reduced [data-tilt],
+html.motion-failed [data-tilt] {
+  transform: none !important;
 }

@@ -1,0 +1,306 @@
+---
+/**
+ * The site's expandable box: keywords visible, detail on demand.
+ *
+ *   <Expand title="Google setup" keywords={['Search Console', 'Schema', 'Maps']} index="03">
+ *     <p>…detail…</p>
+ *   </Expand>
+ *
+ * Built on native <details>, so it opens without JavaScript. With JS the
+ * open and close animate: the panel grows (grid-template-rows 0fr → 1fr), a
+ * violet hairline draws across the top, the plus turns into a minus and the
+ * children rise in a short cascade. Closing plays in reverse before the
+ * element actually closes. Colours come from the section (--fg, --line…),
+ * so it works on dark and light surfaces alike.
+ *
+ * Props: `title`, optional `keywords` (always visible under the title),
+ * `index` (small numeral), `open`, `size` ('m' default | 'l' for headline
+ * boxes), `reveal` (entry animation, default on), `i` (reveal stagger).
+ */
+export interface Props {
+  title: string;
+  keywords?: string[];
+  index?: string;
+  open?: boolean;
+  size?: 'm' | 'l';
+  reveal?: boolean;
+  i?: number;
+  class?: string;
+  id?: string;
+}
+
+const { title, keywords = [], index, open = false, size = 'm', reveal = true, i = 0, class: cls = '', id } = Astro.props;
+---
+
+<details
+  class:list={['xp', `xp--${size}`, cls, { 'is-open': open }]}
+  id={id}
+  open={open}
+  data-expand
+  data-reveal={reveal ? '' : undefined}
+  style={`--i:${i}`}
+>
+  <summary class="xp-sum">
+    {index && <span class="xp-idx label">{index}</span>}
+    <span class="xp-head">
+      <span class="xp-title">{title}</span>
+      {
+        keywords.length > 0 && (
+          <span class="xp-keys">
+            {keywords.map((k) => (
+              <span class="xp-key">{k}</span>
+            ))}
+          </span>
+        )
+      }
+    </span>
+    <span class="xp-icon" aria-hidden="true"><i></i><i></i></span>
+  </summary>
+  <div class="xp-panel">
+    <div class="xp-inner">
+      <slot />
+    </div>
+  </div>
+</details>
+
+<style>
+  .xp {
+    position: relative;
+    border-top: 1px solid var(--line-strong);
+  }
+
+  /* the violet hairline that draws across the top when the box opens */
+  .xp::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -1px;
+    height: 1px;
+    background-color: var(--mark, var(--violet));
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 700ms var(--ease-expo);
+    pointer-events: none;
+  }
+
+  .xp.is-open::before {
+    transform: scaleX(1);
+  }
+
+  .xp-sum {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 16px;
+    padding-block: 22px;
+    list-style: none;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .xp-sum::-webkit-details-marker {
+    display: none;
+  }
+
+  .xp-idx {
+    min-width: 2.2em;
+    padding-top: 0.35em;
+    color: var(--accent-text, var(--fg-2));
+    transition: transform var(--t-ui) var(--ease-expo);
+  }
+
+  .xp-head {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+    transition: transform var(--t-ui) var(--ease-expo);
+  }
+
+  .xp-title {
+    font-stretch: var(--wd-display);
+    font-size: clamp(1.0625rem, 1rem + 0.35vw, 1.25rem);
+    font-weight: 600;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    color: var(--fg);
+  }
+
+  .xp--l .xp-title {
+    font-size: var(--t-d3);
+    font-weight: 620;
+    line-height: 1.1;
+  }
+
+  .xp-keys {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+  }
+
+  .xp-key {
+    font-stretch: var(--wd-display);
+    font-size: var(--t-label);
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--fg-2);
+  }
+
+  .xp-key + .xp-key::before {
+    content: '·';
+    margin-inline-end: 14px;
+    color: var(--fg-3);
+  }
+
+  /* plus → minus: the vertical bar turns and folds into the horizontal one */
+  .xp-icon {
+    position: relative;
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    margin-top: -2px;
+    border: 1px solid var(--line-strong);
+    border-radius: 50%;
+    transition:
+      border-color var(--t-ui) linear,
+      background-color var(--t-ui) linear,
+      transform 600ms var(--ease-expo);
+  }
+
+  .xp-icon i {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 12px;
+    height: 1.5px;
+    margin: -0.75px 0 0 -6px;
+    background-color: var(--fg);
+    transition:
+      transform 600ms var(--ease-expo),
+      background-color var(--t-ui) linear;
+  }
+
+  .xp-icon i:last-child {
+    transform: rotate(90deg);
+  }
+
+  .xp.is-open .xp-icon {
+    transform: rotate(180deg);
+    border-color: var(--mark, var(--violet));
+    background-color: var(--mark, var(--violet));
+  }
+
+  .xp.is-open .xp-icon i {
+    background-color: var(--paper);
+  }
+
+  .xp.is-open .xp-icon i:last-child {
+    transform: rotate(0deg) scaleX(0);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .xp-sum:hover .xp-head,
+    .xp-sum:hover .xp-idx {
+      transform: translateX(6px);
+    }
+
+    .xp-sum:hover .xp-icon {
+      border-color: var(--fg);
+    }
+  }
+
+  .xp-sum:focus-visible {
+    outline-offset: 6px;
+  }
+
+  /* the panel: animated height via grid rows, no measuring */
+  .xp-panel {
+    display: grid;
+    grid-template-rows: 1fr;
+  }
+
+  .xp-inner {
+    min-height: 0;
+    overflow: hidden;
+    padding-bottom: 26px;
+  }
+
+  .xp-inner > :global(*) {
+    color: var(--fg-2);
+  }
+
+  /* armed (JS on, motion on): closed/closing boxes collapse and their
+     children wait below; .is-open plays everything in */
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .xp-panel {
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 620ms var(--ease-expo);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .xp.is-open .xp-panel {
+    grid-template-rows: 1fr;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .xp-inner > :global(*) {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+    transition:
+      opacity 380ms linear,
+      transform 700ms var(--ease-expo);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .xp.is-open .xp-inner > :global(*) {
+    opacity: 1;
+    transform: none;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .xp.is-open .xp-inner > :global(*:nth-child(2)) {
+    transition-delay: 70ms;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .xp.is-open .xp-inner > :global(*:nth-child(3)) {
+    transition-delay: 140ms;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .xp.is-open .xp-inner > :global(*:nth-child(n + 4)) {
+    transition-delay: 210ms;
+  }
+</style>
+
+<script>
+  import { isReduced } from '../../scripts/motion';
+
+  const CLOSE_MS = 560;
+
+  function setOpen(box: HTMLDetailsElement, open: boolean): void {
+    if (open) {
+      box.open = true;
+      // next frame, so the collapsed state paints first and the grow plays
+      requestAnimationFrame(() => requestAnimationFrame(() => box.classList.add('is-open')));
+      return;
+    }
+    box.classList.remove('is-open');
+    if (isReduced()) {
+      box.open = false;
+      return;
+    }
+    window.setTimeout(() => {
+      if (!box.classList.contains('is-open')) box.open = false;
+    }, CLOSE_MS);
+  }
+
+  document.querySelectorAll<HTMLDetailsElement>('details[data-expand]').forEach((box) => {
+    const sum = box.querySelector('summary');
+    if (!sum) return;
+    if (box.open) box.classList.add('is-open');
+    sum.addEventListener('click', (e) => {
+      e.preventDefault();
+      setOpen(box, !box.classList.contains('is-open'));
+    });
+    // native toggles (find-in-page, a hash opening it) keep the class honest
+    box.addEventListener('toggle', () => {
+      if (box.open && !box.classList.contains('is-open')) box.classList.add('is-open');
+      if (!box.open) box.classList.remove('is-open');
+    });
+  });
+</script>

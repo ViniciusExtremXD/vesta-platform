@@ -119,20 +119,20 @@ export const brand: Brand = {
   region: 'SP',
   country: 'Brazil',
   countryCode: 'BR',
-  tagline: 'Websites built like flagships. Fixed prices from $500.',
+  tagline: 'Websites built like flagships. Priced after a free analysis.',
   description:
-    'Vesta designs and builds high-end websites for businesses, new or rebuilt, and sets them up to be found on Google. Fixed prices from $500. Talk to the founder on WhatsApp.',
+    'Vesta designs and builds high-end websites for businesses, new or rebuilt, and sets them up to be found on Google. Every price starts with a free analysis. Talk to the founder on WhatsApp or email.',
   seo: {
-    title: 'Vesta — High-end websites for businesses, from $500',
+    title: 'Vesta — High-end websites for businesses',
     description:
-      'Vesta designs and builds high-end websites for businesses, new or rebuilt, and sets them up to be found on Google. Fixed prices from $500. Talk to the founder on WhatsApp.',
+      'Vesta designs and builds high-end websites for businesses, new or rebuilt, and sets them up to be found on Google. Every price starts with a free analysis. Talk to the founder on WhatsApp or email.',
   },
   og: {
     headline: 'Websites built like flagships.',
-    sub: 'Fixed prices from $500',
+    sub: 'Free price analysis on every project',
   },
   schema: {
-    priceRange: '$500–$750+',
+    priceRange: '$750–$1,000',
     areaServed: 'US, worldwide',
   },
 };
@@ -173,7 +173,10 @@ export const contact = {
   /** Not rendered anywhere until confirmed. */
   email: {
     address: 'vinicius@vesta.systems',
-    confirmed: false,
+    /** Subject line for mailto: links. */
+    subject: 'Website price analysis',
+    label: 'Email',
+    confirmed: true,
   },
   /** Calendly and any booking widget stay hidden until confirmed. */
   booking: {
@@ -188,6 +191,12 @@ export const contact = {
     offsetLine: 'São Paulo · UTC−3 · 1–2 hours ahead of New York',
   },
 };
+
+/** mailto: link to the professional address, with an optional subject and body. */
+export function mail(subject: string = contact.email.subject, body = ''): string {
+  const q = [`subject=${encodeURIComponent(subject)}`, body ? `body=${encodeURIComponent(body)}` : ''].filter(Boolean).join('&');
+  return `mailto:${contact.email.address}?${q}`;
+}
 
 /** Builds a WhatsApp link with a prefilled message (§4 WaLink). */
 export function wa(text: string): string {
@@ -282,9 +291,9 @@ export const waMessages: WaMessages = {
   hero: "Hi Vinícius, I found Vesta and I'd like a price for a website for my business.",
   visibility: "Hi Vinícius, I'd like help getting my business found on Google. My website is: ",
   pricing: {
-    landing: "Hi Vinícius, I'm interested in the Landing Page ($500–$700).",
-    google: "Hi Vinícius, I'm interested in the Landing Page + Google ($750).",
-    complete: "Hi Vinícius, I'd like a quote for a Complete Website (from $750).",
+    landing: "Hi Vinícius, I'd like a free price analysis for a Landing Page.",
+    google: "Hi Vinícius, I'd like a free price analysis for a Landing Page + Google.",
+    complete: "Hi Vinícius, I'd like a free price analysis for a Complete Website.",
   },
   care: "Hi Vinícius, I'd like to ask about the Care plan.",
   founding: "Hi Vinícius, I'd like to ask about a founding-client place.",
@@ -383,6 +392,9 @@ export const navUi = {
   whatsapp: 'WhatsApp',
   /** Mobile icon-only button. */
   whatsappAria: 'Get a price on WhatsApp',
+  /** Desktop/tablet label beside the WhatsApp button. */
+  email: 'Email',
+  emailAria: 'Email Vinícius',
   menu: 'Menu',
   close: 'Close',
   skipToContent: 'Skip to content',
@@ -406,9 +418,9 @@ export const mobileMenu = {
 /** Mobile sticky WhatsApp bar (§4). Renders as `{price} · {note}`. */
 export const stickyBar = {
   /** Bone. */
-  price: 'From $500',
+  price: 'Free price analysis',
   /** Ash. */
-  note: 'Fixed price',
+  note: 'Reply in one business day',
   button: 'WhatsApp',
   text: waMessages.hero,
 };
@@ -489,16 +501,19 @@ export const hero = {
   id: 'hero',
   meta: {
     left: 'Vesta · Website design and build studio',
-    right: 'São Paulo · For businesses in the US and worldwide',
+    /** Removed by the owner (2026-09-23): no audience or coordinates line. */
+    right: null,
     /** At 390px the meta row collapses to this. */
     mobile: 'Website design and build studio',
   },
   h1: 'Your business is better than its website.',
   lead: 'Vesta designs and builds high-end websites for businesses, new or rebuilt from the one you have, and sets them up to be found on Google.',
   primary: { label: 'Get a price on WhatsApp', text: waMessages.hero } satisfies WaCta,
-  secondary: { label: 'See prices', href: '#pricing' } satisfies Link,
+  secondary: { label: 'See packages', href: '#pricing' } satisfies Link,
+  /** Beside WhatsApp: the professional email. */
+  email: { label: 'Email Vinícius', subject: 'Website price analysis' },
   /** Ash, under the CTAs. */
-  micro: 'Landing pages from $500. Complete websites from $750. You talk to the founder, who builds every site.',
+  micro: 'Every project starts with a free price analysis. You talk to the founder, who builds every site.',
   /** Smoke, static. Replaces the live clock line. */
   status: 'Replies Mon–Fri, 9:00–18:00 São Paulo time (UTC−3).',
   plate: {
@@ -528,10 +543,10 @@ export interface SpecCell {
 export const specBand: { cells: SpecCell[]; footnote: string } = {
   cells: [
     {
-      value: '$500',
-      unit: 'From',
-      caption: 'Landing pages. Fixed price, agreed before work starts.',
-      count: { to: 500, prefix: '$', suffix: '' },
+      value: 'Free',
+      unit: 'Analysis',
+      caption: 'Every price starts with a look at your business and your current site.',
+      count: null,
     },
     {
       value: '5–7',
@@ -552,7 +567,7 @@ export const specBand: { cells: SpecCell[]; footnote: string } = {
       count: null,
     },
   ],
-  footnote: 'Complete websites from $750 · 2–3 weeks.',
+  footnote: 'Complete websites in 2–3 weeks.',
 };
 
 /* --------------------------------------------------------- 5.2 #problem */
@@ -903,7 +918,7 @@ export const packages: Package[] = [
     shortName: 'Landing Page',
     tagline: 'One page, one offer, built to turn visitors into conversations.',
     recommended: null,
-    price: { min: 500, max: 700, from: false, currency: 'USD', display: '$500–$700', sub: null, note: null },
+    price: { min: 750, max: 1000, from: false, currency: 'USD', display: 'Price on analysis', sub: null, note: null },
     daysLabel: '5–7 business days',
     daysShort: '5–7 days',
     dayRange: [5, 7],
@@ -917,10 +932,10 @@ export const packages: Package[] = [
       { text: 'Code and accounts delivered to you', confirmed: true },
     ],
     googleIncluded: false,
-    cta: 'Get this price on WhatsApp →',
+    cta: 'Request a price analysis →',
     waText: waMessages.pricing.landing,
     configure: { label: 'Configure', href: '#configure?model=landing' },
-    optionLabel: 'Landing Page · $500–$700',
+    optionLabel: 'Landing Page',
   },
   {
     id: 'google',
@@ -928,7 +943,7 @@ export const packages: Package[] = [
     shortName: '+ Google',
     tagline: 'The Landing Page, plus the technical and local Google setup that gets it found.',
     recommended: { text: 'Recommended for local businesses', confirmed: true },
-    price: { min: 750, max: 750, from: false, currency: 'USD', display: '$750', sub: null, note: null },
+    price: { min: 750, max: 1000, from: false, currency: 'USD', display: 'Price on analysis', sub: null, note: null },
     daysLabel: '7–10 business days',
     daysShort: '7–10 days',
     dayRange: [7, 10],
@@ -942,10 +957,10 @@ export const packages: Package[] = [
       { text: 'Lighthouse report at launch', confirmed: true },
     ],
     googleIncluded: true,
-    cta: 'Get this price on WhatsApp →',
+    cta: 'Request a price analysis →',
     waText: waMessages.pricing.google,
     configure: { label: 'Configure', href: '#configure?model=google' },
-    optionLabel: 'Landing Page + Google · $750',
+    optionLabel: 'Landing Page + Google',
   },
   {
     id: 'complete',
@@ -955,13 +970,12 @@ export const packages: Package[] = [
     recommended: null,
     price: {
       min: 750,
-      max: null,
-      from: true,
+      max: 1000,
+      from: false,
       currency: 'USD',
-      display: 'from $750',
-      sub: 'Fixed quote after a short brief. The scope sets the price.',
-      /** Suggested in §10 item 4 ("the $750 overlap"). Not confirmed. */
-      note: { text: 'Most complete websites land above the starting price.', confirmed: false },
+      display: 'Price on analysis',
+      sub: 'The scope sets the price. It is fixed in writing before work starts.',
+      note: null,
     },
     daysLabel: '2–3 weeks',
     daysShort: '2–3 weeks',
@@ -977,10 +991,10 @@ export const packages: Package[] = [
       { text: 'A direct line to the founder throughout', confirmed: true },
     ],
     googleIncluded: true,
-    cta: 'Ask for a quote on WhatsApp →',
+    cta: 'Request a price analysis →',
     waText: waMessages.pricing.complete,
     configure: { label: 'Configure', href: '#configure?model=complete' },
-    optionLabel: 'Complete Website · from $750',
+    optionLabel: 'Complete Website',
   },
 ];
 
@@ -996,8 +1010,17 @@ export function getPackage(id: PackageId): Package {
 export const pricing = {
   id: 'pricing',
   label: { index: '06', name: 'Pricing' } satisfies SectionLabel,
-  h2: 'Three packages. Prices on the page.',
-  lead: 'Every price is fixed in writing before work starts. Half to begin, half at launch.',
+  h2: 'Three packages. One free price analysis.',
+  lead: 'Tell Vesta what the business needs. The price comes from a free analysis and is fixed in writing before work starts.',
+  /** The owner's observation (2026-09-23). Rendered once, near the packages. */
+  rangeNote: {
+    title: 'What a project usually costs',
+    text: 'From system to system, a project runs $750–$1,000. The analysis often brings that number down.',
+    range: '$750–$1,000',
+  },
+  analysisCta: 'Request a price analysis',
+  /** Replaces the odometer price in each package. */
+  priceLabel: 'Price on analysis',
   /** Ink-2, under the lead. */
   differentiator:
     'A landing page is one page for one offer. A complete website has a page for every service and location, quoted before any work starts.',
@@ -1005,6 +1028,8 @@ export const pricing = {
     bestFor: 'Best for',
     /** 11px label next to the price. */
     currency: 'USD',
+    /** Expandable box toggle under each package. */
+    includes: "What's included",
   },
   /** Business days that fill a full column on the dimension line (2–3 weeks). */
   dayScaleMax: 15,
@@ -1119,7 +1144,7 @@ function buildSheetRows(sel: ConfigSelection): SheetRow[] {
     { key: 'package', label: 'Package', value: p.name, note: null },
     { key: 'start', label: 'Starting point', value: start, note: null },
     { key: 'options', label: 'Options', value: sel.care ? 'Care plan' : 'None', note: null },
-    { key: 'price', label: 'Price', value: p.price.display, note: sel.care ? 'Care priced with your project' : null },
+    { key: 'price', label: 'Price', value: 'Free price analysis', note: sel.care ? 'Care priced with your project' : 'Typical range $750–$1,000, often less' },
     { key: 'delivery', label: 'Delivery', value: p.daysLabel, note: null },
     { key: 'payment', label: 'Payment', value: '50% to start, 50% at launch', note: null },
   ];
@@ -1217,7 +1242,7 @@ export const configure = {
   sticky: {
     summary(id: PackageId): string {
       const p = getPackage(id);
-      return `${p.shortName} · ${p.price.display} · ${p.daysShort}`;
+      return `${p.shortName} · ${p.daysShort}`;
     },
     send: 'Send',
   },
@@ -1392,7 +1417,7 @@ export const faq: FaqItem[] = [
   },
   {
     q: 'How much does it cost?',
-    a: 'Landing Page: $500–$700. Landing Page + Google: $750. Complete Website: from $750, with a fixed quote after a short brief. Prices are fixed before work starts.',
+    a: 'Every project starts with a free price analysis. From system to system, projects run $750–$1,000, and the analysis often brings the price down. The price is fixed in writing before any work starts.',
     confirmed: true,
   },
   {
@@ -1458,7 +1483,7 @@ export interface FinaleIntent {
 
 export const finale = {
   id: 'finale',
-  h2: 'Send your current website. Get a fixed price.',
+  h2: 'Send your current website. Get a free price analysis.',
   body: 'Tell Vinícius what the business does and paste the link. No website yet? Send the business name. You\'ll get a straight answer from the person who would build it.',
   /** Radio group label for the chips. */
   intentsLabel: 'What do you need?',
@@ -1500,9 +1525,10 @@ export const footer = {
     pricing: {
       title: 'Pricing',
       links: [
-        { label: 'Landing Page $500–$700', href: '/#pricing' },
-        { label: 'Landing Page + Google $750', href: '/#pricing' },
-        { label: 'Complete Website from $750', href: '/#pricing' },
+        { label: 'Landing Page', href: '/#pricing' },
+        { label: 'Landing Page + Google', href: '/#pricing' },
+        { label: 'Complete Website', href: '/#pricing' },
+        { label: 'Free price analysis', href: '/#pricing' },
         { label: 'Care, priced with your project', href: '/#pricing' },
       ] satisfies Link[],
     },
@@ -1626,7 +1652,7 @@ export const contactPage = {
   seo: {
     title: 'Contact · Vesta',
     description:
-      'Message Vinícius Magno on WhatsApp for a fixed price on a new or rebuilt website. Replies Mon–Fri, 9:00–18:00 São Paulo time.',
+      'Message Vinícius Magno on WhatsApp for a free price analysis on a new or rebuilt website. Replies Mon–Fri, 9:00–18:00 São Paulo time.',
   } satisfies Seo,
   label: { index: null, name: 'Contact' } satisfies SectionLabel,
   h1: 'Talk to the person who builds it.',
@@ -1738,7 +1764,7 @@ export const conceptPage = {
   layers: { title: 'The six layers' },
   pricing: {
     title: 'How it would be priced',
-    text: 'This scope would be quoted as a Complete Website, from $750.',
+    text: 'This scope would be a Complete Website, priced after a free analysis.',
     cta: { label: 'Ask for a quote on WhatsApp →', text: waMessages.pricing.complete } satisfies WaCta,
   },
 };

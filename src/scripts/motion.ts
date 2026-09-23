@@ -17,6 +17,8 @@
      vestibular effects (Build teardown, Stance, studio light).
    ========================================================================= */
 
+import Lenis from 'lenis';
+
 const STORAGE_KEY = 'vesta-motion';
 const READY_FLAG = '__vestaMotionReady';
 const HONOR_OS_VESTIBULAR = false;
@@ -465,6 +467,25 @@ function initPointer(): void {
     el.addEventListener('blur', reset);
   });
 
+  /* 3D tilt toward the pointer: [data-tilt] or [data-tilt="6"] (max degrees) */
+  document.querySelectorAll<HTMLElement>('[data-tilt]').forEach((el) => {
+    const max = Number(el.dataset.tilt || 5);
+    el.addEventListener('pointermove', (e) => {
+      if (isReduced()) return;
+      const r = el.getBoundingClientRect();
+      const nx = (e.clientX - r.left) / r.width - 0.5;
+      const ny = (e.clientY - r.top) / r.height - 0.5;
+      el.classList.add('is-tilting');
+      el.style.setProperty('--tilt-x', `${(nx * max * 2).toFixed(2)}deg`);
+      el.style.setProperty('--tilt-y', `${(-ny * max * 2).toFixed(2)}deg`);
+    });
+    el.addEventListener('pointerleave', () => {
+      el.classList.remove('is-tilting');
+      el.style.setProperty('--tilt-x', '0deg');
+      el.style.setProperty('--tilt-y', '0deg');
+    });
+  });
+
   /* gleam distance = button width, so the line always crosses fully */
   document.querySelectorAll<HTMLElement>('.btn').forEach((btn) => {
     btn.addEventListener('pointerenter', () => btn.style.setProperty('--gleam-x', `${btn.offsetWidth + 4}px`), { passive: true });
@@ -486,6 +507,97 @@ function initImages(): void {
 }
 
 /* ---------------------------------------------------------------------- */
+/* 6b. smooth scroll + eased anchors                                      */
+/* ---------------------------------------------------------------------- */
+/* Lenis smooths wheel/trackpad scrolling on fine pointers only (touch keeps
+   native momentum). It drives the real window scroll, so position: sticky,
+   the shared frame loop and IntersectionObserver keep working unchanged.
+   Every same-page anchor — with or without Lenis — travels on an eased
+   curve instead of the browser's jump. Motion: off turns both off. */
+
+let lenis: Lenis | null = null;
+
+const easeInOutExpo = (t: number): number =>
+  t <= 0 ? 0 : t >= 1 ? 1 : t < 0.5 ? Math.pow(2, 20 * t - 10) / 2 : (2 - Math.pow(2, -20 * t + 10)) / 2;
+
+function navOffset(): number {
+  const nav = document.querySelector<HTMLElement>('[data-nav]');
+  return (nav?.offsetHeight ?? 0) + 12;
+}
+
+/** Scrolls to an element (or y) on the site's travel curve. */
+export function travelTo(target: HTMLElement | number): void {
+  const top =
+    typeof target === 'number'
+      ? target
+      : target.getBoundingClientRect().top + window.scrollY - navOffset();
+  const distance = Math.abs(top - window.scrollY);
+  const duration = Math.min(2.2, 0.9 + distance / 4000);
+
+  if (isReduced()) {
+    window.scrollTo({ top, behavior: 'instant' as ScrollBehavior });
+    return;
+  }
+  if (lenis) {
+    lenis.scrollTo(top, { duration, easing: easeInOutExpo, force: true });
+    return;
+  }
+  const from = window.scrollY;
+  const start = performance.now();
+  const step = (now: number) => {
+    const t = Math.min(1, (now - start) / (duration * 1000));
+    window.scrollTo({ top: from + (top - from) * easeInOutExpo(t), behavior: 'instant' as ScrollBehavior });
+    if (t < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+function initSmoothScroll(): void {
+  const fine = window.matchMedia('(pointer: fine)').matches;
+  const start = () => {
+    if (lenis || isReduced() || !fine) return;
+    lenis = new Lenis({
+      duration: 1.15,
+      easing: (t) => 1 - Math.pow(1 - t, 4),
+      smoothWheel: true,
+      allowNestedScroll: true,
+      autoRaf: true,
+    });
+  };
+  const stop = () => {
+    lenis?.destroy();
+    lenis = null;
+  };
+  start();
+  document.addEventListener('vesta:motion', () => (isReduced() ? stop() : start()));
+
+  // the full-screen menu locks the page; Lenis has to stop with it
+  new MutationObserver(() => {
+    if (!lenis) return;
+    if (root.classList.contains('menu-open')) lenis.stop();
+    else lenis.start();
+  }).observe(root, { attributes: true, attributeFilter: ['class'] });
+
+  document.addEventListener('click', (e) => {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const a = (e.target as HTMLElement | null)?.closest<HTMLAnchorElement>('a[href*="#"]');
+    if (!a || a.target === '_blank') return;
+    const url = new URL(a.href, location.href);
+    if (url.origin !== location.origin || url.pathname !== location.pathname || url.hash.length < 2) return;
+    // ids may carry a query, e.g. #configure?model=complete
+    const id = decodeURIComponent(url.hash.slice(1).split('?')[0]);
+    const el = document.getElementById(id);
+    if (!el) return;
+    e.preventDefault();
+    travelTo(el);
+    if (location.hash !== url.hash) {
+      history.pushState(null, '', url.hash);
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
+    }
+  });
+}
+
+/* ---------------------------------------------------------------------- */
 /* 7. boot                                                                */
 /* ---------------------------------------------------------------------- */
 
@@ -497,6 +609,7 @@ function boot(): void {
     initReveals();
     initPointer();
     initImages();
+    initSmoothScroll();
   } catch (err) {
     failed = true;
     root.classList.add('motion-failed');
