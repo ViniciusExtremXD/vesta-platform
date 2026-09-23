@@ -1,6 +1,6 @@
 /**
  * Renders the Open Graph image (1200×630) and the square logo with the
- * installed Chrome, so the real webfonts are used. Output goes to public/og/.
+ * installed Chrome, so the real webfont is used. Output goes to public/og/.
  *
  *   npm run og
  */
@@ -28,36 +28,37 @@ function findChrome() {
   return found;
 }
 
-const fonts = `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;700;900&family=Instrument+Serif:ital@1&family=JetBrains+Mono:wght@500&display=swap">`;
+const fonts =
+  '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mona+Sans:wdth,wght@75..125,200..900&display=swap">';
 
+// Carbon, bone, one livery red — the same system as the site.
 const card = `<!doctype html><html><head>${fonts}<style>
   html,body{margin:0}
-  body{width:1200px;height:630px;background:#050507;color:#f4f2fa;font-family:'Archivo',Arial,sans-serif;position:relative;overflow:hidden}
-  .glow{position:absolute;inset:-30% -10% auto;height:120%;background:radial-gradient(60rem 36rem at 20% 10%, rgba(124,58,237,.38), transparent 60%)}
-  .grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);background-size:96px 96px}
-  .in{position:absolute;inset:72px 80px;display:flex;flex-direction:column;justify-content:space-between}
-  .mark{font-weight:900;font-size:34px;letter-spacing:.08em}
-  .mark b{color:#b69cff}
-  .kick{font-family:'JetBrains Mono',monospace;font-size:18px;letter-spacing:.16em;text-transform:uppercase;color:#b69cff;margin-bottom:22px}
-  h1{margin:0;font-size:76px;line-height:1.02;letter-spacing:-.035em;font-weight:900;max-width:15ch}
-  h1 em{font-family:'Instrument Serif',Georgia,serif;font-style:italic;font-weight:400;letter-spacing:0;color:#b69cff}
-  .foot{display:flex;justify-content:space-between;align-items:flex-end;font-family:'JetBrains Mono',monospace;font-size:18px;color:#8a84a0;letter-spacing:.06em;text-transform:uppercase}
-  .bar{position:absolute;left:0;right:0;bottom:0;height:8px;background:linear-gradient(90deg,#7c3aed,#a855f7)}
+  body{width:1200px;height:630px;background:#0b0b0c;color:#eeeae2;font-family:'Mona Sans',Arial,sans-serif;position:relative;overflow:hidden}
+  .light{position:absolute;inset:0;background:radial-gradient(60% 45% at 70% 15%, rgba(238,234,226,.07), transparent 70%)}
+  .in{position:absolute;inset:72px 80px 80px;display:flex;flex-direction:column;justify-content:space-between}
+  .mark{display:flex;align-items:center;gap:18px;font-stretch:115%;font-weight:760;font-size:22px;letter-spacing:.3em}
+  .stripe{display:inline-block;width:22px;height:6px;background:#d3001c;transform:skewX(-24deg)}
+  h1{margin:0;font-stretch:115%;font-size:84px;line-height:.98;letter-spacing:-.03em;font-weight:640;max-width:13ch}
+  .foot{display:flex;justify-content:space-between;align-items:flex-end;font-stretch:115%;font-size:17px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:#a7a39a}
+  .rule{position:absolute;left:80px;right:80px;bottom:136px;height:1px;background:rgba(238,234,226,.14)}
+  .bar{position:absolute;left:0;bottom:0;width:38%;height:8px;background:#d3001c}
 </style></head><body>
-<div class="glow"></div><div class="grid"></div>
+<div class="light"></div>
 <div class="in">
-  <div class="mark">VESTA<b>.</b></div>
-  <div><div class="kick">[ Sites &amp; landing pages for paid traffic ]</div>
-  <h1>You already pay for the click. We build the page that <em>turns it into a customer.</em></h1></div>
-  <div class="foot"><span>Fixed public pricing · from $1,500</span><span>São Paulo · UTC−3</span></div>
+  <div class="mark">VESTA<span class="stripe"></span></div>
+  <h1>Websites built like flagships.</h1>
+  <div class="foot"><span>Fixed prices from $500</span><span>Website design and build studio</span></div>
 </div>
+<div class="rule"></div>
 <div class="bar"></div>
 </body></html>`;
 
 const logo = `<!doctype html><html><head>${fonts}<style>
-  html,body{margin:0}body{width:512px;height:512px;background:#050507;display:grid;place-items:center;font-family:'Archivo',Arial,sans-serif;color:#f4f2fa}
-  .m{font-weight:900;font-size:110px;letter-spacing:.06em}.m b{color:#b69cff}
-</style></head><body><div class="m">V<b>.</b></div></body></html>`;
+  html,body{margin:0}body{width:512px;height:512px;background:#0b0b0c;display:grid;place-items:center;font-family:'Mona Sans',Arial,sans-serif;color:#eeeae2}
+  .m{position:relative;font-stretch:125%;font-weight:700;font-size:230px;line-height:1;letter-spacing:-.02em}
+  .s{position:absolute;left:8%;bottom:-40px;width:84px;height:20px;background:#d3001c;transform:skewX(-24deg)}
+</style></head><body><div class="m">V<span class="s"></span></div></body></html>`;
 
 await mkdir(OUT, { recursive: true });
 await mkdir('C:\\cmv-og', { recursive: true }).catch(() => {});

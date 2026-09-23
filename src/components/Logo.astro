@@ -1,30 +1,101 @@
 ---
+/**
+ * The wordmark: VESTA in Display 760 at 18px, tracked .3em, followed by the
+ * orbit mark — a hairline ellipse tilted −24° around a tiny central dot (the
+ * hearth), with one planet on it. Source text is "Vesta"; CSS sets the caps,
+ * so screen readers say the name, not five letters.
+ *
+ * `progress`: the nav's scroll indicator. The planet travels once around the
+ * orbit as the page scrolls (Nav.astro drives [data-orbit-planet] from the
+ * shared rAF loop, transform-only). Without it the planet rests at the right
+ * end of the ellipse, like the .orbit mark in section labels.
+ *
+ * Colour: the ellipse and hearth use currentColor; the planet uses
+ * --orbit-planet (lilac on dark, violet on light), falling back to --mark.
+ */
 import { brand } from '../data/site';
+
 export interface Props {
   class?: string;
+  progress?: boolean;
 }
-const { class: cls = '' } = Astro.props;
+const { class: cls = '', progress = false } = Astro.props;
+
+/* Geometry in px (viewBox = rendered size, so CSS px = user units). */
+const W = 30;
+const H = 20;
+const RX = 12.5;
+const RY = 4.6;
 ---
 
-<span class={`logo ${cls}`}>{brand.mark}<span class="logo-dot" aria-hidden="true">.</span></span>
+<span class={`logo ${cls}`}>
+  <span class="logo-word">{brand.name}</span>
+  <svg
+    class="logo-orbit"
+    width={W}
+    height={H}
+    viewBox={`0 0 ${W} ${H}`}
+    aria-hidden="true"
+    focusable="false"
+    data-orbit-mark={progress ? '' : undefined}
+    data-rx={RX}
+    data-ry={RY}
+  >
+    <g transform={`rotate(-24 ${W / 2} ${H / 2})`}>
+      <ellipse class="logo-path" cx={W / 2} cy={H / 2} rx={RX} ry={RY}></ellipse>
+      <circle class="logo-hearth" cx={W / 2} cy={H / 2} r="1.1"></circle>
+      <circle
+        class="logo-planet"
+        cx="0"
+        cy="0"
+        r="2.3"
+        style={`transform: translate(${W / 2 + RX}px, ${H / 2}px)`}
+        data-orbit-planet={progress ? '' : undefined}></circle>
+    </g>
+  </svg>
+</span>
 
 <style>
   .logo {
-    font-family: var(--font-display);
-    font-weight: 900;
-    font-size: 1.35rem;
-    letter-spacing: 0.08em;
-    line-height: 1;
+    display: inline-flex;
+    align-items: center;
     color: currentColor;
+    font-family: var(--font-sans, Arial, sans-serif);
+    font-stretch: var(--wd-display);
+    font-size: 18px;
+    font-weight: 760;
+    line-height: 1;
     white-space: nowrap;
   }
 
-  .logo-dot {
-    color: var(--violet-ink-dark);
-    transition: color var(--dur-fast) var(--ease-out);
+  .logo-word {
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    /* the tracking also trails the last letter; the orbit sits in that space */
+    margin-inline-end: calc(-0.3em + 10px);
   }
 
-  :global(:is(.on-paper, .on-paper-2)) .logo-dot {
-    color: var(--violet-ink);
+  .logo-orbit {
+    flex: 0 0 auto;
+    overflow: visible;
+    /* optical: the ellipse centre sits on the cap-height middle */
+    transform: translateY(-1px);
+  }
+
+  .logo-path {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1;
+    stroke-opacity: 0.72;
+  }
+
+  .logo-hearth {
+    fill: currentColor;
+  }
+
+  .logo-planet {
+    fill: var(--orbit-planet, var(--mark, var(--lilac)));
+    transform-origin: 0 0;
   }
 </style>
+

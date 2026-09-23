@@ -1,0 +1,453 @@
+---
+/**
+ * §5.2 #problem — paper. The first white surface after the deep-space hero.
+ * Label + H2 (word mask), three full-width rows (numeral / title / body)
+ * whose strong hairlines draw from the left, and one closing line.
+ *
+ * Deep-space skin: ink on paper, violet only as marks — the orbit in the
+ * section label and one larger orbit mark beside the closing line. On tablet
+ * it stands in the numeral column (01, 02, 03 … then Vesta's own mark); on
+ * desktop it hangs in the margin before the verdict; on phones it sits above
+ * it. On reveal its planet travels the orbit once, drawing the ellipse behind
+ * it, and comes to rest where it started. Default state = the finished mark.
+ * From tablet up the three rows share one height, so the hairlines fall at
+ * equal intervals.
+ */
+import SectionLabel from '../ui/SectionLabel.astro';
+import SplitText from '../ui/SplitText.astro';
+import { problem } from '../../data/site';
+
+/* Typesetting only: tie one-letter words to the next word so no line ends
+   on a stranded "A" or "I". The words are unchanged. */
+const NBSP = String.fromCharCode(160);
+const tie = (t: string) => t.replace(/(^|\s)([AaI])\s+/g, (_m, pre: string, w: string) => pre + w + NBSP);
+
+/* ---- the orbit mark (same anatomy as the wordmark's: ellipse, hearth,
+   planet; tilted −24°). viewBox = rendered desktop size, so user units = px. */
+const MW = 60;
+const MH = 34;
+const RX = 26;
+const RY = 9.6;
+const CX = MW / 2;
+const CY = MH / 2;
+/* Explicit path so the start point and direction are fixed: from the right
+   end, sweeping through the near (lower) side. pathLength normalises the dash. */
+const orbitD = `M ${CX + RX} ${CY} A ${RX} ${RY} 0 1 1 ${CX - RX} ${CY} A ${RX} ${RY} 0 1 1 ${CX + RX} ${CY}`;
+
+/* Planet keyframes sampled at equal ARC LENGTH along that same path, so the
+   planet sits exactly on the head of the stroke being drawn (the dash is
+   measured in arc length too). Build-time; the page only reads the list. */
+const DENSE = 720;
+const dense: [number, number][] = [];
+for (let i = 0; i <= DENSE; i++) {
+  const t = (i / DENSE) * Math.PI * 2;
+  dense.push([CX + RX * Math.cos(t), CY + RY * Math.sin(t)]);
+}
+const cum = [0];
+for (let i = 1; i <= DENSE; i++) cum.push(cum[i - 1] + Math.hypot(dense[i][0] - dense[i - 1][0], dense[i][1] - dense[i - 1][1]));
+const total = cum[DENSE];
+const STEPS = 72;
+const trace: string[] = [];
+for (let k = 0, j = 1; k <= STEPS; k++) {
+  const target = (total * k) / STEPS;
+  while (j < DENSE && cum[j] < target) j++;
+  const f = (target - cum[j - 1]) / (cum[j] - cum[j - 1] || 1);
+  const x = dense[j - 1][0] + (dense[j][0] - dense[j - 1][0]) * f;
+  const y = dense[j - 1][1] + (dense[j][1] - dense[j - 1][1]) * f;
+  trace.push(`${x.toFixed(2)},${y.toFixed(2)}`);
+}
+---
+
+<section id={problem.id} class="s-paper section problem" data-nav-theme="light" aria-labelledby="problem-title">
+  <div class="wrap">
+    <header class="g p-head">
+      <SectionLabel n={problem.label.index ?? undefined} name={problem.label.name} />
+      <SplitText as="h2" id="problem-title" class="d2" text={problem.h2} />
+    </header>
+
+    <ol class="p-rows">
+      {
+        problem.rows.map((row, r) => (
+          <li class="g p-row" data-inview style={`--r:${r}`}>
+            <span class="p-line" aria-hidden="true" />
+            <span class="p-num" aria-hidden="true">
+              <span class="p-num-i">{row.index}</span>
+            </span>
+            <h3 class="d3 p-row-title">{tie(row.title)}</h3>
+            <p class="body p-row-body">{tie(row.body)}</p>
+            {r === problem.rows.length - 1 && <span class="p-line p-line-end" aria-hidden="true" />}
+          </li>
+        ))
+      }
+    </ol>
+
+    <div class="g p-foot">
+      <span class="p-mark" data-inview data-orbit-trace={trace.join(' ')} aria-hidden="true">
+        <svg class="pm-svg" width={MW} height={MH} viewBox={`0 0 ${MW} ${MH}`} focusable="false">
+          <g transform={`rotate(-24 ${CX} ${CY})`}>
+            <path class="pm-path" d={orbitD} pathLength="100" />
+            <circle class="pm-hearth" cx={CX} cy={CY} r="1.8" />
+            <circle class="pm-planet" cx="0" cy="0" r="3.4" style={`transform: translate(${CX + RX}px, ${CY}px)`} />
+          </g>
+        </svg>
+      </span>
+      {/* delayed so that, when the whole table arrives at once, the verdict lands last */}
+      <SplitText as="p" class="d3 p-verdict" text={problem.closing} delay={360} />
+    </div>
+  </div>
+</section>
+
+<script>
+  import { isReduced } from '../../scripts/motion';
+
+  /* The planet's one lap. CSS draws the stroke (a transition on
+     stroke-dashoffset in arc-length units); this moves the planet along the
+     same arc-length samples with the same easing and delay, so it rides the
+     head of the line. Transform only; one shot; nothing to pause. */
+  const mark = document.querySelector<HTMLElement>('#problem [data-orbit-trace]');
+  const planet = mark?.querySelector<SVGCircleElement>('.pm-planet');
+
+  if (mark && planet && typeof planet.animate === 'function' && !mark.classList.contains('is-in')) {
+    const frames = (mark.dataset.orbitTrace || '')
+      .split(' ')
+      .filter(Boolean)
+      .map((p) => {
+        const [x, y] = p.split(',');
+        return { transform: `translate(${x}px, ${y}px)` };
+      });
+
+    if (frames.length > 2) {
+      mark.addEventListener(
+        'vesta:reveal',
+        () => {
+          if (isReduced()) return;
+          planet.animate(frames, {
+            duration: 1600,
+            delay: 150,
+            easing: 'cubic-bezier(0.65, 0, 0.35, 1)',
+          });
+        },
+        { once: true }
+      );
+    }
+  }
+</script>
+
+<style>
+  /* ---------------------------------------------------------------- head */
+
+  .p-head {
+    row-gap: 24px;
+  }
+
+  .p-head :global(h2) {
+    max-width: 18ch;
+    color: var(--ink);
+  }
+
+  /* ---------------------------------------------------------------- rows */
+
+  .p-rows {
+    margin-top: clamp(4rem, 2rem + 5vw, 6.5rem);
+  }
+
+  .p-row {
+    position: relative;
+    padding-block: 32px;
+  }
+
+  /* the 1px strong top line; drawn from the left when the row arrives */
+  .p-line {
+    position: absolute;
+    inset-inline: 0;
+    top: 0;
+    height: 1px;
+    background-color: var(--line-strong);
+    transform-origin: left center;
+  }
+
+  /* the last row also closes the table */
+  .p-line-end {
+    top: auto;
+    bottom: 0;
+  }
+
+  .p-num {
+    display: block;
+    overflow: clip;
+    padding-block: 0.14em;
+    margin-block: -0.14em;
+    color: var(--ink-3);
+    font-stretch: var(--wd-display);
+    font-size: clamp(2.5rem, 2.2rem + 1vw, 3rem);
+    font-weight: 560;
+    line-height: 1;
+    letter-spacing: -0.01em;
+    /* proportional lining figures: the tabular zero is slashed and reads as
+       code. These indices never count, so they don't need tabular widths. */
+    font-variant-numeric: lining-nums proportional-nums;
+  }
+
+  .p-num-i {
+    display: inline-block;
+  }
+
+  .p-row-title {
+    margin-top: 20px;
+    color: var(--ink);
+    max-width: 22ch;
+  }
+
+  .p-row-body {
+    margin-top: 12px;
+    color: var(--ink-2);
+  }
+
+  /* ------------------------------------------------------------- closing */
+
+  .p-foot {
+    margin-top: 56px;
+    align-items: center;
+  }
+
+  .p-foot :global(.p-verdict) {
+    margin-top: 20px;
+    color: var(--ink);
+    text-wrap: balance;
+  }
+
+  /* the orbit mark: 48px on phones, 60px from tablet up */
+  .p-mark {
+    display: block;
+    line-height: 0;
+  }
+
+  .pm-svg {
+    width: 48px;
+    height: auto;
+    overflow: visible;
+    /* optical: the ellipse's left extreme, not the viewBox edge, meets the
+       column edge that the numerals and text share */
+    margin-inline-start: -4px;
+  }
+
+  .pm-path {
+    fill: none;
+    stroke: var(--mark, var(--violet));
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .pm-hearth {
+    fill: var(--ink);
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  .pm-planet {
+    fill: var(--mark, var(--violet));
+  }
+
+  /* -------------------------------------------------------------- tablet */
+
+  @media (min-width: 768px) {
+    .p-head {
+      row-gap: 32px;
+    }
+
+    /* one row height for all three: the hairlines fall at equal intervals,
+       like a specification sheet, whatever the body wraps to */
+    .p-rows {
+      display: grid;
+      grid-auto-rows: 1fr;
+    }
+
+    .p-row {
+      align-items: baseline;
+      /* the spare height of a shorter row collects at its foot */
+      align-content: start;
+      padding-block: 40px;
+    }
+
+    .p-num {
+      grid-column: 1 / span 2;
+      grid-row: 1;
+    }
+
+    .p-row-title {
+      grid-column: 3 / -1;
+      grid-row: 1;
+      margin-top: 0;
+    }
+
+    .p-row-body {
+      grid-column: 3 / -1;
+      grid-row: 2;
+      margin-top: 16px;
+      max-width: 52ch;
+      /* two or three lines in a table cell: even them out, no "good work." tails */
+      text-wrap: balance;
+    }
+
+    .p-foot {
+      margin-top: 80px;
+    }
+
+    /* centred on the cap height of the verdict's FIRST line (mark 34px),
+       so it stays put when the sentence wraps at narrow desktop widths */
+    .p-mark {
+      grid-column: 1 / span 2;
+      grid-row: 1;
+      align-self: start;
+      margin-top: calc(var(--t-d3) * 0.65 - 17px);
+    }
+
+    .pm-svg {
+      width: 60px;
+      margin-inline-start: -5px;
+    }
+
+    .p-foot :global(.p-verdict) {
+      grid-column: 3 / -1;
+      grid-row: 1;
+      margin-top: 0;
+    }
+  }
+
+  /* ------------------------------------------------------------- desktop */
+
+  @media (min-width: 1100px) {
+    .p-head :global(h2) {
+      grid-column: 1 / span 9;
+    }
+
+    .p-row {
+      padding-block: 48px;
+    }
+
+    .p-row-title {
+      grid-column: 3 / span 4;
+    }
+
+    .p-row-body {
+      grid-column: 7 / span 5;
+      grid-row: 1;
+      margin-top: 0;
+      max-width: 62ch;
+    }
+
+    .p-foot {
+      margin-top: 96px;
+    }
+
+    /* the verdict takes the body column (spec: 7–12), so the mark leaves the
+       index column and hangs in the margin just before it, like a signature:
+       the sentence keeps the column edge, the mark sits in the gutter. */
+    .p-mark {
+      grid-column: 7 / -1;
+      justify-self: start;
+      margin-inline-start: -84px;
+    }
+
+    .p-foot :global(.p-verdict) {
+      grid-column: 7 / -1;
+    }
+  }
+
+  /* -------------------------------------------------------------- motion
+     Default = final. Hidden starting states live only under the armed
+     html state, keyed off .is-in (data-inview). Per row: line draws
+     1000ms quint · numeral masks +100 · title +160 · body +240; rows
+     stagger 120ms. The mark: hearth first, then one 1600ms lap. */
+
+  .p-line {
+    transition:
+      opacity 200ms linear,
+      transform 1000ms var(--ease-quint);
+    transition-delay: calc(var(--r, 0) * 120ms);
+  }
+
+  .p-line-end {
+    transition-delay: calc(var(--r, 0) * 120ms + 320ms);
+  }
+
+  .p-num-i {
+    transition:
+      opacity 300ms linear,
+      transform var(--t-mask) var(--ease-expo);
+    transition-delay: calc(var(--r, 0) * 120ms + 100ms);
+  }
+
+  .p-row-title,
+  .p-row-body {
+    transition:
+      opacity var(--t-reveal) var(--ease-expo),
+      transform var(--t-reveal) var(--ease-expo);
+  }
+
+  .p-row-title {
+    transition-delay: calc(var(--r, 0) * 120ms + 160ms);
+  }
+
+  .p-row-body {
+    transition-delay: calc(var(--r, 0) * 120ms + 240ms);
+  }
+
+  .pm-path {
+    transition:
+      opacity 200ms linear 150ms,
+      stroke-dashoffset 1600ms var(--ease-mech) 150ms;
+  }
+
+  .pm-hearth {
+    transition:
+      opacity 300ms linear,
+      transform 700ms var(--ease-expo);
+  }
+
+  .pm-planet {
+    transition: opacity 200ms linear 150ms;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .p-row:not(.is-in) .p-line {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .p-row:not(.is-in) .p-num-i {
+    opacity: 0;
+    transform: translate3d(0, 104%, 0);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .p-row:not(.is-in) .p-row-title,
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .p-row:not(.is-in) .p-row-body {
+    opacity: 0;
+    transform: translate3d(0, var(--rise), 0);
+  }
+
+  /* the stroke is dashed only while armed, so the default is a clean ellipse */
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .pm-path {
+    stroke-dasharray: 100 100;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .p-mark:not(.is-in) .pm-path {
+    opacity: 0;
+    stroke-dashoffset: 100;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .p-mark:not(.is-in) .pm-hearth {
+    opacity: 0;
+    transform: scale(0);
+  }
+
+  /* opacity only: the planet's resting place is its inline transform */
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .p-mark:not(.is-in) .pm-planet {
+    opacity: 0;
+  }
+
+  /* motion switched off mid-page: land instantly, no late transitions */
+  :global(html.motion-reduced) .p-row *,
+  :global(html.motion-reduced) .p-mark * {
+    transition: none;
+  }
+</style>

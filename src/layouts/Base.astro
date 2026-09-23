@@ -3,6 +3,7 @@ import { Font } from 'astro:assets';
 import '../styles/global.css';
 import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
+import StickyBar from '../components/StickyBar.astro';
 import { brand, contact, founder } from '../data/site';
 import { url, absolute } from '../lib/url';
 
@@ -19,9 +20,11 @@ export interface Props {
   /** Extra JSON-LD beyond Organization/WebSite/Person. */
   jsonLd?: Record<string, unknown> | Record<string, unknown>[];
   bodyClass?: string;
+  /** Lab pages: render the slot without nav, footer and sticky bar. */
+  bare?: boolean;
 }
 
-const { title, description, canonical, ogImage, ogType = 'website', noindex = false, jsonLd, bodyClass = '' } = Astro.props;
+const { title, description, canonical, ogImage, ogType = 'website', noindex = false, jsonLd, bodyClass = '', bare = false } = Astro.props;
 
 const basePrefix = import.meta.env.BASE_URL.replace(/\/$/, '');
 const path = canonical ?? (Astro.url.pathname.replace(basePrefix, '') || '/');
@@ -40,11 +43,11 @@ const organization = {
   url: siteUrl,
   logo: absolute('/og/logo.png', Astro.site),
   description: brand.description,
-  address: { '@type': 'PostalAddress', addressLocality: brand.city, addressRegion: 'SP', addressCountry: 'BR' },
-  areaServed: [{ '@type': 'Country', name: 'United States' }, { '@type': 'Country', name: 'Canada' }, { '@type': 'Country', name: 'United Kingdom' }],
+  address: { '@type': 'PostalAddress', addressLocality: 'São Paulo', addressRegion: 'SP', addressCountry: 'BR' },
+  areaServed: [{ '@type': 'Country', name: 'United States' }, { '@type': 'Place', name: 'Worldwide' }],
   founder: { '@id': `${siteUrl}/#founder` },
   sameAs,
-  priceRange: '$1,500 – $5,000',
+  priceRange: '$500–$750+',
 };
 
 const person = {
@@ -74,12 +77,33 @@ const extraLd = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
+    {/*
+      Before first paint:
+      1. mark html.js — the armed (hidden) reveal states only exist under it,
+         so with JavaScript off the page renders complete;
+      2. apply the saved motion preference;
+      3. if the engine hasn't reported in within 4 s, html.motion-failed
+         reveals everything. Invisible content is the one unacceptable defect.
+    */}
+    <script is:inline>
+      (function () {
+        var h = document.documentElement;
+        h.classList.add('js');
+        try {
+          if (localStorage.getItem('vesta-motion') === 'reduced') h.classList.add('motion-reduced');
+        } catch (e) {}
+        window.setTimeout(function () {
+          if (!window.__vestaMotionReady) h.classList.add('motion-failed');
+        }, 4000);
+      })();
+    </script>
 
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonicalUrl} />
-    {noindex && <meta name="robots" content="noindex, nofollow" />}
+    {noindex && <meta name="robots" content="noindex, follow" />}
 
     <meta property="og:type" content={ogType} />
     <meta property="og:site_name" content={brand.name} />
@@ -95,82 +119,43 @@ const extraLd = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImageUrl} />
 
-    <meta name="theme-color" content="#050507" />
+    <meta name="theme-color" content="#0b0b0c" />
     <link rel="icon" href={url('/favicon.svg')} type="image/svg+xml" />
     <link rel="sitemap" href={url('/sitemap-index.xml')} />
 
-    <Font cssVariable="--font-display" preload />
-    <Font cssVariable="--font-serif" preload />
-    <Font cssVariable="--font-mono" />
+    <Font cssVariable="--font-sans" preload />
 
     <script is:inline set:html={JSON.stringify(organization)} type="application/ld+json" />
     <script is:inline set:html={JSON.stringify(person)} type="application/ld+json" />
     <script is:inline set:html={JSON.stringify(website)} type="application/ld+json" />
     {extraLd.map((ld) => <script is:inline set:html={JSON.stringify(ld)} type="application/ld+json" />)}
-
-    {/*
-      Failure guard. Two jobs, both before first paint:
-      1. apply the saved motion preference, so someone who reduced it never
-         sees a flash of animation;
-      2. if the motion engine has not reported in within 4 s, mark
-         html.motion-failed — the CSS then reveals the whole site.
-      Invisible content is the one unacceptable defect here.
-    */}
-    <script is:inline>
-      (function () {
-        var h = document.documentElement;
-        try {
-          if (localStorage.getItem('vesta-motion') === 'reduced') h.classList.add('motion-reduced');
-        } catch (e) {}
-        window.setTimeout(function () {
-          if (!window.__vestaMotionReady) h.classList.add('motion-failed');
-        }, 4000);
-      })();
-    </script>
-
-    <noscript>
-      <style>
-        [data-reveal],
-        [data-reveal='mask'] > *,
-        [data-split] .w,
-        [data-draw],
-        img[data-img-fade] {
-          opacity: 1 !important;
-          transform: none !important;
-          filter: none !important;
-          transition: none !important;
-        }
-        [data-draw-path] {
-          stroke-dashoffset: 0 !important;
-        }
-        [data-parallax],
-        [data-hero-exit],
-        [data-magnetic],
-        [data-tilt] {
-          transform: none !important;
-          opacity: 1 !important;
-        }
-        .field {
-          display: none !important;
-        }
-      </style>
-    </noscript>
   </head>
 
   <body class={bodyClass}>
-    <a class="skip-link" href="#content">Skip to content</a>
-
-    <div class="progress" data-progress aria-hidden="true">
-      <div class="progress-bar"></div>
-    </div>
-
-    <Nav />
+    {
+      !bare && (
+        <Fragment>
+          <a class="skip-link" href="#content">Skip to content</a>
+          <div class="progress" data-progress aria-hidden="true">
+            <div class="progress-bar" />
+          </div>
+          <Nav />
+        </Fragment>
+      )
+    }
 
     <main id="content">
       <slot />
     </main>
 
-    <Footer />
+    {
+      !bare && (
+        <Fragment>
+          <Footer />
+          <StickyBar />
+        </Fragment>
+      )
+    }
 
     <script>
       import '../scripts/motion';

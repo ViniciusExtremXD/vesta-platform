@@ -1,0 +1,701 @@
+---
+/**
+ * #services — SPEC §5.3 + §6.2.
+ *
+ * A. Stance (void): a sticky stage over a quiet star field where the
+ *    statement widens and gains weight on the Mona Sans wdth/wght axes as the
+ *    section scrolls. Then the two paragraphs and the struck-through
+ *    "Not Vesta's work" phrases.
+ * B. Stations (paper sub-block): one rail, three nodes, three blocks of
+ *    different lengths hanging below them. No boxes, no icons.
+ *
+ * Fail-open: without JS, with motion off or a failed engine, the statement
+ * renders at full width and weight in starlight with its violet line drawn, the
+ * stage drops its pinned height, and every node is filled.
+ */
+import SectionLabel from '../ui/SectionLabel.astro';
+import Cosmos from '../Cosmos.astro';
+import { services } from '../../data/site';
+
+const { stance, bodyA, bodyB, notOurWork, stations, modernize, label } = services;
+const lastD = stance.desktop.length - 1;
+const lastM = stance.mobile.length - 1;
+---
+
+<section id={services.id} class="services s-void section" data-nav-theme="dark" aria-labelledby="services-h">
+  {/* ---------------------------------------------------------- A. Stance */}
+  <div class="stance" data-stance data-nav-theme="dark">
+    <div class="stage">
+      <Cosmos variant="stars" class="stage-sky" />
+      <div class="wrap stage-inner">
+        <SectionLabel n={label.index ?? undefined} name={label.name} class="stage-label" />
+        <div class="fit">
+          <h2 class="statement" id="services-h">
+            <span class="visually-hidden">{stance.text}</span>
+            <span class="set set-d" aria-hidden="true">
+              {stance.desktop.map((l, i) => <span class:list={['ln', { 'ln-last': i === lastD }]} style={`--i:${i}`}>{l}</span>)}
+            </span>
+            <span class="set set-m" aria-hidden="true">
+              {stance.mobile.map((l, i) => <span class:list={['ln', { 'ln-last': i === lastM }]} style={`--i:${i}`}>{l}</span>)}
+            </span>
+          </h2>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {/* -------------------------------------------------- A. after the stage */}
+  <div class="after" data-nav-theme="dark">
+    <div class="wrap">
+      <div class="g after-copy">
+        <p class="lead after-a" data-reveal>{bodyA}</p>
+        <p class="body after-b fg-2" data-reveal style="--i:1">{bodyB}</p>
+      </div>
+
+      <div class="g nvw">
+        <span class="rule nvw-rule" data-reveal="draw" aria-hidden="true"></span>
+        <p class="label nvw-label fg-3" data-reveal>{notOurWork.label}</p>
+        <ul class="strikes" role="list">
+          {
+            notOurWork.items.map((item, k) => (
+              <li class="strike-item" data-reveal style={`--i:${k};--k:${k}`}>
+                <s class="strike">
+                  {item.split(' ').map((word, w, all) => (
+                    <Fragment>
+                      <span class="sw" style={`--w:${w}`}>{word}</span>
+                      {w < all.length - 1 && ' '}
+                    </Fragment>
+                  ))}
+                </s>
+              </li>
+            ))
+          }
+        </ul>
+        <p class="body nvw-follow fg-2" data-reveal style="--i:2">{notOurWork.follow}</p>
+      </div>
+    </div>
+  </div>
+
+  {/* --------------------------------------------------- B. the stations */}
+  <div class="stations s-paper" data-nav-theme="light">
+    <div class="wrap">
+      <ol class="st-list g" data-inview>
+        {
+          stations.map((s, k) => (
+            <li class="st" data-inview style={`--k:${k}`}>
+              <span class="node st-node" aria-hidden="true" />
+              <span class="st-seg" aria-hidden="true" />
+              <div class="st-head st-anim" style="--j:0">
+                <span class="st-i d3" aria-hidden="true">{s.index}</span>
+                <h3 class="d3 st-t">
+                  <span class="visually-hidden">{s.index} </span>
+                  {s.title}
+                </h3>
+              </div>
+              <p class="body st-b st-anim" style="--j:1">{s.body}</p>
+              <ul class="st-d st-anim" role="list" style="--j:2">
+                {s.deliverables.map((d) => <li class="label">{d}</li>)}
+              </ul>
+            </li>
+          ))
+        }
+      </ol>
+      <div class="g st-foot">
+        <p class="st-mod" data-reveal>{modernize}</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  /* ================================================================ root */
+  .services {
+    padding-block: 0;
+  }
+
+  /* ============================================================== stance */
+  .stance {
+    position: relative;
+    background-color: var(--void);
+  }
+
+  .stage {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background-color: var(--void);
+    padding-block: var(--section-y);
+  }
+
+  /* the star field (its own nebula haze is the section's light) fades out
+     toward the stage's bottom edge, so when the pin releases the sky doesn't
+     end on a hard line above the paragraphs */
+  .stage :global(.stage-sky) {
+    -webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent);
+    mask-image: linear-gradient(to bottom, #000 62%, transparent);
+  }
+
+  .stage-inner {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(28px, 1rem + 2vw, 48px);
+  }
+
+  /* the statement measures itself against the content column */
+  .fit {
+    container-type: inline-size;
+    width: 100%;
+  }
+
+  .statement {
+    /* reset h2 display type: the lines carry their own */
+    font-size: inherit;
+    font-weight: inherit;
+    line-height: inherit;
+    letter-spacing: 0;
+    text-wrap: nowrap;
+  }
+
+  .set {
+    display: block;
+    /* The step/span pair is read by the script too, so the class change to
+       .is-lit lands exactly where --pi crosses .5. */
+    --step: 0.14;
+    --span: 0.36;
+  }
+
+  .set-m {
+    display: none;
+    --step: 0.09;
+    --span: 0.36;
+  }
+
+  /* The widest line, "Ads rent attention.", measures 9.5em at wdth 125 /
+     wght 700, so 9.4cqi keeps it at ~89% of the column at the axis maximum
+     and it can never overflow. */
+  .set-d .ln {
+    font-size: min(8.6vw, 8.25rem, 9.4cqi);
+  }
+
+  .ln {
+    --pi: 1;
+    position: relative;
+    display: block;
+    width: fit-content;
+    white-space: nowrap;
+    font-family: var(--font-sans);
+    font-stretch: calc((75 + 50 * var(--pi)) * 1%);
+    font-weight: calc(300 + 400 * var(--pi));
+    line-height: 0.92;
+    letter-spacing: -0.03em;
+    color: var(--starlight);
+    transition: color 240ms linear;
+  }
+
+  /* the line under the last line: 2px violet, drawn once lit */
+  .ln-last::after {
+    content: '';
+    position: absolute;
+    left: 0.04em;
+    right: 0;
+    bottom: -0.16em;
+    height: 2px;
+    background-color: var(--violet);
+    transform-origin: left center;
+    transition: transform 700ms var(--ease-quint);
+  }
+
+  @media (max-width: 767px) {
+    .set-d {
+      display: none;
+    }
+
+    .set-m {
+      display: block;
+    }
+
+    /* 15vw (spec: 12vw — too timid once the real width axis loads):
+       "attention." measures 4.96em at the axis maximum, so it fills ~83% of
+       the column at 390 and the cqi cap guarantees it can never overflow */
+    .set-m .ln {
+      font-size: min(15vw, 18.6cqi);
+    }
+
+    .ln-last::after {
+      bottom: -0.14em;
+    }
+  }
+
+  /* ---- armed: the pinned, scrubbed stage (JS on, motion on) ---------- */
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .stance {
+    height: 170vh;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .stage {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    height: 100svh;
+    padding-block: 0;
+    overflow: clip;
+    contain: layout paint;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .ln {
+    --pi: clamp(0, (var(--p, 0) - var(--i) * var(--step)) / var(--span), 1);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .ln:not(.is-lit) {
+    color: var(--haze);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .ln-last:not(.is-done)::after {
+    transform: scaleX(0);
+  }
+
+  @media (max-width: 767px) {
+    :global(html.js:not(.motion-reduced):not(.motion-failed)) .stance {
+      height: 140vh;
+    }
+  }
+
+  /* ========================================================= after-stage */
+  .after {
+    background-color: var(--void);
+    padding-block: clamp(24px, 2vw, 48px) var(--section-y);
+  }
+
+  .after-copy {
+    row-gap: var(--s-24);
+  }
+
+  .after-a {
+    color: var(--starlight);
+  }
+
+  .nvw {
+    margin-top: clamp(64px, 3rem + 5vw, 128px);
+  }
+
+  .nvw-rule {
+    grid-column: 1 / -1;
+    background-color: var(--line-dark);
+  }
+
+  .nvw-label {
+    margin-top: var(--s-24);
+  }
+
+  .strikes {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--s-8);
+    margin-top: var(--s-24);
+  }
+
+  .strike {
+    display: block;
+    color: var(--haze);
+    text-decoration: none;
+    font-family: var(--font-sans);
+    font-stretch: var(--wd-display);
+    /* 28px per spec, eased down on narrow phones so each phrase stays on one
+       line and the stroke reads as a single crossing-out */
+    font-size: min(1.75rem, 6.3vw);
+    font-weight: 560;
+    line-height: 1.15;
+    white-space: nowrap;
+    letter-spacing: -0.015em;
+  }
+
+  /* The crossing-out: a 2px lilac line per word, each reaching across the
+     following space; the delays chain the words into one left-to-right
+     stroke. */
+  .sw {
+    position: relative;
+    display: inline-block;
+  }
+
+  .sw::after {
+    content: '';
+    position: absolute;
+    left: -0.04em;
+    right: -0.3em;
+    top: 54%;
+    height: 2px;
+    background-color: var(--lilac);
+    transform-origin: left center;
+    transition: transform 420ms var(--ease-quint);
+    transition-delay: calc(400ms + var(--k, 0) * 180ms + var(--w, 0) * 110ms);
+  }
+
+  .sw:last-child::after {
+    right: -0.04em;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .strike-item:not(.is-in) .sw::after {
+    transform: scaleX(0);
+    transition-delay: 0ms;
+  }
+
+  .nvw-follow {
+    margin-top: var(--s-32);
+  }
+
+  @media (min-width: 768px) {
+    .after-a {
+      grid-column: 1 / 5;
+    }
+
+    .after-b {
+      grid-column: 5 / 9;
+      padding-top: 0.3em;
+    }
+
+    .nvw-follow {
+      grid-column: 5 / 9;
+    }
+
+    .strikes {
+      grid-column: 1 / -1;
+      flex-direction: row;
+      flex-wrap: wrap;
+      column-gap: var(--s-48);
+      row-gap: var(--s-12);
+    }
+
+    .strike {
+      font-size: var(--t-d3);
+      font-weight: 620;
+      letter-spacing: -0.01em;
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .after-a {
+      grid-column: 1 / 6;
+    }
+
+    .after-b {
+      grid-column: 7 / 12;
+    }
+
+    .nvw-follow {
+      grid-column: 7 / 12;
+    }
+  }
+
+  /* ============================================================ stations */
+  .stations {
+    background-color: var(--paper);
+    padding-block: var(--section-y);
+  }
+
+  .st-list {
+    position: relative;
+    row-gap: 40px;
+  }
+
+  /* the rail (mobile/tablet: vertical, left edge) */
+  .st-list::before {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 12px;
+    bottom: 0;
+    width: 1px;
+    background-color: var(--line-light-strong);
+    transform-origin: center top;
+    transition: transform var(--t-line) var(--ease-quint);
+  }
+
+  .st {
+    /* stacked (phone/tablet): each station plays as it enters; on the
+       desktop rail the three chain at 450ms steps (below) */
+    --kd: 0ms;
+    position: relative;
+    padding-left: 25px;
+  }
+
+  .st-node {
+    position: absolute;
+    left: 0;
+    top: 8px;
+    color: var(--ink);
+    background-color: var(--violet);
+    border-color: var(--violet);
+    transition:
+      background-color 240ms var(--ease-expo),
+      border-color 240ms var(--ease-expo);
+    transition-delay: var(--kd);
+  }
+
+  .st-seg {
+    display: none;
+  }
+
+  .st-head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5em;
+  }
+
+  .st-i {
+    color: var(--violet-ink);
+    font-variant-numeric: tabular-nums;
+    transition: transform var(--t-ui) var(--ease-expo);
+  }
+
+  .st-t {
+    color: var(--ink);
+  }
+
+  .st-b {
+    margin-top: var(--s-16);
+    color: var(--ink-2);
+  }
+
+  .st-d {
+    display: grid;
+    gap: 2px;
+    line-height: 1.5;
+    margin-top: var(--s-24);
+    padding-top: var(--s-16);
+    border-top: 1px solid var(--line-light);
+    color: var(--ink-3);
+  }
+
+  /* one leading for wrapped and stacked items, so a two-line deliverable
+     keeps the same rhythm as the list */
+  .st-d .label {
+    line-height: 1.5;
+  }
+
+  .st-anim {
+    transition:
+      opacity var(--t-reveal) var(--ease-expo),
+      transform var(--t-reveal) var(--ease-expo);
+    transition-delay: calc(var(--kd) + 120ms + var(--j, 0) * 60ms);
+  }
+
+  /* armed hidden states — keyed off the list's .is-in so the rail, the
+     nodes and the text play as one sequence */
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .st-list:not(.is-in)::before {
+    transform: scaleY(0);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .st-list:not(.is-in) .st-node,
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .st:not(.is-in) .st-node {
+    background-color: var(--paper);
+    border-color: var(--ink);
+    transition-delay: 0ms;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .st-list:not(.is-in) .st-anim,
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .st:not(.is-in) .st-anim {
+    opacity: 0;
+    transform: translate3d(0, var(--rise), 0);
+    transition-delay: 0ms;
+  }
+
+  .st-foot {
+    margin-top: clamp(64px, 3rem + 5vw, 128px);
+  }
+
+  .st-mod {
+    max-width: 44ch;
+    color: var(--ink);
+    font-size: 1.0625rem;
+    line-height: 1.55;
+    text-wrap: pretty;
+    padding-top: var(--s-24);
+    border-top: 1px solid var(--line-light-strong);
+  }
+
+  @media (min-width: 768px) {
+    .st-b,
+    .st-d {
+      max-width: 52ch;
+    }
+
+    .st-mod {
+      grid-column: 1 / 7;
+      max-width: none;
+    }
+  }
+
+  /* desktop: one horizontal rail across columns 1–12, nodes at 1, 5, 9 */
+  @media (min-width: 1100px) {
+    .st-list {
+      row-gap: 0;
+    }
+
+    .st-list::before {
+      position: static;
+      grid-column: 1 / -1;
+      grid-row: 1;
+      align-self: start;
+      width: auto;
+      height: 1px;
+      transform-origin: left center;
+    }
+
+    :global(html.js:not(.motion-reduced):not(.motion-failed)) .st-list:not(.is-in)::before {
+      transform: scaleX(0);
+    }
+
+    .st {
+      --kd: calc(var(--k) * 450ms);
+      grid-row: 1;
+      padding-left: 0;
+      padding-top: 40px;
+    }
+
+    .st:nth-child(1) {
+      grid-column: 1 / 4;
+    }
+
+    .st:nth-child(2) {
+      grid-column: 5 / 8;
+    }
+
+    .st:nth-child(3) {
+      grid-column: 9 / 12;
+    }
+
+    .st-node {
+      top: -4px;
+    }
+
+    /* the rail segment to the next node, lit on hover */
+    .st-seg {
+      display: block;
+      position: absolute;
+      left: 9px;
+      top: -1px;
+      height: 2px;
+      width: calc((100% + var(--gap)) * 4 / 3 - 9px);
+      background-color: var(--violet);
+      transform: scaleX(0);
+      transform-origin: left center;
+      transition: transform var(--t-ui) var(--ease-expo);
+      pointer-events: none;
+    }
+
+    .st:last-child .st-seg {
+      width: calc((100% + var(--gap)) * 4 / 3 - var(--gap) - 9px);
+    }
+
+    .st-b,
+    .st-d {
+      max-width: none;
+    }
+
+    .st-mod {
+      grid-column: 1 / 8;
+    }
+  }
+
+  @media (min-width: 1100px) and (hover: hover) and (pointer: fine) {
+    .st:hover .st-i {
+      transform: translateX(6px);
+    }
+
+    .st:hover .st-seg {
+      transform: scaleX(1);
+    }
+  }
+
+  :global(html.motion-reduced) .st-seg {
+    transition: none;
+  }
+</style>
+
+<script>
+  import { addFrame, requestFrame, vestibular } from '../../scripts/motion';
+
+  /* Stance: one --p write per frame on the track, only while it is near the
+     viewport. CSS turns --p into each line's --pi; the script mirrors that
+     maths only to flip the discrete .is-lit / .is-done classes. */
+  const track = document.querySelector<HTMLElement>('[data-stance]');
+  if (track) {
+    const sets = Array.from(track.querySelectorAll<HTMLElement>('.set'));
+    let lines: HTMLElement[] = [];
+    let step = 0.14;
+    let span = 0.36;
+    let near = false;
+    let target = 0;
+    let p = -1;
+    let done = false;
+    const mqMobile = window.matchMedia('(max-width: 767px)');
+
+    const pick = () => {
+      const set = sets.find((s) => getComputedStyle(s).display !== 'none') ?? sets[0];
+      if (!set) return;
+      lines = Array.from(set.querySelectorAll<HTMLElement>('.ln'));
+      const cs = getComputedStyle(set);
+      step = parseFloat(cs.getPropertyValue('--step')) || step;
+      span = parseFloat(cs.getPropertyValue('--span')) || span;
+      p = -1; // force a full write
+    };
+    pick();
+    mqMobile.addEventListener('change', () => {
+      pick();
+      requestFrame();
+    });
+
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(
+        ([e]) => {
+          near = e.isIntersecting;
+          if (near) requestFrame();
+        },
+        { rootMargin: '25% 0px 25% 0px' }
+      ).observe(track);
+    } else {
+      near = true;
+    }
+
+    const pi = (v: number, i: number) => Math.min(1, Math.max(0, (v - i * step) / span));
+
+    addFrame({
+      read(_y, vh) {
+        if (!near || vestibular()) return;
+        const r = track.getBoundingClientRect();
+        // starts just before the stage pins, ends with the pin; the last line
+        // lands at ~.66, leaving the finished statement held for the rest
+        const lead = vh * 0.1;
+        const travel = lead + (r.height - vh);
+        target = travel > 0 ? Math.min(1, Math.max(0, (lead - r.top) / travel)) : 1;
+      },
+      write() {
+        if (!near || vestibular()) return;
+        // a short ease toward the scroll position, so the axes glide rather
+        // than step with each wheel notch
+        const next = p < 0 ? target : p + (target - p) * 0.2;
+        const settled = Math.abs(target - next) < 0.0008;
+        const v = settled ? target : next;
+        if (v === p) return;
+        p = v;
+        track.style.setProperty('--p', p.toFixed(4));
+        lines.forEach((ln, i) => ln.classList.toggle('is-lit', pi(p, i) > 0.5));
+        const last = lines[lines.length - 1];
+        if (last) {
+          const lp = pi(p, lines.length - 1);
+          if (!done && lp >= 0.98) done = true;
+          else if (done && lp < 0.6) done = false;
+          last.classList.toggle('is-done', done);
+        }
+        if (!settled) requestFrame();
+      },
+    });
+
+    document.addEventListener('vesta:motion', () => {
+      p = -1;
+      requestFrame();
+    });
+  }
+</script>

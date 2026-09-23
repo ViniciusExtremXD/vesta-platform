@@ -1,188 +1,414 @@
 ---
+/**
+ * /work/ — SPEC §7. No published cases yet, so the page says so plainly:
+ *   head (void)        WORK · "No borrowed logos." · lead
+ *   founding (paper)   three founding-client places, open, + WhatsApp CTA
+ *   cases (void)       only when a collection entry is confirmed: rows
+ *   concept (void)     Concept 01 · A study — always labelled fictional
+ *
+ * Gating: case studies render only with `confirmed: true` (client permission
+ * + measured numbers, schema-enforced in content.config.ts).
+ */
 import { getCollection } from 'astro:content';
 import Base from '../../layouts/Base.astro';
-import FinalCta from '../../components/home/FinalCta.astro';
-import Icon from '../../components/Icon.astro';
-import { brand, foundingProgram, verticals, primaryCta } from '../../data/site';
-import { url, formatDate } from '../../lib/url';
+import PageHead from '../../components/work/PageHead.astro';
+import CaseRow from '../../components/work/CaseRow.astro';
+import ConceptPlate from '../../components/ConceptPlate.astro';
+import SplitText from '../../components/ui/SplitText.astro';
+import Arrow from '../../components/ui/Arrow.astro';
+import WaGlyph from '../../components/ui/WaGlyph.astro';
+import { TODO_SITE_CASES } from '../../components/work/verticals';
+import { work, founding, hero, wa } from '../../data/site';
+import { url } from '../../lib/url';
 
 const cases = (await getCollection('cases'))
   .filter((c) => c.data.confirmed)
   .sort((a, b) => b.data.launched.getTime() - a.data.launched.getTime());
 
-const labelFor = (slug: string) => verticals.items.find((v) => v.slug === slug)?.label ?? slug;
-
-const title = `Work — ${brand.name} case studies`;
-const description =
-  'Case studies from Vesta: the problem, what was built, and the numbers measured before and after. Published only with the client’s permission.';
+/* CTA labels carry a trailing "→" in site.ts; the arrow is drawn as a hairline
+   SVG so it can nudge on hover. */
+const bare = (s: string) => s.replace(/\s*→\s*$/, '');
+const slots = founding.slots.map((s) => ({
+  n: String(s.n).padStart(2, '0'),
+  status: s.status,
+  label: founding.statusLabels[s.status],
+}));
 ---
 
-<Base title={title} description={description} canonical="/work/">
-  <section class="page-head on-void">
-    <div class="wrap wrap-wide">
-      <p class="kicker" data-reveal="up">Work</p>
-      <h1 data-split>Problem, build, <em>measured result.</em></h1>
-      <p class="lead" data-reveal="up" style="--i:2">
-        Every case here names the client, shows the page, and prints the before-and-after with the tool and the date it
-        was measured. Nothing else qualifies.
-      </p>
+<Base title={work.seo.title} description={work.seo.description} canonical="/work/">
+  <PageHead label={work.label.name} h1={work.h1} lead={work.lead} layout="split" />
+
+  {/* ------------------------------------------------ founding clients */}
+  <section class="s-paper section wf" data-nav-theme="light" aria-labelledby="wf-title">
+    <div class="wrap g">
+      <div class="wf-copy">
+        <SplitText as="h2" id="wf-title" class="d2 wf-title" text={work.founding.title} />
+        <div class="btn-row wf-cta" data-reveal style="--i:2">
+          <a class="btn" href={wa(work.founding.cta.text)} target="_blank" rel="noopener" data-wa-intent="work-founding">
+            <WaGlyph size={16} />
+            <span>{bare(work.founding.cta.label)}</span>
+            <Arrow />
+          </a>
+        </div>
+      </div>
+
+      <ol class="wf-slots">
+        {
+          slots.map((s, i) => (
+            <li class={`wf-slot is-${s.status}`} data-inview style={`--r:${i}`}>
+              <span class="wf-n n1" aria-hidden="true">
+                <span class="wf-n-i">{s.n}</span>
+              </span>
+              <span class="wf-track" aria-hidden="true" />
+              <span class="wf-state">
+                <span class="visually-hidden">{s.n}: </span>
+                <span class="node wf-node" aria-hidden="true" />
+                <span class="label wf-label">{s.label}</span>
+              </span>
+            </li>
+          ))
+        }
+      </ol>
     </div>
   </section>
 
+  {/* --------------------------------------- confirmed client work (gated) */}
   {
-    cases.length > 0 ? (
-      <section class="section-tight on-void">
-        <div class="wrap wrap-wide">
-          <ul class="case-grid">
+    cases.length > 0 && (
+      <section class="s-void section wk" data-nav-theme="dark" aria-labelledby="wk-title">
+        <div class="wrap">
+          <SplitText as="h2" id="wk-title" class="d2 wk-title" text={TODO_SITE_CASES.listTitle} />
+          <ol class="wk-list">
             {cases.map((c, i) => (
-              <li data-reveal="up" style={`--i:${i + 1}`}>
-                <a class="card case-card" href={url(`/work/${c.id}/`)} data-tilt="4" data-glow>
-                  <span class="badge badge-violet">{labelFor(c.data.vertical)}</span>
-                  <h2>{c.data.title}</h2>
-                  <p class="muted">{c.data.summary}</p>
-                  {c.data.metrics[0] && (
-                    <p class="case-metric mono">
-                      {c.data.metrics[0].label}: {c.data.metrics[0].before} → <b>{c.data.metrics[0].after}</b>
-                    </p>
-                  )}
-                  <span class="case-meta mono">
-                    {c.data.location} · {formatDate(c.data.launched)}
-                  </span>
-                </a>
-              </li>
+              <CaseRow index={i} slug={c.id} data={c.data} />
             ))}
-          </ul>
-        </div>
-      </section>
-    ) : (
-      <section class="section on-paper">
-        <div class="wrap wrap-wide founding">
-          <div class="founding-copy">
-            <p class="kicker" data-reveal="up">{foundingProgram.kicker}</p>
-            <h2 data-split set:html={foundingProgram.title} />
-            <p class="lead" data-reveal="up" style="--i:2">
-              {foundingProgram.body}
-            </p>
-            <div class="btn-row" data-reveal="up" style="--i:3">
-              <a class="btn btn-ink btn-lg" href={url(primaryCta.href)} data-magnetic>
-                {foundingProgram.label}
-                <Icon name="arrow" class="arrow" />
-              </a>
-            </div>
-          </div>
-          <div class="founding-ledger" data-reveal="left" style="--i:2">
-            <p class="kicker">What a published case contains</p>
-            <ol class="founding-list">
-              <li>The client’s name and the live URL, with written permission.</li>
-              <li>The problem, in the client’s own terms.</li>
-              <li>What was built, and what was deliberately left out.</li>
-              <li>Before-and-after numbers, each with the tool and the date measured.</li>
-              <li>A Lighthouse run on the final build, saved with the project.</li>
-            </ol>
-            <p class="founding-slots mono">
-              Founding-client slots: <b>{foundingProgram.slots}</b>
-            </p>
-          </div>
+          </ol>
         </div>
       </section>
     )
   }
 
-  <FinalCta />
+  {/* ------------------------------------------------ Concept 01 entry */}
+  <section class="s-void section wc" data-nav-theme="dark" aria-labelledby="wc-title">
+    <div class="wrap g wc-grid">
+      <div class="wc-copy">
+        <p class="label wc-label" data-reveal>
+          <span class="stripe" aria-hidden="true"></span>
+          <span>{work.concept.label}</span>
+        </p>
+        <SplitText as="h2" id="wc-title" class="d2 wc-title" text={work.concept.title} />
+        <p class="body wc-text" data-reveal style="--i:2">{work.concept.text}</p>
+        <p class="wc-go" data-reveal style="--i:3">
+          <a class="tlink wc-link" href={url(work.concept.link.href)}>
+            <span>{bare(work.concept.link.label)}</span>
+            <Arrow />
+          </a>
+        </p>
+      </div>
+
+      {/* the plates repeat the study link for pointer users; hidden from
+          assistive tech and the tab order (the text link is the real one) */}
+      <a class="wc-stage" href={url(work.concept.link.href)} tabindex="-1" aria-hidden="true">
+        <div class="wc-after" data-reveal style="--d:120ms">
+          <ConceptPlate mode="static" />
+          <span class="label wc-tag wc-tag--after">{hero.plate.tags.after}</span>
+        </div>
+        <div class="wc-before" data-reveal style="--d:320ms">
+          <ConceptPlate mode="static" state="before" bar={false} />
+          <span class="label wc-tag wc-tag--before">{hero.plate.tags.before}</span>
+        </div>
+      </a>
+    </div>
+  </section>
 </Base>
 
 <style>
-  .page-head {
-    padding-block: calc(var(--nav-h) + clamp(3rem, 2rem + 5vw, 6rem)) clamp(2rem, 1.5rem + 3vw, 3rem);
+  /* ============================================================ founding */
+
+  .wf {
+    row-gap: 0;
   }
 
-  .page-head > .wrap > * + * {
-    margin-top: var(--space-m);
+  .wf-title {
+    max-width: 12ch;
   }
 
-  .page-head h1 {
-    max-width: 14ch;
+  .wf-cta {
+    margin-top: 40px;
   }
 
-  .case-grid {
+  /* The violet button paints its faceted fill on ::before. Repeat the fill
+     on the element, clipped to the content box (clear of the cut corners and
+     under ::before), so the contrast gate reads white on violet, not paper. */
+  .wf-cta .btn {
+    background-color: var(--btn-bg);
+    background-clip: content-box;
+  }
+
+  .wf-slots {
+    margin-top: 64px;
+    border-bottom: 1px solid var(--line-strong);
+  }
+
+  .wf-slot {
+    position: relative;
     display: grid;
-    gap: var(--space-m);
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 20px;
+    padding-block: 20px;
   }
 
-  .case-card {
-    height: 100%;
-    gap: var(--space-s);
-    text-decoration: none;
-    align-items: flex-start;
+  /* the strong top hairline of each row draws from the left */
+  .wf-slot::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 1px;
+    background-color: var(--line-strong);
+    transform-origin: left center;
+    transition:
+      transform 1000ms var(--ease-quint),
+      opacity 200ms linear;
+    transition-delay: calc(var(--r, 0) * 120ms);
   }
 
-  .case-card h2 {
-    font-size: var(--step-2);
-  }
-
-  .case-metric {
-    font-size: var(--step--1);
-    color: var(--violet-ink-dark);
-  }
-
-  .case-meta {
-    margin-top: auto;
-    font-size: var(--step--2);
-    color: var(--text-dark-faint);
-  }
-
-  .founding {
-    display: grid;
-    gap: var(--space-2xl) var(--space-3xl);
-    align-items: start;
-  }
-
-  .founding-copy > * + * {
-    margin-top: var(--space-m);
-  }
-
-  .founding-copy h2 {
-    max-width: 16ch;
-  }
-
-  .founding-ledger {
-    padding: clamp(1.4rem, 1.1rem + 1vw, 2rem);
-    border: 1px solid var(--line-strong);
-    border-top: 3px solid var(--ink);
-    background: var(--paper-2);
-  }
-
-  .founding-list {
-    margin-top: var(--space-s);
-    padding-left: 1.3em;
-    display: grid;
-    gap: 0.6rem;
+  .wf-n {
+    display: inline-block;
+    overflow: clip;
+    /* Mona Sans' tabular figures carry a slashed zero that reads as
+       monospace; ordinals don't need to align, so use the lining set */
+    font-variant-numeric: lining-nums proportional-nums;
+    padding-block: 0.08em;
+    margin-block: -0.08em;
     color: var(--ink);
   }
 
-  .founding-list li::marker {
-    font-family: var(--font-mono);
-    color: var(--violet-ink);
+  .wf-n-i {
+    display: inline-block;
+    transition:
+      transform var(--t-mask) var(--ease-expo),
+      opacity 300ms linear;
+    transition-delay: calc(var(--r, 0) * 120ms + 100ms);
   }
 
-  .founding-slots {
-    margin-top: var(--space-m);
-    padding-top: var(--space-s);
-    border-top: 1px solid var(--line-strong);
-    font-size: var(--step--2);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--ink-faint);
+  /* the track: a hairline from the numeral to the open node — an empty
+     place, drawn to its end */
+  .wf-track {
+    height: 1px;
+    background-color: var(--line);
+    transform-origin: left center;
+    transition:
+      transform 1200ms var(--ease-quint),
+      opacity 200ms linear;
+    transition-delay: calc(var(--r, 0) * 120ms + 220ms);
   }
 
-  .founding-slots b {
-    color: var(--violet-ink);
+  .wf-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--ink-2);
+    transition:
+      opacity 600ms linear,
+      transform var(--t-reveal) var(--ease-expo);
+    transition-delay: calc(var(--r, 0) * 120ms + 520ms);
   }
 
-  @media (min-width: 56rem) {
-    .founding {
-      grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  .wf-node {
+    color: var(--violet);
+  }
+
+  .wf-slot.is-taken .wf-node {
+    background-color: var(--violet);
+  }
+
+  .wf-label {
+    color: var(--ink);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .wf-slot:not(.is-in)::before,
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .wf-slot:not(.is-in) .wf-track {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .wf-slot:not(.is-in) .wf-n-i {
+    transform: translate3d(0, 108%, 0);
+    opacity: 0;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .wf-slot:not(.is-in) .wf-state {
+    transform: translate3d(-8px, 0, 0);
+    opacity: 0;
+  }
+
+  @media (min-width: 768px) {
+    .wf-slot {
+      column-gap: 32px;
+      padding-block: 28px;
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .wf-copy {
+      grid-column: 1 / span 5;
+    }
+
+    .wf-slots {
+      grid-column: 7 / -1;
+      margin-top: 0;
+      align-self: start;
+    }
+
+    .wf-slot {
+      padding-block: 30px;
+    }
+  }
+
+  /* ========================================================= client work */
+
+  .wk-list {
+    margin-top: clamp(3rem, 2rem + 3vw, 5rem);
+    border-bottom: 1px solid var(--line-strong);
+  }
+
+  /* ========================================================= concept 01 */
+
+  .wc {
+    overflow: clip;
+    /* soft nebula light behind the plates (≤10% alpha) */
+    background-image: radial-gradient(40% 55% at 72% 52%, rgb(98 54 232 / 0.1), transparent 70%);
+  }
+
+  .wc-grid {
+    position: relative;
+    row-gap: 56px;
+    align-items: center;
+  }
+
+  .wc-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--lilac);
+  }
+
+  .wc-title {
+    margin-top: 24px;
+    max-width: 11ch;
+  }
+
+  .wc-text {
+    margin-top: 24px;
+    color: var(--haze);
+    max-width: 40ch;
+  }
+
+  .wc-go {
+    margin-top: 32px;
+  }
+
+  .wc-link {
+    font-size: 0.9375rem;
+  }
+
+  /* two plates: the rebuilt site in front, the 2016 original behind it */
+  .wc-stage {
+    position: relative;
+    display: block;
+    padding-bottom: 22%;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .wc-after {
+    position: relative;
+    z-index: 2;
+    width: 88%;
+    margin-left: auto;
+  }
+
+  .wc-before {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    z-index: 1;
+    width: 46%;
+  }
+
+  .wc-after :global(.cp),
+  .wc-before :global(.cp) {
+    transition: transform 900ms var(--ease-expo);
+  }
+
+  .wc-tag {
+    position: absolute;
+    z-index: 7;
+    padding: 5px 8px 4px;
+    background-color: var(--void);
+    color: var(--starlight);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    white-space: nowrap;
+  }
+
+  .wc-tag--after {
+    right: 12px;
+    bottom: 12px;
+    display: none;
+  }
+
+  @media (min-width: 768px) {
+    .wc-tag--after {
+      display: block;
+    }
+  }
+
+  .wc-tag--before {
+    left: 0;
+    top: 100%;
+    margin-top: 10px;
+    padding-inline: 0;
+    background-color: var(--void);
+    color: var(--haze);
+  }
+
+  /* one hover for the entry: plates part, the link redraws */
+  @media (hover: hover) and (pointer: fine) {
+    .wc-grid:has(.wc-link:hover, .wc-stage:hover) .wc-after :global(.cp) {
+      transform: translate3d(0, -8px, 0);
+    }
+
+    .wc-grid:has(.wc-link:hover, .wc-stage:hover) .wc-before :global(.cp) {
+      transform: translate3d(-8px, 4px, 0);
+    }
+
+    .wc-grid:has(.wc-stage:hover) .wc-link::after {
+      animation: underline-redraw 360ms var(--ease-quint) both;
+    }
+
+    .wc-grid:has(.wc-stage:hover) .wc-link :global(.arrow) {
+      transform: translateX(4px);
+    }
+  }
+
+  @media (min-width: 768px) {
+    .wc-copy {
+      grid-column: 1 / span 6;
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .wc-copy {
+      grid-column: 1 / span 4;
+    }
+
+    .wc-stage {
+      grid-column: 6 / -1;
+      padding-bottom: 18%;
     }
   }
 </style>

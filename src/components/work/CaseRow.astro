@@ -1,0 +1,220 @@
+---
+/**
+ * One confirmed case study as a hairline row (/work/ and /industries/[slug]/).
+ * Renders only for `confirmed: true` entries; the caller filters. The whole
+ * row is one link (stretched from the title link), the first metric prints
+ * with its tool and date, never without them.
+ *
+ *   index · client / title / summary · metric (before → after, tool · date) · ↗
+ */
+import Arrow from '../ui/Arrow.astro';
+import { url, formatDate, isoDate } from '../../lib/url';
+import { verticalLabel } from './verticals';
+
+export interface Props {
+  index: number;
+  slug: string;
+  data: {
+    title: string;
+    client: string;
+    vertical: string;
+    location: string;
+    summary: string;
+    launched: Date;
+    metrics: { label: string; before: string; after: string; tool: string; measured: Date }[];
+  };
+}
+
+const { index, slug, data: d } = Astro.props;
+const m = d.metrics[0];
+const n = String(index + 1).padStart(2, '0');
+---
+
+<li class="g cr" data-inview style={`--r:${index}`}>
+  <span class="cr-line" aria-hidden="true"></span>
+  <span class="cr-n" aria-hidden="true">{n}</span>
+  <div class="cr-main">
+    <p class="label cr-kicker">{d.client} · {verticalLabel(d.vertical)}</p>
+    <h3 class="d3 cr-title">
+      <a class="cr-link" href={url(`/work/${slug}/`)}>{d.title}</a>
+    </h3>
+    <p class="body cr-sum">{d.summary}</p>
+  </div>
+  <div class="cr-side">
+    {
+      m && (
+        <p class="cr-metric">
+          <span class="small cr-m-label">{m.label}</span>
+          <span class="cr-m-vals">
+            <span class="cr-m-before">{m.before}</span>
+            <Arrow size={16} />
+            <span class="cr-m-after">{m.after}</span>
+          </span>
+          <span class="small cr-m-src">
+            {m.tool} · <time datetime={isoDate(m.measured)}>{formatDate(m.measured)}</time>
+          </span>
+        </p>
+      )
+    }
+    <p class="small cr-meta">
+      {d.location} · <time datetime={isoDate(d.launched)}>{formatDate(d.launched)}</time>
+    </p>
+  </div>
+</li>
+
+<style>
+  .cr {
+    position: relative;
+    row-gap: 16px;
+    padding-block: 36px 40px;
+  }
+
+  .cr-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 1px;
+    background-color: var(--line-strong);
+    transform-origin: left center;
+    transition:
+      transform 1000ms var(--ease-quint),
+      opacity 200ms linear;
+    transition-delay: calc(var(--r, 0) * 120ms);
+  }
+
+  .cr-n,
+  .cr-main,
+  .cr-side {
+    transition:
+      opacity var(--t-reveal) var(--ease-expo),
+      transform var(--t-reveal) var(--ease-expo);
+    transition-delay: calc(var(--r, 0) * 120ms + 160ms);
+  }
+
+  .cr-side {
+    transition-delay: calc(var(--r, 0) * 120ms + 260ms);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .cr:not(.is-in) .cr-line {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .cr:not(.is-in) :is(.cr-n, .cr-main, .cr-side) {
+    opacity: 0;
+    transform: translate3d(0, var(--rise), 0);
+  }
+
+  .cr-n {
+    font-stretch: var(--wd-display);
+    color: var(--fg-3);
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+  }
+
+  .cr-kicker {
+    color: var(--accent-text);
+  }
+
+  .cr-title {
+    margin-top: 12px;
+    max-width: 24ch;
+  }
+
+  .cr-link {
+    text-decoration: none;
+  }
+
+  /* the whole row is the link */
+  .cr-link::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+
+  .cr-link:focus-visible {
+    outline: none;
+  }
+
+  .cr:has(.cr-link:focus-visible) {
+    outline: 2px solid var(--fg);
+    outline-offset: 3px;
+  }
+
+  .cr-sum {
+    margin-top: 12px;
+    color: var(--fg-2);
+    max-width: 52ch;
+  }
+
+  .cr-metric {
+    display: grid;
+    gap: 6px;
+  }
+
+  .cr-m-label,
+  .cr-m-src,
+  .cr-meta {
+    color: var(--fg-3);
+  }
+
+  .cr-m-vals {
+    font-stretch: var(--wd-display);
+    font-variant-numeric: lining-nums proportional-nums;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: var(--t-d3);
+    font-weight: 560;
+    color: var(--fg);
+  }
+
+  .cr-m-before {
+    color: var(--fg-3);
+  }
+
+  .cr-m-vals :global(.arrow) {
+    color: var(--accent-text);
+  }
+
+  .cr-meta {
+    margin-top: 16px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .cr-title {
+      transition: transform var(--t-ui) var(--ease-expo);
+    }
+
+    .cr:hover .cr-title {
+      transform: translateX(6px);
+    }
+  }
+
+  @media (min-width: 768px) {
+    .cr-n {
+      grid-column: 1 / span 1;
+      padding-top: 4px;
+    }
+
+    .cr-main {
+      grid-column: 2 / span 4;
+    }
+
+    .cr-side {
+      grid-column: 6 / -1;
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .cr-main {
+      grid-column: 2 / span 6;
+    }
+
+    .cr-side {
+      grid-column: 9 / -1;
+    }
+  }
+</style>

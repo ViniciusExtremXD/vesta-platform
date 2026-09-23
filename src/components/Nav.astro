@@ -1,332 +1,1068 @@
 ---
-import { nav, primaryCta, brand } from '../data/site';
-import { url, isExternal } from '../lib/url';
+/**
+ * Site navigation (SPEC §4 Nav, Mobile menu; §3.5 hover; §3.7 nav behaviour;
+ * SPEC_COSMOS §5 orbit progress).
+ *
+ * Desktop ≥1100 (76px): wordmark + orbit · Services Pricing Process About ·
+ * WhatsApp. Tablet 768–1099: wordmark · WhatsApp · Menu. Mobile (60px):
+ * wordmark · 40px WhatsApp icon · Menu.
+ *
+ * The engine (motion.ts) owns the scroll states on [data-nav]: .is-solid after
+ * 12px, .is-hidden on the way down past 60vh, data-theme="dark|light" from the
+ * [data-nav-theme] section underneath. This file styles those states and runs
+ * three things inside the shared rAF loop: the orbit progress planet beside
+ * the wordmark, the shared active bar, and the full-screen mobile menu.
+ *
+ * Progress: the orbit planet replaces the 2px [data-progress] line from
+ * Base.astro, which is hidden below (one indicator, not two).
+ */
+import { nav, navUi, mobileMenu, primaryCta } from '../data/site';
+import { url } from '../lib/url';
 import Logo from './Logo.astro';
-import Icon from './Icon.astro';
+import Cosmos from './Cosmos.astro';
+import WaGlyph from './ui/WaGlyph.astro';
+import Arrow from './ui/Arrow.astro';
 
-const currentPath = Astro.url.pathname;
-const base = import.meta.env.BASE_URL.replace(/\/$/, '');
-const here = (href: string) => {
-  if (isExternal(href) || href.includes('#')) return false;
-  const full = `${base}${href}`;
-  return currentPath === full || (href !== '/' && currentPath.startsWith(full));
+const path = Astro.url.pathname;
+/** Page links only; home-section anchors are tracked live by the script. */
+const isCurrent = (href: string) => {
+  if (href.includes('#')) return false;
+  const full = url(href);
+  return path === full || (href !== '/' && path.startsWith(full));
 };
 ---
 
-<header class="nav" data-nav>
-  <div class="nav-inner wrap wrap-wide">
-    <a class="nav-brand" href={url('/')} aria-label={`${brand.name} — home`}>
-      <Logo />
+<header class="nav" data-nav data-theme="dark">
+  <div class="nav-in wrap">
+    <a class="nav-home" href={url('/')} aria-label={navUi.homeAria}>
+      <Logo progress />
     </a>
 
-    <p class="nav-status hud" aria-label="System status">
-      <span class="pulse" aria-hidden="true"></span>
-      <b>Celestial Focus</b>
-      <span class="nav-status-sep" aria-hidden="true">✦</span>
-      <span class="nav-status-city">Global Delivery</span>
-    </p>
-
-    <nav class="nav-desktop" aria-label="Primary">
-      <ul class="nav-list">
+    <nav class="nav-primary" aria-label="Primary">
+      <ul class="nav-links">
         {
           nav.map((item) => (
             <li>
               <a
-                class={`nav-link${here(item.href) ? ' is-current' : ''}`}
+                class="nav-link"
                 href={url(item.href)}
-                aria-current={here(item.href) ? 'page' : undefined}
-                data-nav-link
+                data-section={item.section ?? undefined}
+                aria-current={isCurrent(item.href) ? 'page' : undefined}
               >
-                {item.label}
+                <span class="nav-label label">{item.label}</span>
               </a>
             </li>
           ))
         }
       </ul>
+      <span class="nav-bar" data-nav-bar aria-hidden="true"></span>
     </nav>
 
-    <a class="btn btn-primary btn-sm nav-cta" href={url(primaryCta.href)} data-magnetic="0.22">
-      {primaryCta.label}
-      <Icon name="arrow" class="arrow" />
-    </a>
+    <div class="nav-actions">
+      <a
+        class="btn btn-sm nav-wa"
+        href={primaryCta.href}
+        target="_blank"
+        rel="noopener"
+        aria-label={navUi.whatsappAria}
+        data-wa-intent="nav"
+      >
+        <WaGlyph size={16} />
+        <span class="nav-wa-text">{navUi.whatsapp}</span>
+      </a>
 
-    <details class="nav-mobile" name="nav-mobile">
-      <summary aria-label="Open menu">
-        <span class="nav-burger" aria-hidden="true"><i></i><i></i><i></i></span>
-        <span class="visually-hidden">Menu</span>
-      </summary>
-      <div class="nav-drawer">
-        <nav aria-label="Primary (mobile)">
-          <ul class="nav-mlist">
-            {
-              nav.map((item) => (
-                <li>
-                  <a href={url(item.href)} class={here(item.href) ? 'is-current' : undefined} aria-current={here(item.href) ? 'page' : undefined}>
-                    {item.label}
-                    <Icon name="arrow" size={14} />
-                  </a>
-                </li>
-              ))
-            }
-          </ul>
-        </nav>
-        <a class="btn btn-primary nav-mcta" href={url(primaryCta.href)}>{primaryCta.label}</a>
+      <button class="nav-menu label" type="button" aria-expanded="false" aria-controls="site-menu" data-menu-toggle>
+        <span class="nav-menu-mask">
+          <span class="nav-menu-a" data-menu-open-label>{navUi.menu}</span>
+          <span class="nav-menu-b" data-menu-close-label aria-hidden="true">{navUi.close}</span>
+        </span>
+      </button>
+    </div>
+  </div>
+
+  <div class="menu" id="site-menu" data-menu inert>
+    <div class="menu-bg" aria-hidden="true">
+      <Cosmos variant="stars" class="menu-cosmos" />
+      <svg class="menu-orbit" viewBox="0 0 640 640" focusable="false">
+        <ellipse class="menu-orbit-path" cx="320" cy="320" rx="312" ry="116"></ellipse>
+        <ellipse class="menu-orbit-path is-inner" cx="320" cy="320" rx="200" ry="74"></ellipse>
+        <circle class="menu-orbit-hearth" cx="320" cy="320" r="2.5"></circle>
+        <circle class="menu-orbit-planet" cx="164" cy="420.5" r="5"></circle>
+      </svg>
+    </div>
+
+    <div class="menu-in wrap">
+      <nav class="menu-nav" aria-label="Menu">
+        <ul class="menu-list">
+          {
+            mobileMenu.links.map((l, i) => (
+              <li class="menu-item" style={`--i:${i}`}>
+                <a class="menu-link" href={url(l.href)} aria-current={isCurrent(l.href) ? 'page' : undefined}>
+                  <span class="menu-idx-mask" aria-hidden="true">
+                    <span class="menu-idx label num">{l.index}</span>
+                  </span>
+                  <span class="menu-mask">
+                    <span class="menu-txt">{l.label}</span>
+                  </span>
+                  <span class="menu-arrow" aria-hidden="true">
+                    <Arrow size={16} />
+                  </span>
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </nav>
+
+      <div class="menu-foot">
+        <a class="btn menu-cta" href={mobileMenu.cta.href} target="_blank" rel="noopener" data-wa-intent="menu">
+          <WaGlyph size={16} />
+          <span>{mobileMenu.cta.label}</span>
+          <Arrow />
+        </a>
+        <div class="menu-meta">
+          <a class="tlink menu-li" href={mobileMenu.linkedin.href} target="_blank" rel="noopener">
+            {mobileMenu.linkedin.label.replace(/\s*↗\s*$/, '')}
+            <Arrow dir="up-right" size={12} />
+          </a>
+          <p class="menu-hours small">{mobileMenu.hours}</p>
+        </div>
       </div>
-    </details>
+    </div>
   </div>
 </header>
 
 <style>
+  /* One indicator: the orbit planet beside the wordmark replaces the 2px
+     progress line that Base.astro renders. */
+  :global(.progress[data-progress]) {
+    display: none;
+  }
+
+  /* ------------------------------------------------------------ the bar */
+
   .nav {
+    --fg: var(--starlight);
+    --fg-2: var(--haze);
+    --fg-3: var(--dim);
+    --line: var(--line-dark);
+    --line-strong: var(--line-dark-strong);
+    --nav-bg: var(--void);
+    --bar: var(--lilac);
+    --orbit-planet: var(--lilac);
+
     position: fixed;
     inset-block-start: 0;
     inset-inline: 0;
-    z-index: 100;
+    z-index: var(--z-nav);
     height: var(--nav-h);
-    display: flex;
-    align-items: center;
-    color: var(--text-dark);
-    background: transparent;
+    color: var(--fg);
+    background-color: transparent;
     border-bottom: 1px solid transparent;
     transition:
-      transform 380ms var(--ease-out),
-      background-color 320ms var(--ease-out),
-      border-color 320ms var(--ease-out);
+      transform 480ms var(--ease-expo),
+      background-color 240ms linear,
+      border-color 240ms linear,
+      color 240ms linear;
   }
 
-  /* glass, once the page starts moving */
-  .nav.is-solid {
-    background: rgb(5 5 7 / 0.72);
-    -webkit-backdrop-filter: saturate(160%) blur(16px);
-    backdrop-filter: saturate(160%) blur(16px);
-    border-bottom-color: var(--line-dark);
+  .nav[data-theme='light'] {
+    --fg: var(--ink);
+    --fg-2: var(--ink-2);
+    --fg-3: var(--ink-3);
+    --line: var(--line-light);
+    --line-strong: var(--line-light-strong);
+    --nav-bg: var(--paper);
+    --bar: var(--violet);
+    --orbit-planet: var(--violet);
+  }
+
+  /* Transparent only over the top of a dark section (the hero). Over paper
+     the bar is always opaque, so ink text never sits on a see-through bar. */
+  .nav.is-solid,
+  .nav[data-theme='light'] {
+    background-color: var(--nav-bg);
+    border-bottom-color: var(--line);
   }
 
   .nav.is-hidden {
-    transform: translate3d(0, -110%, 0);
+    transform: translate3d(0, -100%, 0);
+    transition-duration: 380ms, 240ms, 240ms, 240ms;
+    transition-timing-function: var(--ease-quint), linear, linear, linear;
   }
 
-  .nav-inner {
-    display: flex;
-    align-items: center;
-    gap: var(--space-m);
-    width: 100%;
+  /* a keyboard user tabbing into a hidden bar gets it back */
+  .nav:focus-within {
+    transform: none;
   }
 
-  .nav-brand {
+  /* open menu: the bar joins the void sheet, above it */
+  :global(html.menu-open) .nav {
+    --fg: var(--starlight);
+    --fg-2: var(--haze);
+    --fg-3: var(--dim);
+    --line: var(--line-dark);
+    --bar: var(--lilac);
+    --orbit-planet: var(--lilac);
+    z-index: var(--z-menu);
+    transform: none;
+    background-color: var(--void);
+    border-bottom-color: var(--line-dark);
+  }
+
+  .nav-in {
+    position: relative;
+    z-index: 2;
     display: flex;
     align-items: center;
-    flex: 0 0 auto;
+    justify-content: space-between;
+    gap: var(--s-16);
+    height: 100%;
+  }
+
+  .nav-home {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    color: var(--fg);
     text-decoration: none;
-    border-radius: var(--radius-s);
-    transition: transform var(--dur-base) var(--ease-out);
+    transition: color 240ms linear;
   }
 
-  .nav-brand:hover {
-    transform: translateY(-1px);
-  }
+  /* ------------------------------------------------------ desktop links */
 
-  .nav-status {
+  .nav-primary {
+    position: relative;
     display: none;
-    flex: 0 0 auto;
-    gap: 0.6em;
-    margin-inline-start: var(--space-s);
-    padding-inline-start: var(--space-m);
-    border-inline-start: 1px solid var(--line-dark);
   }
 
-  .nav-status-sep {
-    color: var(--violet-ink-dark);
-  }
-
-  .nav-status-city {
-    color: var(--text-dark-faint);
-  }
-
-  /* ---- desktop ---- */
-
-  .nav-desktop {
-    display: none;
-    margin-inline: auto;
-  }
-
-  .nav-list {
+  .nav-links {
     display: flex;
     align-items: center;
-    gap: 0.1rem;
     margin: 0;
   }
 
   .nav-link {
-    position: relative;
+    display: flex;
+    align-items: center;
+    height: var(--nav-h);
+    padding-inline: 18px;
+    color: var(--fg-2);
+    text-decoration: none;
+    transition: color var(--t-micro) linear;
+  }
+
+  .nav-links li:first-child .nav-link {
+    padding-inline-start: 0;
+  }
+
+  .nav-label {
+    /* the tracking trails the last letter; keep the box on the ink so the
+       bar spans exactly the word */
+    margin-inline-end: -0.18em;
+  }
+
+  .nav-link.is-active,
+  .nav-link[aria-current='page'] {
+    color: var(--fg);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .nav-link:hover {
+      color: var(--fg);
+    }
+  }
+
+  .nav-link:focus-visible {
+    color: var(--fg);
+    outline-offset: -6px;
+  }
+
+  /* the one shared active bar: 100px wide, placed and scaled by the script */
+  .nav-bar {
+    position: absolute;
+    left: 0;
+    top: calc(50% + 13px);
+    width: 100px;
+    height: 2px;
+    background-color: var(--bar);
+    transform-origin: left center;
+    transform: scaleX(0);
+    opacity: 0;
+    pointer-events: none;
+    transition:
+      transform var(--t-ui) var(--ease-expo),
+      opacity var(--t-micro) linear,
+      background-color 240ms linear;
+  }
+
+  .nav-bar.is-on {
+    opacity: 1;
+  }
+
+  .nav-bar.no-slide {
+    transition: opacity var(--t-micro) linear;
+  }
+
+  /* ------------------------------------------------------------ actions */
+
+  .nav-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--s-16);
+  }
+
+  .nav-wa {
+    width: 40px;
+    padding: 0;
+    gap: 10px;
+  }
+
+  .nav-wa-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .nav-menu {
     display: inline-flex;
     align-items: center;
-    padding: 0.6em 0.85em;
-    border-radius: var(--radius-s);
-    font-size: var(--step--1);
-    font-weight: 600;
-    color: var(--text-dark-muted);
-    text-decoration: none;
-    white-space: nowrap;
-    transition: color var(--dur-fast) var(--ease-out);
+    height: 44px;
+    padding-inline: 4px 0;
+    color: var(--fg);
+    transition: color 240ms linear;
   }
 
-  .nav-link::after {
-    content: '';
-    position: absolute;
-    left: 0.85em;
-    right: 0.85em;
-    bottom: 0.35em;
-    height: 2px;
-    background: var(--violet-ink-dark);
-    border-radius: 2px;
-    transform: scaleX(0);
-    transform-origin: left center;
-    transition: transform var(--dur-base) var(--ease-out);
-  }
-
-  .nav-link:hover,
-  .nav-link.is-current,
-  .nav-link.is-active {
-    color: var(--text-dark);
-  }
-
-  .nav-link:hover::after,
-  .nav-link.is-current::after,
-  .nav-link.is-active::after {
-    transform: scaleX(1);
-  }
-
-  .nav-cta {
-    display: none;
-    flex: 0 0 auto;
-    margin-inline-start: auto;
-  }
-
-  /* ---- mobile ---- */
-
-  .nav-mobile {
-    flex: 0 0 auto;
-    margin-inline-start: auto;
-  }
-
-  .nav-mobile > summary {
-    list-style: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 2.75rem;
-    height: 2.75rem;
-    border: 1px solid var(--line-dark-strong);
-    border-radius: var(--radius-s);
-    background: rgb(255 255 255 / 0.05);
-    cursor: pointer;
-  }
-
-  .nav-mobile > summary::-webkit-details-marker {
-    display: none;
-  }
-
-  .nav-burger {
+  /* Menu / Close swap: two words in one clipped line */
+  .nav-menu-mask {
     display: grid;
-    gap: 4px;
-    width: 18px;
+    overflow: clip;
+    margin-inline-end: -0.18em;
   }
 
-  .nav-burger i {
-    display: block;
-    height: 2px;
-    background: var(--text-dark);
-    border-radius: 2px;
+  .nav-menu-a,
+  .nav-menu-b {
+    grid-area: 1 / 1;
     transition:
-      transform var(--dur-base) var(--ease-out),
-      opacity var(--dur-fast) var(--ease-out);
+      transform 520ms var(--ease-expo),
+      opacity 200ms linear;
   }
 
-  .nav-mobile[open] .nav-burger i:nth-child(1) {
-    transform: translateY(6px) rotate(45deg);
-  }
-
-  .nav-mobile[open] .nav-burger i:nth-child(2) {
+  /* the parked label is also visibility:hidden once it has left, so it is
+     never "text at opacity .02" sitting in the page */
+  .nav-menu-b {
+    transform: translate3d(0, 110%, 0);
     opacity: 0;
+    visibility: hidden;
+    transition:
+      transform 520ms var(--ease-expo),
+      opacity 200ms linear,
+      visibility 0s linear 520ms;
   }
 
-  .nav-mobile[open] .nav-burger i:nth-child(3) {
-    transform: translateY(-6px) rotate(-45deg);
+  .nav.is-open .nav-menu-a {
+    transform: translate3d(0, -110%, 0);
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      transform 520ms var(--ease-expo),
+      opacity 200ms linear,
+      visibility 0s linear 520ms;
   }
 
-  .nav-drawer {
-    position: fixed;
-    inset-block-start: var(--nav-h);
-    inset-inline: 0;
-    max-height: calc(100svh - var(--nav-h));
-    overflow-y: auto;
-    padding: var(--space-m) var(--gutter) var(--space-xl);
-    background: var(--void-2);
-    border-block-start: 1px solid var(--line-dark);
-    box-shadow: var(--shadow-l);
+  .nav.is-open .nav-menu-b {
+    transform: none;
+    opacity: 1;
+    visibility: visible;
+    transition-delay: 0s;
   }
 
-  .nav-mobile[open] .nav-drawer {
-    animation: drawer-in 320ms var(--ease-out);
-  }
+  @media (min-width: 768px) {
+    .nav-actions {
+      gap: var(--s-24);
+    }
 
-  @keyframes drawer-in {
-    from {
-      opacity: 0;
-      transform: translate3d(0, -10px, 0);
+    .nav-wa {
+      width: auto;
+      padding: 0 18px 0 16px;
+    }
+
+    .nav-wa-text {
+      position: static;
+      width: auto;
+      height: auto;
+      overflow: visible;
+      clip: auto;
     }
   }
 
-  .nav-mlist {
-    margin: 0 0 var(--space-m);
-  }
-
-  .nav-mlist > li {
-    border-block-end: 1px solid var(--line-dark);
-  }
-
-  .nav-mlist a {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75em;
-    padding: 1em 0.2em;
-    font-family: var(--font-display);
-    font-size: var(--step-2);
-    font-weight: 700;
-    color: var(--text-dark);
-    text-decoration: none;
-  }
-
-  .nav-mlist a.is-current {
-    color: var(--violet-ink-dark);
-  }
-
-  .nav-mcta {
-    width: 100%;
-  }
-
-  @media (min-width: 64rem) {
-    .nav-desktop,
-    .nav-status {
-      display: flex;
+  @media (min-width: 1100px) {
+    .nav-in {
+      display: grid;
+      grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+      column-gap: var(--gap);
     }
 
-    .nav-cta {
-      display: inline-flex;
+    .nav-home {
+      grid-column: 1 / span 3;
+      justify-self: start;
     }
 
-    .nav-mobile {
+    .nav-primary {
+      display: block;
+      grid-column: 5 / span 6;
+    }
+
+    .nav-actions {
+      grid-column: 11 / -1;
+      justify-self: end;
+    }
+
+    .nav-menu {
       display: none;
     }
   }
 
-  html.motion-reduced .nav {
-    transition: none;
+  /* -------------------------------------------------------- mobile menu */
+
+  .menu {
+    --fg: var(--starlight);
+    --fg-2: var(--haze);
+    --fg-3: var(--dim);
+    --line: var(--line-dark);
+    --line-strong: var(--line-dark-strong);
+
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    padding-top: var(--nav-h);
+    overflow-x: clip;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    color: var(--starlight);
+    background-color: transparent;
+    visibility: hidden;
+    transition:
+      visibility 0s linear 620ms,
+      background-color 0s linear 0s;
   }
 
-  html.motion-reduced .nav-drawer {
-    animation: none;
+  /* the decorative void layer wipes down on open, back up on close */
+  .menu-bg {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    background-color: var(--void);
+    clip-path: inset(0 0 100% 0);
+    transition: clip-path 460ms var(--ease-quint) 120ms;
+  }
+
+  .nav.is-open .menu {
+    visibility: visible;
+    /* opaque once the wipe has landed, so text always sits on void */
+    background-color: var(--void);
+    transition:
+      visibility 0s linear 0s,
+      background-color 0s linear 520ms;
+  }
+
+  .nav.is-open .menu-bg {
+    clip-path: inset(0 0 0 0);
+    transition: clip-path 520ms var(--ease-quint) 0ms;
+  }
+
+  /* a faint star field; the sheet stays quiet behind the links */
+  .menu-bg :global(.menu-cosmos) {
+    opacity: 0.55;
+  }
+
+  /* a large tilted orbit, low right, drifting into its −24° rest on open */
+  .menu-orbit {
+    position: absolute;
+    right: -70%;
+    bottom: 8%;
+    width: 150%;
+    max-width: 980px;
+    height: auto;
+    overflow: visible;
+    transform: rotate(-32deg) scale(0.94);
+    opacity: 0;
+    transition:
+      transform 300ms var(--ease-quint),
+      opacity 200ms linear;
+  }
+
+  .nav.is-open .menu-orbit {
+    transform: rotate(-24deg);
+    opacity: 1;
+    transition:
+      transform 1800ms var(--ease-expo) 180ms,
+      opacity 900ms linear 180ms;
+  }
+
+  .menu-orbit-path {
+    fill: none;
+    stroke: var(--line-dark);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .menu-orbit-path.is-inner {
+    stroke: rgb(243 240 250 / 0.08);
+  }
+
+  .menu-orbit-hearth {
+    fill: var(--haze);
+  }
+
+  .menu-orbit-planet {
+    fill: var(--lilac);
+  }
+
+  .menu-in {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: var(--s-48);
+    flex: 1 0 auto;
+    padding-block: var(--s-16) calc(var(--s-24) + env(safe-area-inset-bottom));
+  }
+
+  .menu-list {
+    margin: 0;
+    border-top: 1px solid transparent;
+  }
+
+  .menu-item {
+    position: relative;
+  }
+
+  /* row hairline, drawn from the left */
+  .menu-item::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    height: 1px;
+    background-color: var(--line-dark);
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 300ms var(--ease-quint);
+  }
+
+  .menu-link {
+    display: flex;
+    align-items: baseline;
+    gap: var(--s-16);
+    padding-block: 16px 14px;
+    color: var(--starlight);
+    text-decoration: none;
+  }
+
+  .menu-idx-mask {
+    flex: 0 0 2.5rem;
+    display: block;
+    overflow: clip;
+  }
+
+  .menu-idx {
+    display: block;
+    color: var(--dim);
+    transition:
+      transform var(--t-ui) var(--ease-expo),
+      color var(--t-micro) linear,
+      opacity 200ms linear;
+  }
+
+  .menu-link[aria-current='page'] .menu-idx {
+    color: var(--lilac);
+  }
+
+  .menu-mask {
+    display: block;
+    flex: 1 1 auto;
+    overflow: clip;
+    padding-block: 0.1em;
+    margin-block: -0.1em;
+  }
+
+  .menu-txt {
+    display: block;
+    font-stretch: var(--wd-display);
+    font-size: 2.5rem;
+    font-weight: 600;
+    line-height: 1.04;
+    letter-spacing: -0.025em;
+    transition:
+      transform 240ms var(--ease-quint),
+      opacity 200ms linear;
+  }
+
+  .menu-arrow {
+    flex: 0 0 auto;
+    align-self: center;
+    color: var(--dim);
+    opacity: 0;
+    transform: translate3d(-8px, 0, 0);
+    transition:
+      transform var(--t-ui) var(--ease-expo),
+      opacity 200ms linear,
+      color var(--t-micro) linear;
+  }
+
+  /* closed: words and indices sit below their masks (the sheet is
+     visibility:hidden, so nothing is ever on screen in this state) */
+  .menu .menu-txt {
+    transform: translate3d(0, 108%, 0);
+    opacity: 0;
+  }
+
+  .menu .menu-idx {
+    transform: translate3d(0, 110%, 0);
+    opacity: 0;
+  }
+
+  .nav.is-open .menu-txt {
+    transform: none;
+    opacity: 1;
+    transition:
+      transform 1000ms var(--ease-expo),
+      opacity 240ms linear;
+    transition-delay: calc(180ms + var(--i, 0) * 60ms);
+  }
+
+  .nav.is-open .menu-idx {
+    transform: none;
+    opacity: 1;
+    transition:
+      transform 900ms var(--ease-expo),
+      color var(--t-micro) linear,
+      opacity 240ms linear;
+    transition-delay: calc(240ms + var(--i, 0) * 60ms), 0ms, calc(240ms + var(--i, 0) * 60ms);
+  }
+
+  .nav.is-open .menu-arrow {
+    opacity: 1;
+    transform: none;
+    transition-delay: calc(420ms + var(--i, 0) * 60ms);
+  }
+
+  .nav.is-open .menu-item::after {
+    transform: scaleX(1);
+    transition: transform var(--t-line) var(--ease-quint);
+    transition-delay: calc(120ms + var(--i, 0) * 60ms);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .menu-link:hover .menu-idx {
+      transform: translateX(4px);
+      color: var(--haze);
+      transition-delay: 0ms;
+    }
+
+    .menu-link:hover .menu-arrow {
+      color: var(--starlight);
+      transform: translateX(4px);
+      transition-delay: 0ms;
+    }
+  }
+
+  .menu-link:focus-visible {
+    outline-offset: -2px;
+  }
+
+  .menu-link:focus-visible .menu-idx {
+    transform: translateX(4px);
+    transition-delay: 0ms;
+  }
+
+  .menu-foot {
+    display: grid;
+    gap: var(--s-24);
+    transition:
+      transform 240ms var(--ease-quint),
+      opacity 200ms linear;
+    transform: translate3d(0, var(--rise), 0);
+    opacity: 0;
+  }
+
+  .nav.is-open .menu-foot {
+    transform: none;
+    opacity: 1;
+    transition:
+      transform var(--t-reveal) var(--ease-expo) 460ms,
+      opacity 400ms linear 460ms;
+  }
+
+  .menu-cta {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .menu-cta :global(.arrow) {
+    margin-inline-start: auto;
+  }
+
+  .menu-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--s-8) var(--s-24);
+  }
+
+  /* the hours line sits on void (the sheet is opaque behind it) */
+  .menu-hours {
+    color: var(--haze);
+    background-color: var(--void);
+  }
+
+  @media (min-width: 768px) {
+    .menu-in {
+      padding-block: var(--s-48) calc(var(--s-48) + env(safe-area-inset-bottom));
+    }
+
+    .menu-txt {
+      font-size: clamp(3rem, 1.4rem + 3.4vw, 4rem);
+    }
+
+    .menu-link {
+      gap: var(--s-24);
+      padding-block: 20px 18px;
+    }
+
+    .menu-idx-mask {
+      flex-basis: 4rem;
+    }
+
+    .menu-foot {
+      grid-template-columns: auto 1fr;
+      align-items: center;
+      gap: var(--s-32);
+    }
+
+    .menu-cta {
+      width: auto;
+    }
+
+    .menu-cta :global(.arrow) {
+      margin-inline-start: 0;
+    }
+
+    .menu-meta {
+      justify-content: flex-start;
+    }
+
+    .menu-orbit {
+      right: -30%;
+      bottom: -12%;
+      width: 100%;
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .menu {
+      display: none;
+    }
+  }
+
+  /* -------------------------------------------------------- motion off */
+
+  :global(html.motion-reduced) .nav,
+  :global(html.motion-reduced) .nav-bar,
+  :global(html.motion-reduced) .nav-menu-a,
+  :global(html.motion-reduced) .nav-menu-b,
+  :global(html.motion-reduced) .menu,
+  :global(html.motion-reduced) .menu-bg,
+  :global(html.motion-reduced) .menu-orbit,
+  :global(html.motion-reduced) .menu-txt,
+  :global(html.motion-reduced) .menu-idx,
+  :global(html.motion-reduced) .menu-arrow,
+  :global(html.motion-reduced) .menu-item::after,
+  :global(html.motion-reduced) .menu-foot {
+    transition: none !important;
   }
 </style>
+
+<script>
+  import { addFrame, requestFrame, isReduced } from '../scripts/motion';
+
+  const root = document.documentElement;
+  const nav = document.querySelector<HTMLElement>('[data-nav]');
+  if (nav) {
+    initOrbit(nav);
+    initBar(nav);
+    initMenu(nav);
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* the orbit progress planet beside the wordmark                      */
+  /* ------------------------------------------------------------------ */
+
+  function initOrbit(nav: HTMLElement): void {
+    const svg = nav.querySelector<SVGSVGElement>('[data-orbit-mark]');
+    const planet = svg?.querySelector<SVGCircleElement>('[data-orbit-planet]');
+    if (!svg || !planet) return;
+    const vb = svg.viewBox.baseVal;
+    const cx = vb.width / 2;
+    const cy = vb.height / 2;
+    const rx = Number(svg.dataset.rx) || 12.5;
+    const ry = Number(svg.dataset.ry) || 4.6;
+    const TAU = Math.PI * 2;
+
+    let target = 0;
+    let shown = -1;
+
+    const place = (p: number) => {
+      // one prograde lap from the rest position (right end); the far half of
+      // the orbit reads smaller, the near half larger — depth without 3D
+      const th = -TAU * p;
+      const x = cx + rx * Math.cos(th);
+      const y = cy + ry * Math.sin(th);
+      const s = 1 + 0.2 * Math.sin(th);
+      planet.style.transform = `translate(${x.toFixed(2)}px, ${y.toFixed(2)}px) scale(${s.toFixed(3)})`;
+    };
+
+    addFrame({
+      read(y, vh) {
+        const docH = root.scrollHeight - vh;
+        target = docH > 0 ? Math.min(1, Math.max(0, y / docH)) : 0;
+      },
+      write() {
+        if (shown < 0 || isReduced()) shown = target;
+        else shown += (target - shown) * 0.2;
+        if (Math.abs(target - shown) < 0.0004) shown = target;
+        place(shown);
+        // ease toward the scroll position over a few frames
+        if (shown !== target) requestFrame();
+      },
+    });
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* the shared active bar                                              */
+  /* ------------------------------------------------------------------ */
+
+  function initBar(nav: HTMLElement): void {
+    const primary = nav.querySelector<HTMLElement>('.nav-primary');
+    const bar = nav.querySelector<HTMLElement>('[data-nav-bar]');
+    if (!primary || !bar) return;
+    const links = Array.from(primary.querySelectorAll<HTMLAnchorElement>('a.nav-link'));
+    if (!links.length) return;
+    const labels = links.map((a) => a.querySelector<HTMLElement>('.nav-label') ?? a);
+    const pageIndex = links.findIndex((a) => a.getAttribute('aria-current') === 'page');
+
+    let geo: { x: number; w: number }[] = [];
+    let measuredAt = -1;
+    let visible = false;
+    let sectionIndex = -1;
+    let hoverIndex = -1;
+    let shown = -1;
+    let activeClass = -2;
+
+    /** The home section a link points at, only when it's on this page. */
+    const sectionOf = (a: HTMLAnchorElement): HTMLElement | null => {
+      const id = a.dataset.section;
+      if (!id || a.pathname !== location.pathname) return null;
+      return document.getElementById(id);
+    };
+
+    const measure = () => {
+      const base = primary.getBoundingClientRect();
+      geo = labels.map((l) => {
+        const r = l.getBoundingClientRect();
+        return { x: r.left - base.left, w: r.width };
+      });
+    };
+
+    const place = (i: number, scale: number) => {
+      const g = geo[i];
+      if (!g) return;
+      bar.style.transform = `translate3d(${g.x.toFixed(1)}px,0,0) scaleX(${((g.w * scale) / 100).toFixed(4)})`;
+    };
+
+    addFrame({
+      read(_y, vh, vw) {
+        visible = primary.offsetParent !== null;
+        if (!visible) return;
+        if (vw !== measuredAt || !geo.length) {
+          measure();
+          measuredAt = vw;
+        }
+        const probe = vh * 0.4;
+        sectionIndex = -1;
+        links.forEach((a, i) => {
+          const s = sectionOf(a);
+          if (!s) return;
+          const r = s.getBoundingClientRect();
+          if (r.top <= probe && r.bottom > probe) sectionIndex = i;
+        });
+      },
+      write() {
+        if (!visible) return;
+        const active = sectionIndex >= 0 ? sectionIndex : pageIndex;
+        if (active !== activeClass) {
+          links.forEach((a, i) => a.classList.toggle('is-active', i === active));
+          activeClass = active;
+        }
+        const target = hoverIndex >= 0 ? hoverIndex : active;
+        if (target === shown) return;
+        if (target < 0) {
+          bar.classList.remove('is-on');
+          shown = -1;
+          return;
+        }
+        if (shown < 0) {
+          // appearing: draw from the word's left edge instead of sliding in
+          bar.classList.add('no-slide');
+          place(target, 0);
+          bar.classList.add('is-on');
+          const t = target;
+          requestAnimationFrame(() =>
+            requestAnimationFrame(() => {
+              bar.classList.remove('no-slide');
+              if (shown === t) place(t, 1);
+            })
+          );
+        } else {
+          place(target, 1);
+        }
+        shown = target;
+      },
+    });
+
+    const point = (i: number) => {
+      hoverIndex = i;
+      requestFrame();
+    };
+    if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+      links.forEach((a, i) => a.addEventListener('pointerenter', () => point(i)));
+      primary.addEventListener('pointerleave', () => point(-1));
+    }
+    links.forEach((a, i) => {
+      a.addEventListener('focus', () => point(i));
+      a.addEventListener('blur', () => point(-1));
+    });
+
+    // web font swap changes the word widths
+    document.fonts?.ready.then(() => {
+      measuredAt = -1;
+      if (shown >= 0) shown = -3; // force a re-place (no draw-in)
+      requestFrame();
+    });
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* the mobile menu                                                    */
+  /* ------------------------------------------------------------------ */
+
+  function initMenu(nav: HTMLElement): void {
+    const toggle = nav.querySelector<HTMLButtonElement>('[data-menu-toggle]');
+    const menu = nav.querySelector<HTMLElement>('[data-menu]');
+    if (!toggle || !menu) return;
+    const openLabel = toggle.querySelector<HTMLElement>('[data-menu-open-label]');
+    const closeLabel = toggle.querySelector<HTMLElement>('[data-menu-close-label]');
+
+    let open = false;
+    let inerted: HTMLElement[] = [];
+
+    const focusables = () =>
+      Array.from(nav.querySelectorAll<HTMLElement>('a[href], button:not([disabled])')).filter(
+        (el) => el.getClientRects().length > 0 && !el.closest('[inert]')
+      );
+
+    const lock = () => {
+      const sbw = window.innerWidth - root.clientWidth;
+      root.style.overflow = 'hidden';
+      if (sbw > 0) {
+        document.body.style.paddingRight = `${sbw}px`;
+        nav.style.paddingRight = `${sbw}px`;
+      }
+    };
+
+    const unlock = () => {
+      root.style.overflow = '';
+      document.body.style.paddingRight = '';
+      nav.style.paddingRight = '';
+    };
+
+    const setInert = (on: boolean) => {
+      if (on) {
+        inerted = Array.from(document.body.children).filter(
+          (el): el is HTMLElement => el instanceof HTMLElement && el !== nav && el.tagName !== 'SCRIPT' && !el.hasAttribute('inert')
+        );
+        inerted.forEach((el) => el.setAttribute('inert', ''));
+      } else {
+        inerted.forEach((el) => el.removeAttribute('inert'));
+        inerted = [];
+      }
+    };
+
+    const setOpen = (next: boolean, restoreFocus = true) => {
+      if (next === open) return;
+      open = next;
+      nav.classList.toggle('is-open', open);
+      root.classList.toggle('menu-open', open);
+      toggle.setAttribute('aria-expanded', String(open));
+      openLabel?.toggleAttribute('aria-hidden', open);
+      closeLabel?.toggleAttribute('aria-hidden', !open);
+      menu.toggleAttribute('inert', !open);
+      if (open) {
+        lock();
+        setInert(true);
+      } else {
+        unlock();
+        setInert(false);
+        if (restoreFocus) toggle.focus({ preventScroll: true });
+      }
+      requestFrame();
+    };
+
+    toggle.addEventListener('click', () => setOpen(!open, false));
+
+    // any link in the sheet closes it first, so an anchor can scroll the page
+    menu.addEventListener('click', (e) => {
+      const a = (e.target as HTMLElement | null)?.closest('a');
+      if (a) setOpen(false, false);
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (!open) return;
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setOpen(false);
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      const f = focusables();
+      if (!f.length) return;
+      const first = f[0];
+      const last = f[f.length - 1];
+      const current = document.activeElement as HTMLElement | null;
+      if (!current || !nav.contains(current)) {
+        e.preventDefault();
+        first.focus();
+      } else if (e.shiftKey && current === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && current === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    });
+
+    const wide = window.matchMedia('(min-width: 1100px)');
+    wide.addEventListener('change', (e) => {
+      if (e.matches) setOpen(false, false);
+    });
+    window.addEventListener('pagehide', () => setOpen(false, false));
+  }
+</script>
+

@@ -24,37 +24,20 @@ export default defineConfig({
   image: {
     responsiveStyles: true,
   },
-  // Self-hosted, subsetted, preloaded. Fallbacks are metric-matched stacks.
+  // One self-hosted variable family (Mona Sans, SIL OFL): wdth 75–125 and
+  // wght 200–900 in a single latin file. Display type runs at wdth 115, text at
+  // 100, and the Stance statement scrubs the width axis live.
   fonts: [
     {
-      name: 'Archivo',
-      cssVariable: '--font-display',
+      name: 'Mona Sans',
+      cssVariable: '--font-sans',
       provider: fontProviders.google(),
-      weights: ['400 900'],
+      weights: ['200 900'],
       styles: ['normal'],
       subsets: ['latin'],
       display: 'swap',
-      fallbacks: ['Segoe UI', 'Helvetica Neue', 'Arial', 'sans-serif'],
-    },
-    {
-      name: 'Instrument Serif',
-      cssVariable: '--font-serif',
-      provider: fontProviders.google(),
-      weights: ['400'],
-      styles: ['italic'],
-      subsets: ['latin'],
-      display: 'swap',
-      fallbacks: ['Georgia', 'Times New Roman', 'serif'],
-    },
-    {
-      name: 'JetBrains Mono',
-      cssVariable: '--font-mono',
-      provider: fontProviders.google(),
-      weights: ['400 700'],
-      styles: ['normal'],
-      subsets: ['latin'],
-      display: 'swap',
-      fallbacks: ['ui-monospace', 'Cascadia Mono', 'Consolas', 'monospace'],
+      fallbacks: ['Arial', 'Helvetica Neue', 'sans-serif'],
+      options: { experimental: { variableAxis: { wdth: [['75', '125']] } } },
     },
   ],
   devToolbar: { enabled: false },

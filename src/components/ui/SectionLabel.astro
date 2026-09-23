@@ -1,0 +1,16 @@
+---
+/** stripe · 01 · THE PROBLEM — the one section-label pattern on the site. */
+export interface Props {
+  n?: string;
+  name: string;
+  class?: string;
+  reveal?: boolean;
+}
+const { n, name, class: cls = '', reveal = true } = Astro.props;
+---
+
+<p class={`sec-label label ${cls}`} data-reveal={reveal ? '' : undefined}>
+  <span class="stripe" aria-hidden="true"></span>
+  {n && <span class="sec-n">{n}</span>}
+  <span>{name}</span>
+</p>

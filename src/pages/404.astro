@@ -1,34 +1,375 @@
 ---
+/**
+ * 404 — SPEC §7 + SPEC_COSMOS. The only centred element on the site: a huge
+ * "404" floating in a <Cosmos variant="stars"> sky, framed like a drawing —
+ * a dimension line above it labelled ROUTE NOT FOUND, and two vertical
+ * dimension lines measuring its height. One hairline orbit (the brand mark,
+ * tilted −24°) rings the zero: its far half passes behind the digits, its
+ * near half in front, with the planet resting on the near side.
+ *
+ * Load (CSS only): dimension lines draw 0–900ms, digits mask up from 180ms,
+ * the orbit draws from 700ms, copy rises at 900ms, links at 1000ms.
+ * Everything else on the page is left-aligned. noindex.
+ */
 import Base from '../layouts/Base.astro';
-import Icon from '../components/Icon.astro';
-import { brand, primaryCta } from '../data/site';
+import Cosmos from '../components/Cosmos.astro';
+import Arrow from '../components/ui/Arrow.astro';
+import WaGlyph from '../components/ui/WaGlyph.astro';
+import { notFound } from '../data/site';
 import { url } from '../lib/url';
+
+const digits = notFound.numeral.split('');
+/* orbit ellipse in a 1000 × 400 box, tilted −24° about its centre (the
+   brand's one diagonal). Back half = upper arc, drawn behind the digits;
+   front half = lower arc, in front. The planet rides the front half. */
+const RX = 490;
+const RY = 118;
+const CX = 500;
+const CY = 200;
+const back = `M ${CX - RX} ${CY} A ${RX} ${RY} 0 0 1 ${CX + RX} ${CY}`;
+const front = `M ${CX + RX} ${CY} A ${RX} ${RY} 0 0 1 ${CX - RX} ${CY}`;
+const T = (118 * Math.PI) / 180;
+const PX = +(CX + RX * Math.cos(T)).toFixed(1);
+const PY = +(CY + RY * Math.sin(T)).toFixed(1);
 ---
 
-<Base title={`Page not found — ${brand.name}`} description="That page does not exist. The home page does, and it loads fast." noindex canonical="/404/">
-  <section class="nf on-void">
-    <div class="wrap wrap-narrow nf-inner">
-      <p class="kicker" data-reveal="up">404</p>
-      <h1 data-split>This page loads fast. <em>It just isn’t the one you wanted.</em></h1>
-      <p class="lead" data-reveal="up" style="--i:2">The link is broken or the page moved. Everything worth seeing is one click away.</p>
-      <div class="btn-row" data-reveal="up" style="--i:3">
-        <a class="btn btn-primary" href={url('/')}>Home <Icon name="arrow" class="arrow" /></a>
-        <a class="btn btn-ghost" href={url(primaryCta.href)}>{primaryCta.label}</a>
+<Base title={notFound.seo.title} description={notFound.seo.description} noindex={notFound.seo.noindex} canonical="/404/">
+  <section class="s-void nf" data-nav-theme="dark" aria-labelledby="nf-title">
+    <Cosmos variant="stars" />
+
+    <div class="nf-stage">
+      <div class="nf-frame">
+        <div class="dim label nf-dim" aria-hidden="true">
+          <span>{notFound.dimension}</span>
+        </div>
+
+        <div class="nf-body">
+          <span class="nf-v nf-v--l" aria-hidden="true"></span>
+
+          <div class="nf-obj">
+            <svg class="nf-orbit nf-orbit--back" viewBox="0 0 1000 400" aria-hidden="true" focusable="false">
+              <g transform={`rotate(-24 ${CX} ${CY})`}>
+                <path d={back} pathLength="100" />
+              </g>
+            </svg>
+
+            <h1 id="nf-title" class="nf-num" data-load-split>
+              <span class="visually-hidden">{notFound.numeral}, {notFound.dimension}</span>
+              <span class="nf-digits" aria-hidden="true">
+                {
+                  digits.map((d, i) => (
+                    <span class="wm">
+                      <span class="w" style={`--i:${i}`}>
+                        {d}
+                      </span>
+                    </span>
+                  ))
+                }
+              </span>
+            </h1>
+
+            <svg class="nf-orbit nf-orbit--front" viewBox="0 0 1000 400" aria-hidden="true" focusable="false">
+              <g transform={`rotate(-24 ${CX} ${CY})`}>
+                <path d={front} pathLength="100" />
+                <circle class="nf-planet" cx={PX} cy={PY} r="7" />
+              </g>
+            </svg>
+          </div>
+
+          <span class="nf-v nf-v--r" aria-hidden="true"></span>
+        </div>
       </div>
+    </div>
+
+    <div class="wrap g nf-foot">
+      <p class="lead nf-text" data-load style="--d:900ms">{notFound.text}</p>
+      <nav class="nf-links" aria-label="Where to go" data-load style="--d:1000ms">
+        {
+          notFound.links.map((l) => (
+            <a class="tlink" href={url(l.href)}>
+              <span>{l.label}</span>
+              <Arrow />
+            </a>
+          ))
+        }
+        <a class="btn nf-cta" href={notFound.cta.href} target="_blank" rel="noopener" data-wa-intent="404">
+          <WaGlyph size={16} />
+          <span>{notFound.cta.label}</span>
+          <Arrow />
+        </a>
+      </nav>
     </div>
   </section>
 </Base>
 
 <style>
   .nf {
-    min-height: 80svh;
+    position: relative;
     display: flex;
-    align-items: center;
-    padding-block: calc(var(--nav-h) + 3rem) 4rem;
+    flex-direction: column;
+    min-height: 100svh;
+    padding-block: calc(var(--nav-h) + 24px) clamp(2.5rem, 1.5rem + 3vw, 4.5rem);
+    overflow: clip;
   }
 
-  .nf-inner {
+  .nf > :not(.cosmos) {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ------------------------------------------------------------ the object */
+
+  .nf-stage {
+    flex: 1 1 auto;
     display: grid;
-    gap: var(--space-m);
+    place-items: center;
+    padding-block: clamp(2rem, 1rem + 4vw, 4rem);
+  }
+
+  /* the frame shrink-wraps the numeral, so the dimension lines measure it */
+  .nf-frame {
+    --num: clamp(6rem, 30vw, 22rem);
+    display: grid;
+    justify-items: stretch;
+    row-gap: clamp(14px, 1vw + 8px, 24px);
+    width: max-content;
+    max-width: 100%;
+  }
+
+  .nf-dim {
+    color: var(--dim);
+    letter-spacing: 0.22em;
+  }
+
+  .nf-dim::before,
+  .nf-dim::after {
+    transform-origin: center;
+  }
+
+  .nf-body {
+    display: grid;
+    grid-template-columns: 9px auto 9px;
+    align-items: stretch;
+    column-gap: clamp(10px, 2vw, 28px);
+  }
+
+  /* vertical dimension lines: 1px with 9px end ticks, measuring the digits */
+  .nf-v {
+    position: relative;
+    color: var(--dim);
+  }
+
+  .nf-v::before,
+  .nf-v::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+  }
+
+  .nf-v::before {
+    top: 0;
+    bottom: 0;
+    margin-inline: auto;
+    width: 1px;
+    background-color: currentColor;
+    opacity: 0.7;
+  }
+
+  .nf-v::after {
+    top: 0;
+    bottom: 0;
+    border-block: 1px solid currentColor;
+    opacity: 0.7;
+  }
+
+  .nf-obj {
+    position: relative;
+    display: grid;
+    place-items: center;
+  }
+
+  .nf-num {
+    position: relative;
+    z-index: 1;
+    margin: 0;
+    color: var(--starlight);
+    font-size: var(--num);
+    font-weight: 800;
+    line-height: 0.8;
+    letter-spacing: -0.045em;
+    text-align: center;
+    font-variant-numeric: lining-nums proportional-nums;
+    white-space: nowrap;
+  }
+
+  /* the mask needs room for the tight line box */
+  .nf-num .wm {
+    padding-block: 0.08em 0.02em;
+    margin-block: -0.08em -0.02em;
+  }
+
+  .nf-digits {
+    display: inline-block;
+    /* optical centre: the tracking leaves space after the last digit */
+    margin-right: -0.045em;
+  }
+
+  .nf-orbit {
+    position: absolute;
+    left: 50%;
+    top: 54%;
+    width: 112%;
+    height: auto;
+    overflow: visible;
+    translate: -50% -50%;
+    fill: none;
+    stroke: var(--lilac);
+    stroke-width: 1.5;
+    vector-effect: non-scaling-stroke;
+    pointer-events: none;
+  }
+
+  .nf-orbit path {
+    stroke-width: 1.25px;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .nf-orbit--back {
+    z-index: 0;
+    stroke: var(--dim);
+  }
+
+  .nf-orbit--front {
+    z-index: 2;
+  }
+
+  .nf-planet {
+    fill: var(--lilac);
+    stroke: none;
+  }
+
+  /* ------------------------------------------------------------- the copy */
+
+  .nf-foot {
+    row-gap: 28px;
+    align-items: end;
+  }
+
+  .nf-text {
+    color: var(--haze);
+    max-width: 26ch;
+  }
+
+  .nf-links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px 32px;
+  }
+
+  @media (max-width: 479px) {
+    .nf-links .nf-cta {
+      width: 100%;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .nf-text {
+      grid-column: 1 / span 4;
+    }
+
+    .nf-links {
+      grid-column: 5 / -1;
+      justify-content: flex-end;
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .nf-text {
+      grid-column: 1 / span 5;
+    }
+
+    .nf-links {
+      grid-column: 7 / -1;
+    }
+  }
+
+  /* ------------------------------------------------------------- motion */
+  /* Default = final. Load choreography only when motion is on (CSS only). */
+
+  :global(html:not(.motion-reduced)) .nf-dim::before,
+  :global(html:not(.motion-reduced)) .nf-dim::after {
+    animation: nf-draw-x 900ms var(--ease-quint) both;
+  }
+
+  :global(html:not(.motion-reduced)) .nf-dim > span {
+    animation: rise-in 700ms var(--ease-expo) 420ms both;
+  }
+
+  :global(html:not(.motion-reduced)) .nf-v::before,
+  :global(html:not(.motion-reduced)) .nf-v::after {
+    animation: nf-draw-y 900ms var(--ease-quint) 120ms both;
+  }
+
+  :global(html:not(.motion-reduced)) .nf-num .w {
+    animation-duration: 1300ms;
+  }
+
+  .nf-num {
+    --d: 180ms;
+  }
+
+  :global(html:not(.motion-reduced)) .nf-orbit {
+    animation: nf-fade 400ms linear 700ms both;
+  }
+
+  :global(html:not(.motion-reduced)) .nf-orbit path {
+    stroke-dasharray: 100;
+    animation: nf-orbit 1400ms var(--ease-mech) 700ms both;
+  }
+
+  :global(html:not(.motion-reduced)) .nf-orbit--front path {
+    animation-delay: 1150ms;
+  }
+
+  :global(html:not(.motion-reduced)) .nf-planet {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: nf-planet 600ms var(--ease-expo) 2000ms both;
+  }
+
+  @keyframes nf-draw-x {
+    from {
+      transform: scaleX(0);
+    }
+  }
+
+  @keyframes nf-draw-y {
+    from {
+      transform: scaleY(0);
+    }
+  }
+
+  @keyframes nf-orbit {
+    from {
+      stroke-dashoffset: 100;
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  @keyframes nf-fade {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes nf-planet {
+    from {
+      opacity: 0;
+      transform: scale(0.2);
+    }
   }
 </style>

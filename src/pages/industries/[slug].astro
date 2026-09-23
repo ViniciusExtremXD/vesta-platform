@@ -1,100 +1,135 @@
 ---
 /**
- * Industry pages. One per vertical, and only when at least one confirmed
- * case study exists for it — a vertical page without proof is the trap the
- * old site fell into, and this route refuses to build it.
+ * /industries/[slug]/ — one page per industry, and ONLY when at least one
+ * confirmed case study exists for it. A vertical page without proof is the
+ * trap the old site fell into; this route refuses to build it.
+ *
+ *   head (void)     industry label · H1 · lead
+ *   cases (paper)   the confirmed case studies for this industry (rows)
+ *   prices (void)   the three packages, name / price / lead time, → #pricing
+ *
+ * Copy for this route is not in site.ts yet (TODO_SITE_INDUSTRY in
+ * components/work/verticals.ts).
  */
 import { getCollection } from 'astro:content';
 import Base from '../../layouts/Base.astro';
-import Offers from '../../components/home/Offers.astro';
-import FinalCta from '../../components/home/FinalCta.astro';
-import { brand, verticals } from '../../data/site';
-import { url, formatDate } from '../../lib/url';
+import PageHead from '../../components/work/PageHead.astro';
+import CaseRow from '../../components/work/CaseRow.astro';
+import SplitText from '../../components/ui/SplitText.astro';
+import Arrow from '../../components/ui/Arrow.astro';
+import { verticalLabel, TODO_SITE_INDUSTRY as T } from '../../components/work/verticals';
+import { packages } from '../../data/site';
+import { url } from '../../lib/url';
 
 export async function getStaticPaths() {
   const cases = (await getCollection('cases')).filter((c) => c.data.confirmed);
-  const slugs = new Set(cases.map((c) => c.data.vertical));
-  return verticals.items
-    .filter((v) => slugs.has(v.slug))
-    .map((v) => ({
-      params: { slug: v.slug },
-      props: { vertical: v, cases: cases.filter((c) => c.data.vertical === v.slug) },
-    }));
+  const slugs = Array.from(new Set(cases.map((c) => c.data.vertical)));
+  return slugs.map((slug) => ({
+    params: { slug },
+    props: {
+      slug,
+      cases: cases
+        .filter((c) => c.data.vertical === slug)
+        .sort((a, b) => b.data.launched.getTime() - a.data.launched.getTime()),
+    },
+  }));
 }
 
-const { vertical, cases } = Astro.props;
-const title = `${vertical.label} website design & landing pages — ${brand.name}`;
-const description = `Custom, sub-second websites and landing pages for ${vertical.label.toLowerCase()} businesses running paid traffic. Fixed public pricing. See the measured case studies.`;
+const { slug, cases } = Astro.props;
+const label = verticalLabel(slug);
 ---
 
-<Base title={title} description={description} canonical={`/industries/${vertical.slug}/`}>
-  <section class="page-head on-void">
-    <div class="wrap wrap-wide">
-      <p class="kicker" data-reveal="up">{vertical.label}</p>
-      <h1 data-split>Websites and landing pages built for <em>{vertical.label.toLowerCase()} businesses that buy traffic.</em></h1>
-      <p class="lead" data-reveal="up" style="--i:2">
-        The same offer, the same fixed prices — and the case studies below are the proof it works in your industry.
-      </p>
+<Base title={T.seoTitle(label)} description={T.seoDescription(label)} canonical={`/industries/${slug}/`}>
+  <PageHead label={label} h1={T.h1(label)} lead={T.lead} />
+
+  <section class="s-paper section ind-cases" data-nav-theme="light" aria-labelledby="ind-cases-title">
+    <div class="wrap">
+      <SplitText as="h2" id="ind-cases-title" class="d2" text={T.casesTitle} />
+      <ol class="ind-list">
+        {cases.map((c, i) => <CaseRow index={i} slug={c.id} data={c.data} />)}
+      </ol>
     </div>
   </section>
 
-  <section class="section-tight on-void">
-    <div class="wrap wrap-wide">
-      <ul class="ind-cases">
+  <section class="s-void section ind-prices" data-nav-theme="dark" aria-labelledby="ind-prices-title">
+    <div class="wrap g">
+      <SplitText as="h2" id="ind-prices-title" class="d2 ind-prices-title" text={T.pricesTitle} />
+      <ul class="ind-pk">
         {
-          cases.map((c, i) => (
-            <li data-reveal="up" style={`--i:${i + 1}`}>
-              <a class="card ind-case" href={url(`/work/${c.id}/`)} data-glow>
-                <h2>{c.data.title}</h2>
-                <p class="muted">{c.data.summary}</p>
-                <span class="mono ind-meta">
-                  {c.data.location} · {formatDate(c.data.launched)}
-                </span>
-              </a>
+          packages.map((p, i) => (
+            <li class="ind-pk-row" data-reveal style={`--i:${i}`}>
+              <span class="d3 ind-pk-name">{p.name}</span>
+              <span class="small ind-pk-days">{p.daysLabel}</span>
+              <span class="ind-pk-price">{p.price.display}</span>
             </li>
           ))
         }
       </ul>
+      <p class="ind-pk-go" data-reveal style="--i:3">
+        <a class="tlink" href={url(T.pricesLink.href)}>
+          <span>{T.pricesLink.label}</span>
+          <Arrow />
+        </a>
+      </p>
     </div>
   </section>
-
-  <Offers />
-  <FinalCta />
 </Base>
 
 <style>
-  .page-head {
-    padding-block: calc(var(--nav-h) + clamp(3rem, 2rem + 5vw, 6rem)) clamp(2rem, 1.5rem + 3vw, 3rem);
+  .ind-list {
+    margin-top: clamp(2.5rem, 1.5rem + 3vw, 4rem);
+    border-bottom: 1px solid var(--line-strong);
   }
 
-  .page-head > .wrap > * + * {
-    margin-top: var(--space-m);
+  .ind-pk {
+    margin-top: 40px;
+    border-bottom: 1px solid var(--line);
   }
 
-  .page-head h1 {
-    font-size: var(--step-5);
-    max-width: 18ch;
-  }
-
-  .ind-cases {
+  .ind-pk-row {
     display: grid;
-    gap: var(--space-m);
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 6px 24px;
+    padding-block: 22px;
+    border-top: 1px solid var(--line);
   }
 
-  .ind-case {
-    height: 100%;
-    gap: var(--space-s);
-    text-decoration: none;
+  .ind-pk-name {
+    color: var(--starlight);
   }
 
-  .ind-case h2 {
-    font-size: var(--step-2);
+  .ind-pk-days {
+    grid-row: 2;
+    color: var(--dim);
   }
 
-  .ind-meta {
-    margin-top: auto;
-    font-size: var(--step--2);
-    color: var(--text-dark-faint);
+  .ind-pk-price {
+    grid-row: 1 / span 2;
+    grid-column: 2;
+    align-self: center;
+    color: var(--starlight);
+    font-size: var(--t-d3);
+    font-weight: 520;
+    font-variant-numeric: lining-nums proportional-nums;
+  }
+
+  .ind-pk-go {
+    margin-top: 32px;
+  }
+
+  @media (min-width: 1100px) {
+    .ind-prices-title {
+      grid-column: 1 / span 4;
+    }
+
+    .ind-pk {
+      grid-column: 6 / -1;
+      margin-top: 0;
+    }
+
+    .ind-pk-go {
+      grid-column: 6 / -1;
+    }
   }
 </style>

@@ -1,193 +1,951 @@
 ---
-import { brand, contact, nav, legal, founder } from '../data/site';
-import { url } from '../lib/url';
+/**
+ * Footer (SPEC §5.13, SPEC_COSMOS §4), void.
+ *
+ * Brand block · Pricing · Studio · Contact as hairline rows; the orbit of
+ * 4 Vesta drawn to scale between Mars and Jupiter; the measured build line;
+ * the legal row (Motion toggle, Back to top); the giant VESTA wordmark in
+ * plate, cropped by the page bottom.
+ *
+ * The orbit diagram: semi-major axes and eccentricities from site.ts
+ * (footer.orbit). Each orbit is a true Kepler ellipse with the Sun at one
+ * focus, seen from above the ecliptic at a shallow angle (y × VIEW_K) and
+ * turned by VIEW_TILT. Periods follow Kepler's third law (T = a^1.5 years),
+ * so the three planets move at their true relative rates, time-lapsed:
+ * one Vesta year ≈ VESTA_LAP seconds. Transform-only, paused offscreen,
+ * on a hidden tab and with Motion: off.
+ *
+ * data-sticky-hide: the mobile sticky bar never covers the footer.
+ */
+import { footer, legal, wa } from '../data/site';
+import measurements from '../data/measurements.json';
+import { url, formatDate } from '../lib/url';
 import Logo from './Logo.astro';
-import Icon from './Icon.astro';
+import Cosmos from './Cosmos.astro';
+import Arrow from './ui/Arrow.astro';
+import WaGlyph from './ui/WaGlyph.astro';
+
+/**
+ * "VESTA" outlined from Mona Sans at wdth 115 / wght 760 (the wordmark
+ * instance), tracked .3em like the nav mark, GPOS kerning applied.
+ * Font units, y down; the viewBox is the ink box.
+ */
+const WORDMARK = {
+  w: 4772.9,
+  h: 747.4,
+  viewBox: '4.6 -737.8 4772.9 747.4',
+  d: 'M292.4 0 4.6 -729H206.6L373.8 -250.2L408.3 -144.2H415.4L449.5 -249.4L617.4 -729H819.2L531.5 0ZM1181.6 0V-729H1770.2V-580.8H1325.2L1364.1 -619.8V-109.4L1325.2 -148.4H1772.6V0ZM1326.4 -299.1V-437.6H1720.6V-299.1ZM2460.4 9.6Q2347.4 9.6 2272.8 -21.1Q2198.2 -51.7 2161.3 -106.3Q2124.4 -161 2123.6 -231.7H2312.1Q2313.2 -197.9 2330.2 -172.9Q2347.2 -148 2381.3 -134.4Q2415.5 -120.9 2467.5 -120.9Q2510.5 -120.9 2540.5 -130.1Q2570.5 -139.3 2586.3 -157.9Q2602 -176.5 2602 -204.1Q2602 -227.4 2593.4 -242Q2584.8 -256.6 2565.2 -265.7Q2545.6 -274.8 2513.3 -280.9Q2481 -287.1 2433.2 -293.6Q2360.4 -303.2 2305.5 -319.2Q2250.6 -335.2 2214.1 -360.2Q2177.7 -385.2 2159.4 -422.2Q2141.1 -459.1 2141.1 -510.2Q2141.1 -582.5 2179.3 -633.2Q2217.5 -684 2288.5 -710.9Q2359.5 -737.8 2457.8 -737.8Q2549.7 -737.8 2617.6 -711.6Q2685.5 -685.3 2724 -636.2Q2762.5 -587 2766.2 -518.3H2582Q2579.4 -551 2562 -570.9Q2544.6 -590.9 2516.1 -600.1Q2487.7 -609.2 2451.4 -609.2Q2413 -609.2 2385.4 -600.3Q2357.8 -591.3 2343.4 -574.1Q2329 -557 2329 -532.1Q2329 -504.4 2343.8 -489.1Q2358.5 -473.8 2395.9 -465Q2433.3 -456.3 2500.4 -447.2Q2567.4 -438.8 2621 -425.2Q2674.6 -411.6 2712.5 -387Q2750.5 -362.3 2770.7 -321.5Q2790.8 -280.6 2790.8 -217.7Q2790.8 -148.4 2753 -97.2Q2715.2 -45.9 2641.9 -18.1Q2568.6 9.6 2460.4 9.6ZM3337 0V-594H3519V0ZM3111.5 -579.2V-729H3749.3V-579.2ZM3973.6 0 4252.4 -729H4497.9L4777.4 0H4582.3L4409.1 -501.8L4378.2 -594.9H4371.8L4341.1 -501.3L4167.8 0ZM4204 -141 4249.8 -278.3H4500.4L4545.6 -141Z',
+};
+/** Share of the wordmark's height left above the page bottom. */
+const CROP = 0.6;
+
+/* ------------------------------------------------------ the orbit diagram */
+
+/** px per AU in viewBox units. */
+const SCALE = 80;
+/** Viewing angle: cos of the elevation above the ecliptic plane. */
+const VIEW_K = 0.34;
+/** Screen rotation of the whole plane, degrees (the orbit mark's −24°, softened). */
+const VIEW_TILT = -9;
+/** Seconds per Vesta year in the time-lapse. */
+const VESTA_LAP = 72;
+/**
+ * Longitude of perihelion ϖ (degrees) and a starting mean anomaly for the
+ * drawing. ϖ: Mars 336.0°, 4 Vesta ≈ 255° (Ω 103.8° + ω 151.2°), Jupiter
+ * 14.7° (JPL mean elements). The start anomalies only place the planets for
+ * the still frame; they are not an ephemeris.
+ */
+const ELEMENTS: Record<string, { peri: number; m0: number; r: number }> = {
+  Mars: { peri: 336.0, m0: 200, r: 2.6 },
+  '4 Vesta': { peri: 255.0, m0: 300, r: 3.6 },
+  Jupiter: { peri: 14.7, m0: 120, r: 4.8 },
+};
+
+const rad = (d: number) => (d * Math.PI) / 180;
+const cT = Math.cos(rad(VIEW_TILT));
+const sT = Math.sin(rad(VIEW_TILT));
+/** orbital-plane (AU, y toward the far side) → screen offset from the Sun */
+const project = (X: number, Y: number): [number, number] => {
+  const px = X * SCALE;
+  const py = -Y * SCALE * VIEW_K;
+  return [px * cT - py * sT, px * sT + py * cT];
+};
+
+const kepler = (M: number, e: number) => {
+  let E = M;
+  for (let i = 0; i < 6; i++) E -= (E - e * Math.sin(E) - M) / (1 - e * Math.cos(E));
+  return E;
+};
+
+/** heliocentric orbital-plane position at mean anomaly M */
+const position = (a: number, e: number, peri: number, M: number): [number, number] => {
+  const E = kepler(M, e);
+  const b = a * Math.sqrt(1 - e * e);
+  const xp = a * (Math.cos(E) - e);
+  const yp = b * Math.sin(E);
+  const c = Math.cos(rad(peri));
+  const s = Math.sin(rad(peri));
+  return [xp * c - yp * s, xp * s + yp * c];
+};
+
+const bodies = footer.orbit.bodies.map((body) => {
+  const el = ELEMENTS[body.name] ?? { peri: 0, m0: 0, r: 3 };
+  const { a, e } = body;
+  const b = a * Math.sqrt(1 - e * e);
+  const u: [number, number] = [Math.cos(rad(el.peri)), Math.sin(rad(el.peri))];
+  const v: [number, number] = [-u[1], u[0]];
+  // centre and conjugate semi-diameters of the projected ellipse
+  const C = project(-a * e * u[0], -a * e * u[1]);
+  const A = project(a * u[0], a * u[1]);
+  const B = project(b * v[0], b * v[1]);
+  const s11 = A[0] * A[0] + B[0] * B[0];
+  const s22 = A[1] * A[1] + B[1] * B[1];
+  const s12 = A[0] * A[1] + B[0] * B[1];
+  const mid = (s11 + s22) / 2;
+  const half = Math.sqrt(((s11 - s22) / 2) ** 2 + s12 ** 2);
+  const angle = (0.5 * Math.atan2(2 * s12, s11 - s22) * 180) / Math.PI;
+  const start = project(...position(a, e, el.peri, rad(el.m0)));
+  return {
+    name: body.name,
+    a,
+    e,
+    peri: el.peri,
+    m0: el.m0,
+    r: el.r,
+    period: a ** 1.5,
+    vesta: body.name === '4 Vesta',
+    cx: C[0],
+    cy: C[1],
+    rx: Math.sqrt(mid + half),
+    ry: Math.sqrt(Math.max(0, mid - half)),
+    angle,
+    start,
+  };
+});
+
+/* bounding box of all three orbits (sampled), padded, Sun at (sunX, sunY) */
+let minX = 0;
+let maxX = 0;
+let minY = 0;
+let maxY = 0;
+for (const o of bodies) {
+  for (let i = 0; i < 180; i++) {
+    const [x, y] = project(...position(o.a, o.e, o.peri, (i / 180) * Math.PI * 2));
+    minX = Math.min(minX, x);
+    maxX = Math.max(maxX, x);
+    minY = Math.min(minY, y);
+    maxY = Math.max(maxY, y);
+  }
+}
+const PAD = 14;
+const sunX = +(PAD - minX).toFixed(2);
+const sunY = +(PAD - minY).toFixed(2);
+const VB_W = Math.ceil(maxX - minX + PAD * 2);
+const VB_H = Math.ceil(maxY - minY + PAD * 2);
+
+const orbitData = JSON.stringify({
+  sun: [sunX, sunY],
+  k: VIEW_K,
+  tilt: VIEW_TILT,
+  scale: SCALE,
+  lap: VESTA_LAP / bodies.find((b) => b.vesta)!.period,
+  bodies: bodies.map((b) => ({ a: b.a, e: b.e, peri: b.peri, m0: b.m0, period: b.period })),
+});
+
+const fmtAu = (a: number) => `${a.toFixed(2)} AU`;
+
+/* ------------------------------------------------------------- columns */
+
+/** "Landing Page $500–$700" → name + price, keeping the exact text. */
+const priceRow = (label: string) => {
+  const price = label.match(/^(.*?)\s+((?:from\s+)?\$[^\s]+)$/);
+  if (price) return { name: price[1], value: price[2], num: true };
+  return { name: label, value: '', num: false };
+};
+
+const { pricing, studio, contact } = footer.columns;
+/* The measured score is quoted only when it is 90 or better. */
+const buildLine =
+  measurements.performance >= 90
+    ? footer.buildLine(measurements.performance, formatDate(measurements.date))
+    : 'Designed and built by Vinícius Magno in São Paulo.';
+const backToTop = footer.backToTop.replace(/\s*↑\s*$/, '');
+/** Keep "CNPJ 61.465.539/0001-00" on one line when the legal row wraps. */
+const copyright = legal.copyright.replace('CNPJ ', 'CNPJ ');
 ---
 
-<footer class="foot on-void-2">
-  <div class="wrap wrap-wide">
-    <div class="foot-grid">
-      <div class="foot-brand" data-reveal="up">
-        <Logo />
-        <p class="foot-tagline">{brand.tagline}</p>
-        <p class="foot-founder muted">
-          {brand.legalName} · CNPJ {brand.cnpj}<br />
-          Built and run by {founder.name}. {founder.location}.
-        </p>
+<footer class="foot s-void" data-nav-theme="dark" data-sticky-hide>
+  <div class="wrap">
+    <div class="foot-cols g">
+      <div class="foot-id" data-reveal>
+        <a class="foot-home" href={url('/')} aria-label="Vesta, home"><Logo /></a>
+        <p class="foot-blurb">{footer.brand.blurb}</p>
+        <p class="foot-tagline">{footer.brand.tagline}</p>
       </div>
 
-      <nav class="foot-col" aria-label="Footer" data-reveal="up" style="--i:1">
-        <h2 class="foot-h">Navigate</h2>
-        <ul class="foot-list">
-          {nav.map((item) => <li><a href={url(item.href)}>{item.label}</a></li>)}
-          <li><a href={url(legal.privacyUrl)}>Privacy</a></li>
+      <nav class="foot-col foot-pricing" aria-labelledby="foot-h-pricing" data-reveal style="--i:1">
+        <h2 class="foot-h label" id="foot-h-pricing">{pricing.title}</h2>
+        <ul class="foot-rows">
+          {
+            pricing.links.map((l) => {
+              const r = priceRow(l.label);
+              return (
+                <li>
+                  <a class="frow" href={url(l.href)}>
+                    <span class="frow-name">{r.name}</span>{' '}
+                    {r.value && <span class:list={['frow-val', { num: r.num }]}>{r.value}</span>}
+                  </a>
+                </li>
+              );
+            })
+          }
         </ul>
       </nav>
 
-      <div class="foot-col" data-reveal="up" style="--i:2">
-        <h2 class="foot-h">Contact</h2>
-        <ul class="foot-list">
+      <nav class="foot-col foot-studio" aria-labelledby="foot-h-studio" data-reveal style="--i:2">
+        <h2 class="foot-h label" id="foot-h-studio">{studio.title}</h2>
+        <ul class="foot-rows">
           {
-            contact.whatsapp.confirmed && (
+            studio.links.map((l) => (
               <li>
-                <a href={contact.whatsapp.url} target="_blank" rel="noopener">
-                  <Icon name="whatsapp" /> WhatsApp {contact.whatsapp.display}
+                <a class="frow" href={url(l.href)}>
+                  <span class="frow-name">{l.label}</span>
+                  <Arrow size={12} />
                 </a>
               </li>
-            )
+            ))
           }
-          {
-            contact.email.confirmed && (
-              <li>
-                <a href={`mailto:${contact.email.address}`}>
-                  <Icon name="mail" /> {contact.email.address}
-                </a>
-              </li>
-            )
-          }
-          {
-            contact.linkedin.confirmed && (
-              <li>
-                <a href={contact.linkedin.url} target="_blank" rel="noopener">
-                  <Icon name="linkedin" /> LinkedIn
-                </a>
-              </li>
-            )
-          }
-          <li><a href={url('/contact/')}><Icon name="arrow" /> Request a Quote</a></li>
         </ul>
-      </div>
+      </nav>
 
-      <div class="foot-col foot-alignment" data-reveal="up" style="--i:3">
-        <h2 class="foot-h">Alignment</h2>
-        <p class="foot-founder muted">
-          Named after 4 Vesta — the celestial asteroid of the sacred flame. Forging digital monoliths aligned with peak conversion and Google SEO velocity.
+      <div class="foot-col foot-contact" data-reveal style="--i:3">
+        <h2 class="foot-h label">{contact.title}</h2>
+        <ul class="foot-rows">
+          <li>
+            <a class="frow" href={wa(contact.whatsapp.text)} target="_blank" rel="noopener" data-wa-intent="footer">
+              <span class="frow-name frow-wa"><WaGlyph size={14} /><span class="tnum">{contact.whatsapp.label}</span></span>
+              <Arrow dir="up-right" size={12} />
+            </a>
+          </li>
+          <li>
+            <a class="frow" href={contact.linkedin.href} target="_blank" rel="noopener">
+              <span class="frow-name">{contact.linkedin.label}</span>
+              <Arrow dir="up-right" size={12} />
+            </a>
+          </li>
+        </ul>
+        <p class="foot-hours small">
+          <span class="foot-hours-main">{contact.hours}</span>
+          <span class="foot-hours-offset">{contact.offset}</span>
         </p>
       </div>
     </div>
 
-    <hr class="divider" data-draw style="--i:2" />
+    <!-- the orbit of 4 Vesta, to scale -->
+    <div class="orb g">
+      <span class="orb-rule rule" data-reveal="draw" aria-hidden="true"></span>
 
-    <div class="foot-bottom" data-reveal="fade" style="--i:1">
-      <p class="foot-legal mono">{legal.copyright}</p>
+      <div class="orb-key" data-reveal style="--i:1">
+        <p class="orb-caption">
+          {
+            /* lines break only between the "·" segments, never inside one */
+            footer.orbit.caption.split(' · ').map((part, i, all) => (
+              <Fragment>
+                <span class="orb-seg">{part}</span>
+                {i < all.length - 1 && ' · '}
+              </Fragment>
+            ))
+          }
+        </p>
+        <ul class="orb-rows">
+          {
+            bodies.map((b) => (
+              <li class:list={['orb-row', { 'is-vesta': b.vesta }]}>
+                <span class="orb-swatch" aria-hidden="true" />
+                <span class="orb-name">{b.name}</span>
+                <span class="orb-au num">{fmtAu(b.a)}</span>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
 
-      <button type="button" class="motion-toggle" data-motion-toggle aria-pressed="false" aria-label="Reduce motion">
-        <span class="motion-dot" aria-hidden="true"></span>
-        <span data-motion-label>Motion: on</span>
-      </button>
+      <div class="orb-fig" data-reveal="fade" style={`--i:2; --vb-ratio:${VB_W} / ${VB_H}`} aria-hidden="true">
+        <Cosmos variant="stars" class="orb-cosmos" />
+        <svg
+          class="orb-svg"
+          viewBox={`0 0 ${VB_W} ${VB_H}`}
+          preserveAspectRatio="xMidYMid slice"
+          focusable="false"
+          data-orbit={orbitData}
+        >
+          {
+            bodies.map((b, i) => (
+              <g class="orb-ring" style={`--o:${i}; transform-origin:${sunX}px ${sunY}px`}>
+                <ellipse
+                  class:list={['orb-path', { 'is-vesta': b.vesta }]}
+                  cx={(sunX + b.cx).toFixed(2)}
+                  cy={(sunY + b.cy).toFixed(2)}
+                  rx={b.rx.toFixed(2)}
+                  ry={b.ry.toFixed(2)}
+                  transform={`rotate(${b.angle.toFixed(3)} ${(sunX + b.cx).toFixed(2)} ${(sunY + b.cy).toFixed(2)})`}
+                />
+              </g>
+            ))
+          }
+          <circle class="orb-sun" cx={sunX} cy={sunY} r="3.2"></circle>
+          {
+            bodies.map((b, i) => (
+              <g class="orb-ring" style={`--o:${i}; transform-origin:${sunX}px ${sunY}px`}>
+                <circle
+                  class:list={['orb-planet', { 'is-vesta': b.vesta }]}
+                  cx="0"
+                  cy="0"
+                  r={b.r}
+                  data-orbit-body={i}
+                  style={`transform: translate(${(sunX + b.start[0]).toFixed(2)}px, ${(sunY + b.start[1]).toFixed(2)}px)`}
+                />
+              </g>
+            ))
+          }
+        </svg>
+      </div>
+    </div>
+
+    <p class="foot-build small" data-reveal="fade">{buildLine}</p>
+
+    <span class="foot-rule rule" data-reveal="draw" aria-hidden="true"></span>
+
+    <div class="foot-legal" data-reveal="fade" style="--d:120ms">
+      <p class="foot-copy small tnum">{copyright}</p>
+      <div class="foot-tools">
+        <button class="foot-motion small" type="button" data-motion-toggle aria-pressed="false" aria-label={footer.motion.ariaReduce}>
+          <span class="foot-node" aria-hidden="true"></span>
+          <span data-motion-label>{footer.motion.on}</span>
+        </button>
+        <a class="foot-top small" href="#top" data-back-to-top>
+          {backToTop}
+          <Arrow dir="up" size={12} />
+        </a>
+      </div>
+    </div>
+
+    <div class="foot-crop" style={`--wm-ratio:${WORDMARK.w} / ${(WORDMARK.h * CROP).toFixed(1)}`} aria-hidden="true">
+      <div class="foot-brand" data-reveal>
+        <svg viewBox={WORDMARK.viewBox} width="100%" focusable="false" aria-hidden="true">
+          <path d={WORDMARK.d}></path>
+        </svg>
+      </div>
     </div>
   </div>
 </footer>
 
 <style>
   .foot {
-    padding-block: var(--space-2xl) var(--space-l);
-    border-top: 1px solid var(--line-dark);
+    position: relative;
+    padding-block-start: clamp(4.5rem, 3rem + 5vw, 8rem);
+    /* the sticky bar hides over the footer; only the home indicator needs room */
+    padding-block-end: env(safe-area-inset-bottom);
+    overflow: clip;
   }
 
-  .foot-grid {
-    display: grid;
-    gap: var(--space-xl) var(--space-l);
-    grid-template-columns: 1fr;
-    margin-bottom: var(--space-xl);
+  /* ------------------------------------------------------------ columns */
+
+  .foot-cols {
+    row-gap: var(--s-64);
+  }
+
+  .foot-home {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    margin-block-start: -12px;
+    color: var(--starlight);
+    text-decoration: none;
+  }
+
+  .foot-blurb {
+    margin-block-start: var(--s-24);
+    max-width: 34ch;
+    color: var(--haze);
+    font-size: 0.9375rem;
+    line-height: 1.55;
+    text-wrap: pretty;
   }
 
   .foot-tagline {
-    margin-top: var(--space-s);
-    font-family: var(--font-display);
+    margin-block-start: var(--s-16);
+    max-width: 26ch;
+    color: var(--starlight);
+    font-stretch: var(--wd-display);
+    font-size: 1.0625rem;
     font-weight: 600;
-    max-width: 24ch;
+    line-height: 1.35;
+    letter-spacing: -0.005em;
     text-wrap: balance;
   }
 
-  .foot-founder {
-    margin-top: var(--space-xs);
-    font-size: var(--step--1);
-    max-width: 30ch;
-  }
-
   .foot-h {
-    font-family: var(--font-mono);
-    font-size: var(--step--2);
-    font-weight: 600;
-    letter-spacing: var(--tracking-kicker);
-    text-transform: uppercase;
-    color: var(--text-dark-faint);
-    margin-bottom: var(--space-s);
+    padding-block-end: var(--s-16);
+    color: var(--dim);
   }
 
-  .foot-list {
-    display: grid;
-    gap: 0.55rem;
+  .foot-rows {
+    margin: 0;
+    border-block-start: 1px solid var(--line-dark);
   }
 
-  .foot-list a {
+  .foot-rows > li {
+    border-block-end: 1px solid var(--line-dark);
+  }
+
+  .frow {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--s-16);
+    min-height: 48px;
+    padding-block: 14px 13px;
+    color: var(--haze);
+    font-size: 0.9375rem;
+    line-height: 1.35;
+    text-decoration: none;
+    transition: color var(--t-micro) linear;
+  }
+
+  .frow-name {
+    transition: transform var(--t-ui) var(--ease-expo);
+  }
+
+  .frow-val {
+    flex: 0 0 auto;
+    color: var(--starlight);
+    font-stretch: var(--wd-display);
+    font-size: 0.875rem;
+    font-weight: 560;
+    text-align: right;
+  }
+
+  .frow-val:not(.num) {
+    flex: 0 1 auto;
+    color: var(--haze);
+    font-stretch: var(--wd-text);
+    font-weight: 420;
+  }
+
+  .frow-wa {
     display: inline-flex;
     align-items: center;
-    gap: 0.5em;
-    color: var(--text-dark-muted);
-    text-decoration: none;
-    font-size: var(--step--1);
-    transition: color var(--dur-fast) var(--ease-out);
+    gap: 10px;
   }
 
-  .foot-list a:hover {
-    color: var(--violet-ink-dark);
+  .frow-wa :global(svg) {
+    flex: 0 0 auto;
+    transform: translateY(1px);
   }
 
-  .foot-bottom {
+  .frow :global(.arrow) {
+    flex: 0 0 auto;
+    align-self: center;
+    color: var(--dim);
+    transition:
+      transform var(--t-ui) var(--ease-expo),
+      color var(--t-micro) linear;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .frow:hover {
+      color: var(--starlight);
+    }
+
+    .frow:hover .frow-name {
+      transform: translateX(4px);
+    }
+
+    .frow:hover :global(.arrow) {
+      color: var(--lilac);
+      transform: translateX(3px);
+    }
+  }
+
+  .frow:focus-visible {
+    color: var(--starlight);
+    outline-offset: 2px;
+  }
+
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .foot-hours {
+    display: grid;
+    gap: 2px;
+    margin-block-start: var(--s-16);
+    color: var(--haze);
+  }
+
+  .foot-hours-offset {
+    color: var(--dim);
+  }
+
+  /* ----------------------------------------------------- orbit diagram */
+
+  .orb {
+    position: relative;
+    margin-block-start: var(--s-96);
+    row-gap: var(--s-32);
+    align-items: end;
+  }
+
+  .orb-rule {
+    background-color: var(--line-dark);
+  }
+
+  .orb-key {
+    padding-block-end: var(--s-8);
+  }
+
+  .orb-caption {
+    max-width: 30ch;
+    color: var(--starlight);
+    font-stretch: var(--wd-display);
+    font-size: 1.0625rem;
+    font-weight: 600;
+    line-height: 1.35;
+    letter-spacing: -0.005em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .orb-seg {
+    white-space: nowrap;
+  }
+
+  .orb-rows {
+    margin: var(--s-24) 0 0;
+    border-block-start: 1px solid var(--line-dark);
+  }
+
+  .orb-row {
+    display: flex;
+    align-items: center;
+    gap: var(--s-12);
+    min-height: 40px;
+    border-block-end: 1px solid var(--line-dark);
+    color: var(--haze);
+    font-size: var(--t-small);
+    line-height: 1.4;
+  }
+
+  /* a short run of the orbit line, as drawn in the figure */
+  .orb-swatch {
+    flex: 0 0 auto;
+    width: 20px;
+    height: 1px;
+    background-color: var(--line-dark-strong);
+  }
+
+  .orb-name {
+    flex: 1 1 auto;
+  }
+
+  .orb-au {
+    color: var(--starlight);
+    font-size: var(--t-small);
+    font-weight: 560;
+  }
+
+  .orb-row.is-vesta {
+    color: var(--starlight);
+  }
+
+  .orb-row.is-vesta .orb-swatch {
+    background-color: var(--lilac);
+  }
+
+  .orb-row.is-vesta .orb-au {
+    color: var(--lilac);
+  }
+
+  .orb-fig {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    overflow: clip;
+    background-color: var(--void);
+  }
+
+  /* the star field feathers out at the edges: no box around the sky */
+  .orb-fig :global(.orb-cosmos) {
+    opacity: 0.75;
+    -webkit-mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 45%, transparent 100%);
+    mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 45%, transparent 100%);
+  }
+
+  .orb-svg {
+    position: relative;
+    z-index: 1;
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  .orb-path {
+    fill: none;
+    stroke: var(--line-dark-strong);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .orb-path.is-vesta {
+    stroke: var(--lilac);
+  }
+
+  .orb-sun {
+    fill: var(--starlight);
+  }
+
+  .orb-planet {
+    fill: var(--haze);
+    transform-origin: 0 0;
+  }
+
+  .orb-planet.is-vesta {
+    fill: var(--lilac);
+  }
+
+  /* the rings open out from the Sun, inner orbit first */
+  .orb-ring {
+    transition:
+      transform 1800ms var(--ease-expo),
+      opacity 700ms linear;
+    transition-delay: calc(200ms + var(--o, 0) * 140ms);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .orb-fig:not(.is-in) .orb-ring {
+    transform: scale(0.82);
+    opacity: 0;
+  }
+
+  /* ---------------------------------------------------------- build line */
+
+  .foot-build {
+    margin-block-start: var(--s-64);
+    max-width: 62ch;
+    color: var(--dim);
+    text-wrap: pretty;
+  }
+
+  .foot-rule {
+    margin-block-start: var(--s-24);
+    background-color: var(--line-dark);
+  }
+
+  /* ----------------------------------------------------------- legal row */
+
+  .foot-legal {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: var(--space-s);
-    padding-top: var(--space-m);
+    gap: var(--s-8) var(--s-32);
+    padding-block: var(--s-8);
   }
 
-  .foot-legal {
-    font-size: var(--step--2);
-    color: var(--text-dark-faint);
-    letter-spacing: 0.02em;
+  .foot-copy {
+    color: var(--dim);
+    padding-block: 12px;
   }
 
-  .motion-toggle {
+  .foot-tools {
+    display: flex;
+    align-items: center;
+    gap: var(--s-32);
+  }
+
+  .foot-motion,
+  .foot-top {
     display: inline-flex;
     align-items: center;
-    gap: 0.55em;
-    padding: 0.45em 0.9em;
-    border: 1px solid var(--line-dark-strong);
-    border-radius: var(--radius-pill);
-    font-family: var(--font-mono);
-    font-size: var(--step--2);
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--text-dark-muted);
-    transition:
-      color var(--dur-fast) var(--ease-out),
-      border-color var(--dur-fast) var(--ease-out);
+    gap: 10px;
+    min-height: 44px;
+    color: var(--haze);
+    text-decoration: none;
+    transition: color var(--t-micro) linear;
   }
 
-  .motion-toggle:hover {
-    color: var(--text-dark);
-    border-color: var(--violet-ink-dark);
+  /* hairline node: filled while motion is on */
+  .foot-node {
+    width: 9px;
+    height: 9px;
+    border: 1px solid var(--lilac);
+    background-color: var(--lilac);
+    transition: background-color 240ms var(--ease-expo);
   }
 
-  .motion-dot {
-    width: 0.55em;
-    height: 0.55em;
-    border-radius: 50%;
-    background: var(--pulse);
-    transition: background-color var(--dur-fast) var(--ease-out);
+  .foot-motion[aria-pressed='true'] .foot-node {
+    border-color: var(--dim);
+    background-color: transparent;
   }
 
-  .motion-toggle[aria-pressed='true'] .motion-dot {
-    background: var(--text-dark-faint);
+  .foot-top :global(.arrow) {
+    transition: transform var(--t-ui) var(--ease-expo);
   }
 
-  @media (min-width: 48rem) {
-    .foot-grid {
-      grid-template-columns: 1.4fr 0.8fr 1.1fr 1.3fr;
+  @media (hover: hover) and (pointer: fine) {
+    .foot-motion:hover,
+    .foot-top:hover {
+      color: var(--starlight);
+    }
+
+    .foot-top:hover :global(.arrow) {
+      transform: translateY(-3px);
     }
   }
+
+  /* -------------------------------------------------- the giant wordmark */
+
+  .foot-crop {
+    margin-block-start: clamp(3rem, 2rem + 4vw, 6rem);
+    aspect-ratio: var(--wm-ratio);
+    overflow: clip;
+  }
+
+  .foot-brand svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    fill: var(--plate);
+  }
+
+  /* rises 40px over 1200ms expo (the verify gate measures this curve) */
+  .foot-brand[data-reveal] {
+    transition-duration: 1200ms, 1200ms;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .foot-brand[data-reveal]:not(.is-in) {
+    transform: translate3d(0, 40px, 0);
+  }
+
+  /* ----------------------------------------------------------- layouts */
+
+  @media (max-width: 767px) {
+    .foot-cols {
+      row-gap: var(--s-48);
+    }
+
+    .foot-studio .foot-rows {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      column-gap: var(--gap);
+    }
+
+    .orb {
+      margin-block-start: var(--s-64);
+    }
+
+    /* the figure first, the key under it */
+    .orb-fig {
+      grid-row: 2;
+    }
+
+    .orb-key {
+      grid-row: 3;
+    }
+
+    .foot-legal {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0;
+    }
+
+    .foot-tools {
+      width: 100%;
+      justify-content: space-between;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .foot-id {
+      grid-column: 1 / span 4;
+    }
+
+    .foot-contact {
+      grid-column: 5 / span 4;
+    }
+
+    .foot-pricing {
+      grid-column: 1 / span 4;
+      grid-row: 2;
+    }
+
+    .foot-studio {
+      grid-column: 5 / span 4;
+      grid-row: 2;
+    }
+
+    .orb-key {
+      grid-column: 1 / span 3;
+      grid-row: 2;
+    }
+
+    .orb-fig {
+      grid-column: 4 / -1;
+      grid-row: 2;
+      aspect-ratio: 16 / 9;
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .foot-cols {
+      row-gap: 0;
+    }
+
+    .foot-id {
+      grid-column: 1 / span 4;
+    }
+
+    .foot-pricing {
+      grid-column: 5 / span 3;
+      grid-row: 1;
+    }
+
+    .foot-studio {
+      grid-column: 8 / span 2;
+      grid-row: 1;
+    }
+
+    .foot-contact {
+      grid-column: 10 / span 3;
+      grid-row: 1;
+    }
+
+    .orb {
+      margin-block-start: var(--s-96);
+    }
+
+    .orb-key {
+      grid-column: 1 / span 4;
+    }
+
+    .orb-fig {
+      grid-column: 5 / -1;
+      /* the whole system, uncropped */
+      aspect-ratio: var(--vb-ratio);
+    }
+
+    .foot-build {
+      margin-block-start: var(--s-96);
+    }
+  }
+
+  :global(html.motion-reduced) .orb-ring {
+    transition: none;
+  }
 </style>
+
+<script>
+  import { isReduced } from '../scripts/motion';
+
+  // Back to top: the #top fragment scrolls natively; move focus up with it so
+  // keyboard users continue from the top of the page.
+  document.querySelectorAll<HTMLAnchorElement>('[data-back-to-top]').forEach((a) => {
+    a.addEventListener('click', () => {
+      const home = document.querySelector<HTMLElement>('[data-nav] .nav-home');
+      if (home) window.setTimeout(() => home.focus({ preventScroll: true }), 0);
+    });
+  });
+
+  /* ------------------------------------------------------------------ */
+  /* the orbit diagram: three planets on true Kepler orbits              */
+  /* ------------------------------------------------------------------ */
+
+  interface OrbitData {
+    sun: [number, number];
+    k: number;
+    tilt: number;
+    scale: number;
+    /** seconds per Earth year in the time-lapse */
+    lap: number;
+    bodies: { a: number; e: number; peri: number; m0: number; period: number }[];
+  }
+
+  const svg = document.querySelector<SVGSVGElement>('svg[data-orbit]');
+  const fig = svg?.closest<HTMLElement>('.orb-fig');
+  if (svg && fig) initOrbit(svg, fig);
+
+  function initOrbit(svg: SVGSVGElement, fig: HTMLElement): void {
+    let data: OrbitData;
+    try {
+      data = JSON.parse(svg.dataset.orbit || '');
+    } catch {
+      return;
+    }
+    const dots = data.bodies.map((_, i) => svg.querySelector<SVGCircleElement>(`[data-orbit-body="${i}"]`));
+    if (dots.some((d) => !d)) return;
+
+    const rad = (d: number) => (d * Math.PI) / 180;
+    const cT = Math.cos(rad(data.tilt));
+    const sT = Math.sin(rad(data.tilt));
+    const TAU = Math.PI * 2;
+
+    const place = (years: number) => {
+      data.bodies.forEach((b, i) => {
+        const M = rad(b.m0) + (TAU * years) / b.period;
+        let E = M;
+        for (let n = 0; n < 5; n++) E -= (E - b.e * Math.sin(E) - M) / (1 - b.e * Math.cos(E));
+        const xp = b.a * (Math.cos(E) - b.e);
+        const yp = b.a * Math.sqrt(1 - b.e * b.e) * Math.sin(E);
+        const c = Math.cos(rad(b.peri));
+        const s = Math.sin(rad(b.peri));
+        const X = xp * c - yp * s;
+        const Y = xp * s + yp * c;
+        const px = X * data.scale;
+        const py = -Y * data.scale * data.k;
+        const x = data.sun[0] + px * cT - py * sT;
+        const y = data.sun[1] + px * sT + py * cT;
+        // near side (Y < 0) a touch larger than the far side
+        const depth = 1 - 0.14 * (Y / b.a);
+        dots[i]!.style.transform = `translate(${x.toFixed(2)}px, ${y.toFixed(2)}px) scale(${depth.toFixed(3)})`;
+      });
+    };
+
+    let years = 0;
+    let last = 0;
+    let raf = 0;
+    let onscreen = false;
+
+    const tick = (now: number) => {
+      raf = 0;
+      if (last) years += Math.min(0.1, (now - last) / 1000) / data.lap;
+      last = now;
+      place(years);
+      schedule();
+    };
+
+    const running = () => onscreen && !document.hidden && !isReduced();
+
+    function schedule(): void {
+      if (running()) {
+        if (!raf) raf = requestAnimationFrame(tick);
+      } else {
+        if (raf) cancelAnimationFrame(raf);
+        raf = 0;
+        last = 0;
+      }
+    }
+
+    place(0);
+
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(
+        (entries) => {
+          onscreen = entries.some((e) => e.isIntersecting);
+          schedule();
+        },
+        { rootMargin: '80px 0px' }
+      ).observe(fig);
+    }
+    document.addEventListener('visibilitychange', schedule);
+    document.addEventListener('vesta:motion', schedule);
+  }
+</script>

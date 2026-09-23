@@ -1,0 +1,108 @@
+---
+/**
+ * Decorative deep-space backdrop — the signature visual.
+ *   <Cosmos variant="galaxy" />  hero only: a slowly rotating spiral galaxy + star field (WebGL2)
+ *   <Cosmos variant="stars" />   a quiet star field with a faint violet haze (finale, build stage, footer)
+ *
+ * Absolutely positioned: fills its nearest positioned ancestor (inset 0,
+ * z-index 0), aria-hidden, pointer-events none, clipped — never affects
+ * layout. Place content above it with position: relative + z-index ≥ 1.
+ *
+ * Without JS, without WebGL2, on Save-Data, or until the first WebGL frame
+ * exists, a static CSS sky is shown. The canvas replaces it with a crossfade.
+ *
+ * Composition (galaxy) can be tuned from the parent without props:
+ *   --cosmos-x / --cosmos-y  galaxy centre as a fraction of width / height
+ *   --cosmos-r               disc radius as a fraction of width
+ *   --cosmos-mask            "ax ay bx by": text-safe gradient, dark at A → full at B
+ * The left half (landscape) / upper half (portrait) is always masked dark
+ * so the H1 and lead sit on near-black.
+ */
+export interface Props {
+  variant?: 'galaxy' | 'stars';
+  class?: string;
+}
+const { variant = 'stars', class: cls = '' } = Astro.props;
+---
+
+<div class={`cosmos cosmos--${variant} ${cls}`} aria-hidden="true" data-cosmos={variant}>
+  <div class="cosmos__sky"></div>
+</div>
+
+<script>
+  import { initCosmos } from '../scripts/cosmos';
+  initCosmos();
+</script>
+
+<style>
+  .cosmos {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+    contain: strict;
+  }
+
+  .cosmos > :global(canvas) {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity 2.2s cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+
+  .cosmos.is-live > :global(canvas) {
+    opacity: 1;
+  }
+
+  /* Static CSS sky: star dots + one soft nebula radial (≤10% alpha). */
+  .cosmos__sky {
+    position: absolute;
+    inset: 0;
+    transition: opacity 2.2s cubic-bezier(0.22, 0.61, 0.36, 1);
+    background-repeat: no-repeat;
+    background-image:
+      radial-gradient(circle at 7% 14%, rgb(243 240 250 / 0.75) 0 0.7px, transparent 1.4px),
+      radial-gradient(circle at 18% 71%, rgb(243 240 250 / 0.45) 0 0.6px, transparent 1.2px),
+      radial-gradient(circle at 24% 33%, rgb(218 212 255 / 0.55) 0 0.6px, transparent 1.2px),
+      radial-gradient(circle at 31% 88%, rgb(243 240 250 / 0.4) 0 0.6px, transparent 1.2px),
+      radial-gradient(circle at 39% 9%, rgb(255 233 214 / 0.6) 0 0.7px, transparent 1.4px),
+      radial-gradient(circle at 44% 57%, rgb(243 240 250 / 0.35) 0 0.6px, transparent 1.2px),
+      radial-gradient(circle at 52% 23%, rgb(243 240 250 / 0.5) 0 0.6px, transparent 1.2px),
+      radial-gradient(circle at 57% 79%, rgb(218 212 255 / 0.6) 0 0.8px, transparent 1.6px),
+      radial-gradient(circle at 63% 12%, rgb(243 240 250 / 0.4) 0 0.6px, transparent 1.2px),
+      radial-gradient(circle at 69% 64%, rgb(243 240 250 / 0.55) 0 0.6px, transparent 1.2px),
+      radial-gradient(circle at 76% 27%, rgb(243 240 250 / 0.8) 0 0.9px, transparent 1.8px),
+      radial-gradient(circle at 81% 91%, rgb(255 233 214 / 0.45) 0 0.6px, transparent 1.2px),
+      radial-gradient(circle at 86% 47%, rgb(243 240 250 / 0.5) 0 0.6px, transparent 1.2px),
+      radial-gradient(circle at 92% 8%, rgb(218 212 255 / 0.5) 0 0.6px, transparent 1.2px),
+      radial-gradient(circle at 95% 74%, rgb(243 240 250 / 0.6) 0 0.7px, transparent 1.4px),
+      radial-gradient(circle at 12% 46%, rgb(243 240 250 / 0.3) 0 0.5px, transparent 1px),
+      radial-gradient(circle at 48% 96%, rgb(243 240 250 / 0.3) 0 0.5px, transparent 1px),
+      radial-gradient(circle at 72% 4%, rgb(243 240 250 / 0.35) 0 0.5px, transparent 1px),
+      radial-gradient(ellipse 46% 38% at 74% 36%, rgb(98 54 232 / 0.1), transparent 70%);
+  }
+
+  .cosmos--stars .cosmos__sky {
+    background-image:
+      radial-gradient(circle at 7% 14%, rgb(243 240 250 / 0.6) 0 0.6px, transparent 1.2px),
+      radial-gradient(circle at 18% 71%, rgb(243 240 250 / 0.4) 0 0.6px, transparent 1.2px),
+      radial-gradient(circle at 29% 36%, rgb(218 212 255 / 0.45) 0 0.6px, transparent 1.2px),
+      radial-gradient(circle at 41% 84%, rgb(243 240 250 / 0.35) 0 0.5px, transparent 1px),
+      radial-gradient(circle at 46% 12%, rgb(255 233 214 / 0.5) 0 0.6px, transparent 1.2px),
+      radial-gradient(circle at 58% 52%, rgb(243 240 250 / 0.3) 0 0.5px, transparent 1px),
+      radial-gradient(circle at 66% 21%, rgb(243 240 250 / 0.5) 0 0.6px, transparent 1.2px),
+      radial-gradient(circle at 73% 77%, rgb(218 212 255 / 0.45) 0 0.6px, transparent 1.2px),
+      radial-gradient(circle at 84% 39%, rgb(243 240 250 / 0.65) 0 0.7px, transparent 1.4px),
+      radial-gradient(circle at 93% 88%, rgb(243 240 250 / 0.4) 0 0.6px, transparent 1.2px),
+      radial-gradient(circle at 90% 6%, rgb(243 240 250 / 0.35) 0 0.5px, transparent 1px),
+      radial-gradient(ellipse 50% 42% at 78% 30%, rgb(98 54 232 / 0.08), transparent 70%);
+  }
+
+  .cosmos.is-live .cosmos__sky {
+    opacity: 0;
+  }
+</style>

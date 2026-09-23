@@ -1,0 +1,77 @@
+---
+/**
+ * Dimension line (§2.5, §4): a 1px line with 1×9px end ticks whose length is
+ * proportional to a quantity (lead time), with its label set above it like a
+ * drafting annotation. The line draws from the left (900ms quint); the label
+ * fades in as the line lands.
+ *
+ *   <DimensionLine label="5–7 business days" ratio={7 / 15} />
+ *
+ * Colour follows the surface: the label uses --fg-2, the line --fg-2 too.
+ * The label is LABEL style (CSS uppercase); keep the source in sentence case.
+ */
+export interface Props {
+  label: string;
+  /** 0–1, share of the available width. */
+  ratio: number;
+  /** ms before the line starts drawing. */
+  delay?: number;
+  class?: string;
+}
+
+const { label, ratio, delay = 0, class: cls = '' } = Astro.props;
+const r = Math.min(1, Math.max(0.08, ratio));
+---
+
+<div class={`dl ${cls}`} data-inview style={`--r:${r.toFixed(4)};--dl-delay:${delay}ms`}>
+  <span class="dl-label label">{label}</span>
+  <span class="dl-line" aria-hidden="true"></span>
+</div>
+
+<style>
+  .dl {
+    display: grid;
+    justify-items: start;
+    row-gap: 12px;
+    color: var(--fg-2, currentColor);
+  }
+
+  .dl-label {
+    font-variant-numeric: lining-nums proportional-nums;
+    white-space: nowrap;
+    transition: opacity 600ms linear;
+    transition-delay: calc(var(--dl-delay, 0ms) + 620ms);
+  }
+
+  .dl-line {
+    position: relative;
+    display: block;
+    width: calc(var(--r) * 100%);
+    height: 9px;
+    border-inline: 1px solid currentColor;
+    transform-origin: left center;
+    transition:
+      transform 900ms var(--ease-quint),
+      opacity 160ms linear;
+    transition-delay: var(--dl-delay, 0ms);
+  }
+
+  .dl-line::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 4px;
+    height: 1px;
+    background-color: currentColor;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .dl:not(.is-in) .dl-line {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .dl:not(.is-in) .dl-label {
+    opacity: 0;
+  }
+</style>

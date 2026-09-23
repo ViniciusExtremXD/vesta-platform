@@ -1,0 +1,210 @@
+---
+/**
+ * Spec band (§5.1) — continuous void, rendered inside #hero.
+ * Four cells: value / unit / caption. Verticals draw, $500 and 100% count,
+ * 5–7 rises, captions rise 200ms after their value. Final values are in the
+ * HTML, so no-JS and motion-off read complete.
+ */
+import { specBand } from '../../data/site';
+---
+
+<div class="sb wrap">
+  <span class="sb-rule" data-reveal="draw" aria-hidden="true"></span>
+  <ul class="sb-cells">
+    {
+      specBand.cells.map((c, k) => (
+        <li class:list={['sb-cell', !c.unit && 'sb-cell--text']} style={`--k:${k}`}>
+          <span class="sb-v" data-reveal="draw-y" style={`--d:${120 + k * 90}ms`} aria-hidden="true" />
+          <span class="sb-h" data-reveal="draw" style={`--d:${120 + k * 90}ms`} aria-hidden="true" />
+          {c.unit ? (
+            <p class="sb-value" data-reveal style={`--d:${200 + k * 90}ms`}>
+              {c.count ? (
+                <span
+                  class="sb-num n1"
+                  data-count={c.count.to}
+                  data-count-prefix={c.count.prefix || undefined}
+                  data-count-suffix={c.count.suffix || undefined}
+                  data-count-delay={200 + k * 90}
+                >
+                  {c.value}
+                </span>
+              ) : (
+                <span class="sb-num n1">{c.value}</span>
+              )}
+              <span class="sb-unit label">{c.unit}</span>
+            </p>
+          ) : (
+            <p class="sb-value sb-value--text d3" data-reveal style={`--d:${200 + k * 90}ms`}>
+              {c.value}
+            </p>
+          )}
+          <p class="sb-cap" data-reveal style={`--d:${400 + k * 90}ms`}>
+            {c.caption}
+          </p>
+        </li>
+      ))
+    }
+  </ul>
+  <p class="sb-foot small" data-reveal style="--d:600ms">{specBand.footnote}</p>
+</div>
+
+<style>
+  /* second row of the hero grid, on plain void below the sky */
+  .sb {
+    position: relative;
+    z-index: 1;
+    grid-row: 2;
+    grid-column: 1;
+    background-color: var(--void);
+    padding-bottom: clamp(4rem, 2.5rem + 5vw, 7.5rem);
+  }
+
+  .sb-rule {
+    display: block;
+    height: 1px;
+    background-color: var(--line-dark-strong);
+  }
+
+  .sb-cells {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 0;
+  }
+
+  .sb-cell {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 132px;
+    padding: 24px 12px 28px 16px;
+  }
+
+  .sb-cell:nth-child(odd) {
+    padding-left: 0;
+  }
+
+  /* hairline cross on phones: verticals between columns, horizontals
+     between rows */
+  .sb-v {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background-color: var(--line-dark);
+    transition-duration: 200ms, 800ms;
+  }
+
+  .sb-cell:nth-child(odd) .sb-v {
+    display: none;
+  }
+
+  .sb-h {
+    display: none;
+  }
+
+  .sb-cell:nth-child(n + 3) .sb-h {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    display: block;
+    height: 1px;
+    background-color: var(--line-dark);
+    transition-duration: 200ms, 800ms;
+  }
+
+  .sb-value {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    color: var(--starlight);
+  }
+
+  .sb-num {
+    font-size: 2.75rem;
+    white-space: nowrap;
+  }
+
+  .sb-unit {
+    color: var(--haze);
+    font-size: 0.6875rem;
+    letter-spacing: 0.14em;
+  }
+
+  .sb-value--text {
+    max-width: 11ch;
+    font-size: 1.375rem;
+    line-height: 1.1;
+  }
+
+  .sb-cap {
+    margin-top: 14px;
+    max-width: 26ch;
+    color: var(--haze);
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    text-wrap: pretty;
+  }
+
+  .sb-foot {
+    margin-top: 24px;
+    color: var(--dim);
+    text-align: right;
+  }
+
+  @media (min-width: 768px) {
+    .sb-cells {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .sb-cell {
+      min-height: 160px;
+      padding: 40px 20px 36px 24px;
+    }
+
+    .sb-cell:nth-child(odd) {
+      padding-left: 24px;
+    }
+
+    .sb-cell:first-child {
+      padding-left: 0;
+    }
+
+    .sb-cell:nth-child(odd) .sb-v {
+      display: block;
+    }
+
+    .sb-cell:first-child .sb-v,
+    .sb-cell:nth-child(n + 3) .sb-h {
+      display: none;
+    }
+
+    .sb-v {
+      top: 0;
+      bottom: 0;
+    }
+
+    .sb-num {
+      font-size: var(--t-n1);
+    }
+
+    .sb-unit {
+      font-size: 0.75rem;
+    }
+
+    .sb-value--text {
+      font-size: var(--t-d3);
+      /* sits on the numerals' baseline band */
+      min-height: calc(var(--t-n1) * 1);
+      display: flex;
+      align-items: flex-end;
+    }
+
+    .sb-cap {
+      margin-top: 18px;
+    }
+  }
+</style>

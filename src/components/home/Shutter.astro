@@ -1,0 +1,177 @@
+---
+/**
+ * The planet horizon — SPEC §6.4 as re-skinned by SPEC_COSMOS §2. The one
+ * paper→void cut on the page (between #services and #build): the limb of a
+ * planet, a --void disc about three viewports wide with a 1px lilac rim and a
+ * fainter atmospheric shell, rises from below as the block scrolls through
+ * and swallows the white into the dark Build section.
+ *
+ * (The file keeps its old name because index.astro imports it.)
+ *
+ * - Transform only: one translateY on the clipped body, driven by --e from
+ *   the shared scroll loop. The disc itself is never its own layer.
+ * - Decorative: aria-hidden, no text, no pointer events.
+ * - Not armed (no JS, motion off, failed engine): display:none, leaving a
+ *   hard paper→void cut.
+ * - Never overflows sideways: the block clips its sides and bottom with a
+ *   static inset clip-path; only the top is open, so the finished dome can
+ *   crest into the stations' bottom padding (never into their text).
+ */
+---
+
+<div class="horizon" data-shutter aria-hidden="true">
+  <div class="hz-body">
+    <div class="hz-disc"></div>
+  </div>
+</div>
+
+<style>
+  .horizon {
+    /* block height; the body reads it too */
+    --h: 40svh;
+    /* disc diameter in viewport widths, and the matching sagitta factor:
+       sag = (k/2 − √(k²/4 − ¼)) · width, the drop of the limb from its apex
+       to the block's edges */
+    --k: 2.4;
+    --sagf: 0.1091;
+    /* room above the disc for the atmospheric shell */
+    --shell: 7px;
+    --pad: 10px;
+
+    position: relative;
+    z-index: var(--z-shutter);
+    height: 40vh;
+    height: var(--h);
+    container-type: inline-size;
+    background-color: var(--paper);
+    /* clip sides and bottom; leave the top open by more than any sagitta */
+    clip-path: inset(-40vw 0 0 0);
+    pointer-events: none;
+  }
+
+  @media (min-width: 768px) {
+    .horizon {
+      --h: 60vh;
+      --k: 3;
+      --sagf: 0.0858;
+      --shell: 10px;
+      --pad: 14px;
+    }
+  }
+
+  .hz-body {
+    /* sagitta in px of this block's width (cqi = .horizon) */
+    --sag: calc(100cqi * var(--sagf));
+    /* how far the finished dome crests above the block, capped so it stays
+       inside the stations' bottom padding on very wide screens (there the
+       limb's ends meet the paper a little below the block's top, which is
+       the same paper, so the curve simply runs on) */
+    --crest: min(var(--sag), 7.5rem);
+    --travel: calc(var(--h) + var(--crest) + var(--pad) + 4px);
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(-1 * (var(--crest) + var(--pad)));
+    height: calc(var(--h) + var(--crest) + var(--pad) + 2px);
+    /* keeps the painted layer the size of the block, not of the planet */
+    overflow: clip;
+    transform: translate3d(0, calc((1 - var(--e, 1)) * var(--travel)), 0);
+  }
+
+  .horizon.is-live .hz-body {
+    will-change: transform;
+  }
+
+  .hz-disc {
+    position: absolute;
+    top: var(--pad);
+    left: calc(50% - var(--k) * 50%);
+    width: calc(var(--k) * 100%);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background-color: var(--void);
+    /* the lit limb: a thin ≤10% lilac band just inside the rim */
+    background-image: radial-gradient(closest-side, rgb(185 162 255 / 0) 97.4%, rgb(185 162 255 / 0.08) 100%);
+  }
+
+  /* the atmospheric rim: 1px lilac riding just inside the limb, so it reads
+     as light on the planet's edge rather than a line drawn on the paper */
+  .hz-disc::after {
+    content: '';
+    position: absolute;
+    inset: 2px;
+    border: 1px solid var(--lilac);
+    border-radius: 50%;
+  }
+
+  /* the upper atmosphere: one faint violet hairline standing off the limb */
+  .hz-disc::before {
+    content: '';
+    position: absolute;
+    inset: calc(-1 * var(--shell));
+    border: 1px solid rgb(98 54 232 / 0.3);
+    border-radius: 50%;
+  }
+
+  /* not armed: no horizon at all, a hard paper→void cut instead */
+  :global(html:not(.js)) .horizon,
+  :global(html.motion-reduced) .horizon,
+  :global(html.motion-failed) .horizon {
+    display: none;
+  }
+</style>
+
+<script>
+  import { addFrame, requestFrame, vestibular } from '../../scripts/motion';
+
+  const horizon = document.querySelector<HTMLElement>('[data-shutter]');
+  if (horizon) {
+    let near = false;
+    let target = 1;
+    let p = -1;
+
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(
+        ([e]) => {
+          near = e.isIntersecting;
+          horizon.classList.toggle('is-live', near);
+          if (near) requestFrame();
+        },
+        { rootMargin: '20% 0px 20% 0px' }
+      ).observe(horizon);
+    } else {
+      near = true;
+    }
+
+    addFrame({
+      read(_y, vh) {
+        if (!near) return;
+        if (vestibular()) {
+          target = 1;
+          return;
+        }
+        // 0 as the block's top enters the viewport, 1 once its bottom (the
+        // top of #build) has risen to 80% of the viewport
+        const r = horizon.getBoundingClientRect();
+        target = Math.min(1, Math.max(0, (vh - r.top) / (r.height + 0.2 * vh)));
+      },
+      write() {
+        if (!near) return;
+        const next = p < 0 ? target : p + (target - p) * 0.22;
+        const settled = Math.abs(target - next) < 0.0008;
+        const v = settled ? target : next;
+        if (v === p) return;
+        p = v;
+        // smoothstep: the limb lifts off gently and settles into place
+        const e = p * p * (3 - 2 * p);
+        horizon.style.setProperty('--e', e.toFixed(4));
+        if (!settled) requestFrame();
+      },
+    });
+
+    document.addEventListener('vesta:motion', () => {
+      p = -1;
+      requestFrame();
+    });
+  }
+</script>

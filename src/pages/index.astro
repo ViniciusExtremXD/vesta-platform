@@ -1,27 +1,25 @@
 ---
-import { getCollection } from 'astro:content';
 import Base from '../layouts/Base.astro';
 import Hero from '../components/home/Hero.astro';
-import ProofStrip from '../components/home/ProofStrip.astro';
-import Situations from '../components/home/Situations.astro';
-import CelestialAlignment from '../components/home/CelestialAlignment.astro';
-import Manifesto from '../components/home/Manifesto.astro';
-import Offers from '../components/home/Offers.astro';
+import Problem from '../components/home/Problem.astro';
+import Services from '../components/home/Services.astro';
+import Shutter from '../components/home/Shutter.astro';
+import Build from '../components/home/Build.astro';
+import Visibility from '../components/home/Visibility.astro';
+import TestDrive from '../components/home/TestDrive.astro';
+import Pricing from '../components/home/Pricing.astro';
+import Configurator from '../components/home/Configurator.astro';
 import Process from '../components/home/Process.astro';
-import Founder from '../components/home/Founder.astro';
-import Calculator from '../components/home/Calculator.astro';
-import Verticals from '../components/home/Verticals.astro';
+import Builder from '../components/home/Builder.astro';
 import Faq from '../components/home/Faq.astro';
-import FinalCta from '../components/home/FinalCta.astro';
-import { brand, faq, offers } from '../data/site';
+import Finale from '../components/home/Finale.astro';
+import { brand, faq, packages, confirmedOnly } from '../data/site';
 
-const cases = (await getCollection('cases')).filter((c) => c.data.confirmed);
-const industryPages = new Set(cases.map((c) => c.data.vertical));
-
+/* FAQPage from the same rendered, confirmed answers. */
 const faqLd = {
   '@context': 'https://schema.org',
   '@type': 'FAQPage',
-  mainEntity: faq.map((f) => ({
+  mainEntity: confirmedOnly(faq).map((f) => ({
     '@type': 'Question',
     name: f.q,
     acceptedAnswer: { '@type': 'Answer', text: f.a },
@@ -31,16 +29,22 @@ const faqLd = {
 const offersLd = {
   '@context': 'https://schema.org',
   '@type': 'ItemList',
-  name: 'Vesta services',
-  itemListElement: offers.items.map((o, i) => ({
+  name: `${brand.name} packages`,
+  itemListElement: packages.map((p, i) => ({
     '@type': 'ListItem',
     position: i + 1,
     item: {
       '@type': 'Service',
-      name: o.name,
-      description: o.description,
+      name: p.name,
+      description: p.tagline,
       provider: { '@type': 'ProfessionalService', name: brand.name },
-      offers: { '@type': 'Offer', priceCurrency: 'USD', price: o.price.replace(/[^0-9–-]/g, '').split(/[–-]/)[0] },
+      offers: {
+        '@type': 'Offer',
+        priceCurrency: 'USD',
+        ...(p.price.max && p.price.max !== p.price.min
+          ? { priceSpecification: { '@type': 'PriceSpecification', minPrice: p.price.min, maxPrice: p.price.max, priceCurrency: 'USD' } }
+          : { price: p.price.min }),
+      },
     },
   })),
 };
@@ -48,15 +52,16 @@ const offersLd = {
 
 <Base title={brand.seo.title} description={brand.seo.description} canonical="/" jsonLd={[faqLd, offersLd]}>
   <Hero />
-  <ProofStrip />
-  <Situations />
-  <CelestialAlignment />
-  <Offers />
-  <Manifesto />
+  <Problem />
+  <Services />
+  <Shutter />
+  <Build />
+  <Visibility />
+  <TestDrive />
+  <Pricing />
+  <Configurator />
   <Process />
-  <Founder />
-  <Calculator />
-  <Verticals pages={industryPages} />
+  <Builder />
   <Faq />
-  <FinalCta />
+  <Finale />
 </Base>

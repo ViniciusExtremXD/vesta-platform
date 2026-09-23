@@ -1,0 +1,1590 @@
+---
+/**
+ * §5.5 #visibility (paper). The SEO add-on made concrete: six checklist
+ * buttons drive a search illustration drawn in Vesta's own neutrals
+ * (no Google logo, blue, green, fonts, stars or reviews).
+ *
+ * Default markup = the final state (all six items done). src/scripts/serp.ts
+ * arms the section and plays it once when the panel comes into view.
+ */
+import SectionLabel from '../ui/SectionLabel.astro';
+import SplitText from '../ui/SplitText.astro';
+import Arrow from '../ui/Arrow.astro';
+import { visibility as v, concept, wa } from '../../data/site';
+import measured from '../../data/measurements.json';
+
+const shortDate = (iso: string) =>
+  new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).format(new Date(iso));
+
+/* TODO_SITE: strings the spec implies but site.ts does not carry yet. */
+const TODO_SITE = {
+  /** role="img" label for the panel. */
+  panelAria: `Illustration: a search for "${v.panel.query}". The result for Halden Roofing, a fictional business, goes from a page called "Home" to a clear title, description, opening hours, questions and a map listing.`,
+  /** Small label inside the query field. */
+  queryLabel: 'Query',
+  /** Map card readout: Austin, TX (the concept's city), real coordinates. */
+  mapCoords: '30.27° N · 97.74° W',
+  /** Under the "Speed" gauge label. The number is this page's measured score. */
+  gaugeNote: ['Lighthouse, mobile', `This page · ${shortDate(measured.date)}`],
+};
+
+const STEPS = 6;
+const pad = (n: number) => String(n).padStart(2, '0');
+const items = v.items.map((item, i) => ({ ...item, state: i + 1 })).filter((item) => item.confirmed);
+const p = v.panel;
+const score = measured.performance;
+/* This page's own score is shown only when it is one worth showing (90+). */
+const showGauge = score >= 90;
+const ctaLabel = v.cta.label.replace(/\s*→\s*$/, '');
+const [open, ...hoursRest] = p.after.hours.split(' · ');
+
+/* Keep the phone number on one line inside the snippet. */
+const phoneRe = /(\(\d{3}\) \d{3}-\d{4})/;
+const snipParts = p.after.snippet.split(phoneRe);
+
+/* The results column renders twice: a hidden sizer in its final state holds
+   the panel's height, so nothing below it moves while the live copy plays. */
+const copies = ['sizer', 'live'] as const;
+
+/* ---- map: a faint star-chart graticule under a small street plan ------- */
+/* Parallels: arcs of circles centred far below the card (pole at 160,900).
+   Meridians: straight lines radiating from that pole. ≤8% ink, static. */
+const POLE = { x: 160, y: 900 };
+const parallels = [872, 836, 800, 764, 728].map((R) => {
+  const half = 190;
+  const dy = Math.sqrt(R * R - half * half);
+  const y = (POLE.y - dy).toFixed(1);
+  return `M${POLE.x - half} ${y}A${R} ${R} 0 0 1 ${POLE.x + half} ${y}`;
+});
+const meridians = [-200, -160, -120, -80, -40, 0, 40, 80, 120, 160, 200].map((dx) => {
+  const top = (POLE.x + (dx * POLE.y) / 800).toFixed(1);
+  const bottom = (POLE.x + (dx * (POLE.y - 200)) / 800).toFixed(1);
+  return `M${bottom} 200L${top} 0`;
+});
+
+/* ---- gauge: an observatory dial. 240° sweep, ticks every 5 units ------- */
+const C = 28;
+const polar = (value: number, r: number) => {
+  const a = ((-120 + value * 2.4) * Math.PI) / 180;
+  return [(C + r * Math.sin(a)).toFixed(2), (C - r * Math.cos(a)).toFixed(2)];
+};
+const ticks = Array.from({ length: 21 }, (_, i) => {
+  const val = i * 5;
+  const major = val % 25 === 0;
+  const [x1, y1] = polar(val, major ? 24 : 25);
+  const [x2, y2] = polar(val, 27.5);
+  return { d: `M${x1} ${y1}L${x2} ${y2}`, major, band: val >= 90 };
+});
+const needleDeg = -120 + score * 2.4;
+---
+
+<section id={v.id} class="vz s-paper section" data-nav-theme="light" data-serp-root>
+  <div class="wrap g vz-grid">
+    <header class="vz-head">
+      <SectionLabel n={v.label.index ?? undefined} name={v.label.name} />
+      <SplitText as="h2" class="d2" text={v.h2} />
+      <p class="lead vz-lead" data-reveal style="--d:120ms">{v.lead}</p>
+    </header>
+
+    <div class="vz-l">
+      <ol class="vz-list">
+        {
+          items.map((item, i) => (
+            <li data-reveal style={`--d:${i * 50}ms`}>
+              <button type="button" class="vz-item" data-serp-item={item.state} aria-controls="vz-panel">
+                <span class="vz-ind" aria-hidden="true">
+                  <span class="vz-ind-f" />
+                  <svg viewBox="0 0 12 12" width="12" height="12">
+                    <path d="M2.6 6.3 5 8.6 9.4 3.8" pathLength="1" />
+                  </svg>
+                </span>
+                <span class="vz-t">{item.title}</span>
+                <span class="vz-x">{item.text}</span>
+                <span class="vz-tag label">{item.tag}</span>
+                <span class="vz-n label" aria-hidden="true">{pad(item.state)}</span>
+              </button>
+            </li>
+          ))
+        }
+      </ol>
+
+      <div class="vz-ctrl" data-reveal>
+        <button type="button" class="vz-replay" data-serp-replay hidden>{v.replay}</button>
+        <a class="tlink vz-cta" href={wa(v.cta.text)} target="_blank" rel="noopener" data-wa-intent="visibility">
+          <span>{ctaLabel}</span>
+          <Arrow />
+        </a>
+      </div>
+    </div>
+
+    <div class="vz-r">
+      <figure class="vz-fig" data-reveal>
+        <div class="pz" id="vz-panel" data-serp role="img" aria-label={TODO_SITE.panelAria}>
+          <div class="pz-bar">
+            <span class="label pz-bar-l">{p.label}</span>
+            <span class="pz-count" data-serp-count>{pad(STEPS)}/{pad(STEPS)}</span>
+            <span class="pz-prog" />
+          </div>
+
+          <div class="pz-q">
+            <span class="label pz-q-l">{TODO_SITE.queryLabel}</span>
+            <span class="pz-q-t">{p.query}</span>
+          </div>
+
+          <div class="pz-body">
+            <div class="pz-results">
+              {
+                copies.map((copy) => (
+                  <div class={`pz-${copy}`}>
+                    <div class="ph ph-1">
+                      <span class="u" />
+                      <span class="t" />
+                      <span class="s" />
+                      <span class="s2" />
+                    </div>
+
+                    <div class="slot">
+                      <div class="res">
+                        <div class="res-in">
+                          <div class="sw sw-url">
+                            <div class="sw-b"><span class="sw-t">{p.before.url}</span></div>
+                            <div class="sw-a"><span class="sw-t">{p.after.url}</span></div>
+                          </div>
+                          <div class="sw sw-title" style="--sd:50ms">
+                            <div class="sw-b"><span class="sw-t">{p.before.title}</span></div>
+                            <div class="sw-a"><span class="sw-t">{p.after.title}</span></div>
+                          </div>
+                          <span class="res-rule" />
+                          <div class="sw sw-snip" style="--sd:100ms">
+                            <div class="sw-b"><span class="sw-t">{p.before.snippet}</span></div>
+                            <div class="sw-a">
+                              <span class="sw-t">
+                                {snipParts.map((part) => (phoneRe.test(part) ? <span class="nw">{part}</span> : part))}
+                              </span>
+                            </div>
+                          </div>
+                          <div class="rich">
+                            <div class="rich-in">
+                              <p class="hrs" style="--r:0">
+                                <span class="sq" />
+                                <span>{open}{hoursRest.length ? ` · ${hoursRest.join(' · ')}` : ''}</span>
+                              </p>
+                              <ul class="faq">
+                                {p.after.faq.map((q, j) => (
+                                  <li style={`--r:${j + 1}`}>
+                                    <span>{q}</span>
+                                    <span class="plus" />
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="ph ph-2">
+                      <span class="u" />
+                      <span class="t" />
+                      <span class="s" />
+                    </div>
+                  </div>
+                ))
+              }
+            </div>
+
+            <div class="pz-map">
+              <div class="plot">
+                <svg class="grat" viewBox="0 0 320 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+                  {parallels.map((d) => <path d={d} />)}
+                  {meridians.map((d) => <path d={d} />)}
+                </svg>
+                <svg class="streets" viewBox="0 0 320 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+                  <g transform="rotate(-24 160 100)">
+                    <path class="st" style="--i:0" d="M-120 109H440" pathLength="1" />
+                    <path class="st" style="--i:1" d="M-120 38H440" pathLength="1" />
+                    <path class="st" style="--i:2" d="M-120 184H440" pathLength="1" />
+                    <path class="st" style="--i:1" d="M118 -160V360" pathLength="1" />
+                    <path class="st" style="--i:3" d="M226 -160V360" pathLength="1" />
+                    <path class="st" style="--i:4" d="M22 -160V360" pathLength="1" />
+                  </g>
+                  <path class="st st-main" style="--i:2" d="M212 -12C226 24 258 48 334 56" pathLength="1" />
+                </svg>
+                <span class="pin" aria-hidden="true" />
+                <span class="orb" aria-hidden="true">
+                  <svg viewBox="0 0 120 70">
+                    <ellipse class="orb-e" cx="60" cy="35" rx="54" ry="24" transform="rotate(-24 60 35)" pathLength="1" />
+                  </svg>
+                  <span class="orb-p" />
+                </span>
+                <span class="coords">{TODO_SITE.mapCoords}</span>
+              </div>
+
+              <div class="pl-head">
+                <p class="pl-name">{p.map.name}</p>
+                <p class="pl-meta">
+                  <span>{p.map.category} · </span>
+                  <span class="op"><span class="sq" />{p.map.status}</span>
+                </p>
+              </div>
+
+              <div class="acts">
+                {
+                  p.map.actions.map((a, j) =>
+                    j === p.map.actions.length - 1 ? (
+                      <span class="act act-call">
+                        {a}
+                        <span class="ld-sq" />
+                        <span class="ld-v" />
+                        <span class="ld-h" />
+                        <span class="ld-l label">{p.tracked}</span>
+                      </span>
+                    ) : (
+                      <span class="act">{a}</span>
+                    )
+                  )
+                }
+              </div>
+
+              {showGauge && (
+              <div class="gz-row">
+                <div class="gz">
+                  <svg viewBox="0 0 56 56" width="56" height="56" aria-hidden="true">
+                    <g class="gz-ticks">
+                      {ticks.map((t) => <path d={t.d} class:list={['tk', { m: t.major, b: t.band }]} />)}
+                    </g>
+                    <path class="gz-track" d="M8.95 39A22 22 0 1 1 47.05 39" pathLength="100" />
+                    <path class="gz-val" d="M8.95 39A22 22 0 1 1 47.05 39" pathLength="100" style={`--off:${100 - score}`} />
+                    <g class="gz-ndl" style={`--deg:${needleDeg}deg`}>
+                      <path d="M28 9.5V1" />
+                    </g>
+                  </svg>
+                  <span class="gz-n" data-serp-num>{score}</span>
+                </div>
+                <p class="gz-txt">
+                  <span class="label gz-l">{p.gaugeLabel}</span>
+                  <span class="gz-note">
+                    <span>{TODO_SITE.gaugeNote[0]}</span>
+                    <span>{TODO_SITE.gaugeNote[1]}</span>
+                  </span>
+                </p>
+              </div>
+              )}
+            </div>
+          </div>
+        </div>
+        <figcaption class="small vz-cap">{concept.caption}</figcaption>
+      </figure>
+
+      <div class="vz-notes">
+        <p class="lead vz-honest" data-reveal>{v.honesty}</p>
+        <p class="small vz-src" data-reveal style="--d:90ms">
+          <span class="vz-src-t">{v.source.text}</span>{' '}
+          <a href={v.source.url} target="_blank" rel="noopener">{v.source.citation}<Arrow dir="up-right" size={12} /></a>
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  import { bootSerp } from '../../scripts/serp';
+  bootSerp();
+</script>
+
+<style>
+  /* =====================================================================
+     Layout
+     ≤1099: head, panel, checklist, controls, notes (one column, §5.5 390px)
+     ≥1100: head in 1–7; checklist + controls in 1–5; panel + notes in 6–12
+     ===================================================================== */
+
+  .vz {
+    overflow: clip;
+  }
+
+  .vz-head {
+    order: 0;
+    margin-bottom: clamp(48px, 1.5rem + 4.5vw, 104px);
+  }
+
+  .vz-head :global(h2) {
+    margin-top: 28px;
+    max-width: 18ch;
+  }
+
+  .vz-lead {
+    margin-top: 28px;
+    color: var(--ink-2);
+  }
+
+  .vz-l,
+  .vz-r {
+    display: contents;
+  }
+
+  .vz-fig {
+    order: 1;
+    grid-column: 1 / -1;
+    margin: 0;
+  }
+
+  .vz-list {
+    order: 2;
+    grid-column: 1 / -1;
+    margin-top: 56px;
+    border-bottom: 1px solid var(--line-light);
+  }
+
+  .vz-ctrl {
+    order: 3;
+    grid-column: 1 / -1;
+    margin-top: 28px;
+  }
+
+  .vz-notes {
+    order: 4;
+    grid-column: 1 / -1;
+    margin-top: 72px;
+  }
+
+  @media (min-width: 768px) {
+    .vz-list,
+    .vz-ctrl,
+    .vz-notes {
+      grid-column: 1 / 8;
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .vz-head {
+      grid-column: 1 / 8;
+    }
+
+    .vz-l,
+    .vz-r {
+      display: block;
+    }
+
+    .vz-l {
+      grid-column: 1 / 6;
+    }
+
+    .vz-r {
+      grid-column: 6 / 13;
+    }
+
+    .vz-list {
+      margin-top: 0;
+    }
+
+    .vz-ctrl {
+      margin-top: 32px;
+    }
+
+    .vz-notes {
+      margin-top: 64px;
+      padding-right: calc((100% - 6 * var(--gap)) / 7);
+    }
+  }
+
+  /* =====================================================================
+     Checklist: six real buttons
+     ===================================================================== */
+
+  .vz-item {
+    display: grid;
+    grid-template-columns: 12px minmax(0, 1fr) auto;
+    column-gap: 18px;
+    width: 100%;
+    padding: 22px 0 24px;
+    border-top: 1px solid var(--line-light);
+    background-color: var(--paper);
+    color: var(--ink);
+    text-align: left;
+    -webkit-tap-highlight-color: transparent;
+    position: relative;
+  }
+
+  /* the current step: its top hairline draws across in violet */
+  .vz-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -1px;
+    height: 1px;
+    background-color: var(--violet);
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 700ms var(--ease-quint);
+  }
+
+  .vz-item[aria-current='step']::before {
+    transform: scaleX(1);
+  }
+
+  .vz-ind {
+    grid-column: 1;
+    grid-row: 1;
+    position: relative;
+    width: 12px;
+    height: 12px;
+    margin-top: 6px;
+    border: 1px solid var(--ink);
+    transition: border-color var(--t-micro) linear;
+  }
+
+  .vz-ind-f {
+    position: absolute;
+    inset: -1px;
+    background-color: var(--ink);
+    transition: transform var(--t-micro) var(--ease-expo);
+  }
+
+  .vz-ind svg {
+    position: absolute;
+    inset: -1px;
+    overflow: visible;
+  }
+
+  .vz-ind path {
+    fill: none;
+    stroke: var(--paper);
+    stroke-width: 1.5;
+    stroke-linecap: square;
+    stroke-dasharray: 1 1;
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset 300ms var(--ease-quint) 120ms;
+  }
+
+  .vz-t {
+    grid-column: 2;
+    grid-row: 1;
+    font-size: 1.0625rem;
+    font-weight: 560;
+    line-height: 1.4;
+    color: var(--ink);
+    transition: color 240ms linear;
+  }
+
+  .vz-x {
+    grid-column: 2;
+    margin-top: 6px;
+    max-width: 46ch;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    color: var(--ink-2);
+    text-wrap: pretty;
+    transition: color 240ms linear;
+  }
+
+  .vz-tag {
+    grid-column: 2;
+    margin-top: 14px;
+    color: var(--ink-3);
+  }
+
+  .vz-n {
+    grid-column: 3;
+    grid-row: 1;
+    align-self: start;
+    margin-top: 5px;
+    padding-left: 12px;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-3);
+    transition:
+      transform var(--t-ui) var(--ease-expo),
+      color 240ms linear;
+  }
+
+  .vz-item[aria-current='step'] .vz-n {
+    color: var(--violet-ink);
+  }
+
+  /* armed and not yet reached: hollow square, quieter copy */
+  :global(html.js:not(.motion-failed)) .vz.is-armed .vz-item.is-todo .vz-ind {
+    border-color: var(--ink-3);
+  }
+
+  :global(html.js:not(.motion-failed)) .vz.is-armed .vz-item.is-todo .vz-ind-f {
+    transform: scale(0);
+  }
+
+  :global(html.js:not(.motion-failed)) .vz.is-armed .vz-item.is-todo .vz-ind path {
+    stroke-dashoffset: 1;
+    transition: none;
+  }
+
+  :global(html.js:not(.motion-failed)) .vz.is-armed .vz-item.is-todo .vz-t {
+    color: var(--ink-3);
+  }
+
+  :global(html.js:not(.motion-failed)) .vz.is-armed .vz-item.is-todo .vz-x {
+    color: var(--ink-3);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .vz-item:hover .vz-n {
+      transform: translateX(4px);
+      color: var(--ink);
+    }
+
+    .vz-item[aria-current='step']:hover .vz-n {
+      color: var(--violet-ink);
+    }
+
+    :global(html.js:not(.motion-failed)) .vz.is-armed .vz-item.is-todo:hover .vz-t,
+    :global(html.js:not(.motion-failed)) .vz.is-armed .vz-item.is-todo:hover .vz-x {
+      color: var(--ink);
+    }
+  }
+
+  .vz-item:focus-visible {
+    outline-offset: -2px;
+  }
+
+  /* =====================================================================
+     Controls and notes
+     ===================================================================== */
+
+  .vz-ctrl {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 32px;
+  }
+
+  .vz-replay[hidden] {
+    display: none;
+  }
+
+  .vz-replay {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 20px;
+    border: 1px solid var(--line-light-strong);
+    background-color: var(--paper);
+    color: var(--ink);
+    font-stretch: var(--wd-display);
+    font-size: 0.8125rem;
+    font-weight: 620;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    transition:
+      border-color var(--t-micro) linear,
+      transform 120ms var(--ease-expo);
+  }
+
+  .vz-replay:active {
+    transform: scale(0.98);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .vz-replay:hover {
+      border-color: var(--ink);
+    }
+  }
+
+  .vz-cta {
+    color: var(--ink);
+  }
+
+  @media (max-width: 767px) {
+    .vz-ctrl {
+      align-items: stretch;
+      gap: 16px;
+    }
+
+    .vz-replay {
+      align-self: flex-start;
+    }
+
+    .vz-cta {
+      justify-content: space-between;
+      min-height: 48px;
+      padding: 0 16px;
+      border: 1px solid var(--ink);
+      transition: transform 120ms var(--ease-expo);
+    }
+
+    .vz-cta::after {
+      display: none;
+    }
+
+    .vz-cta:active {
+      transform: scale(0.98);
+    }
+  }
+
+  .vz-cap {
+    margin-top: 14px;
+    color: var(--ink-3);
+  }
+
+  .vz-honest {
+    color: var(--ink);
+  }
+
+  .vz-src {
+    margin-top: 20px;
+    max-width: 58ch;
+    color: var(--ink-2);
+  }
+
+  .vz-src-t {
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .vz-src a {
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--line-light-strong);
+    transition: text-decoration-color var(--t-micro) linear;
+  }
+
+  .vz-src a :global(svg) {
+    display: inline-block;
+    margin-left: 4px;
+    vertical-align: -1px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .vz-src a:hover {
+      text-decoration-color: var(--ink);
+    }
+  }
+
+  /* =====================================================================
+     Panel: a white instrument card, hairlines, Vesta type only
+     ===================================================================== */
+
+  .pz {
+    --lead: 0ms;
+    --k: 6;
+    container: pz / inline-size;
+    position: relative;
+    background-color: var(--white);
+    border: 1px solid var(--line-light);
+    color: var(--ink);
+  }
+
+  .pz-bar {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 44px;
+    padding: 0 20px;
+    border-bottom: 1px solid var(--line-light);
+  }
+
+  .pz-bar-l {
+    color: var(--ink-3);
+  }
+
+  .pz-count {
+    font-stretch: var(--wd-display);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-2);
+  }
+
+  .pz-prog {
+    position: absolute;
+    left: -1px;
+    right: -1px;
+    bottom: -1px;
+    height: 2px;
+    background-color: var(--violet);
+    transform-origin: left center;
+    transform: scaleX(calc(var(--k) / 6));
+    transition: transform 700ms var(--ease-quint) var(--lead);
+  }
+
+  .pz-q {
+    display: flex;
+    align-items: stretch;
+    min-height: 44px;
+    margin: 20px 20px 0;
+    border: 1px solid var(--line-light-strong);
+    background-color: var(--white);
+  }
+
+  .pz-q-l {
+    display: flex;
+    align-items: center;
+    flex: none;
+    padding: 0 14px;
+    border-right: 1px solid var(--line-light);
+    color: var(--ink-3);
+  }
+
+  .pz-q-t {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    padding: 0 14px;
+    font-size: 0.9375rem;
+    line-height: 1.3;
+    color: var(--ink);
+  }
+
+  .nw {
+    white-space: nowrap;
+  }
+
+  .pz-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 28px;
+    padding: 24px 20px 20px;
+  }
+
+  @container pz (min-width: 600px) {
+    .pz-body {
+      grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+      padding-top: 28px;
+    }
+
+    .pz-results {
+      padding-right: 24px;
+    }
+
+    .pz-map {
+      padding-left: 24px;
+      border-left: 1px solid var(--line-light);
+    }
+  }
+
+  /* ---- results: sizer + live copy share one cell ----------------------- */
+
+  .pz-results {
+    display: grid;
+    align-items: start;
+  }
+
+  .pz-sizer,
+  .pz-live {
+    grid-area: 1 / 1;
+    min-width: 0;
+  }
+
+  .pz-sizer {
+    visibility: hidden;
+  }
+
+  /* placeholder results: drawn as hairline text lines, never skeleton blocks */
+  .ph > span {
+    display: block;
+    height: 1px;
+    background-color: var(--line-light-strong);
+  }
+
+  .ph > span + span {
+    margin-top: 9px;
+  }
+
+  .ph .u {
+    width: 30%;
+  }
+
+  .ph .t {
+    width: 68%;
+    margin-top: 10px;
+    background-color: var(--ink-3);
+  }
+
+  .ph .s {
+    width: 94%;
+    margin-top: 12px;
+  }
+
+  .ph .s2 {
+    width: 58%;
+  }
+
+  .ph-1 {
+    margin-bottom: 22px;
+  }
+
+  /* phones: one neighbour above is enough to read "a list of results" */
+  @container pz (max-width: 479px) {
+    .ph-2 {
+      display: none;
+    }
+
+    .pz-results .res-in {
+      padding-bottom: 0;
+    }
+  }
+
+  /* the result slot (state 1) */
+  .slot {
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows 560ms var(--ease-mech) var(--lead);
+  }
+
+  .res {
+    min-height: 0;
+    overflow: clip;
+  }
+
+  .res-in {
+    padding-bottom: 22px;
+    transition:
+      opacity 360ms linear calc(var(--lead) + 60ms),
+      transform 620ms var(--ease-expo) calc(var(--lead) + 60ms),
+      visibility 0s linear 0s;
+  }
+
+  /* before/after swap rows (state 2): the old line rolls up and out */
+  .sw {
+    display: grid;
+    grid-template-rows: 0fr 1fr;
+    transition: grid-template-rows 560ms var(--ease-mech) calc(var(--lead) + var(--sd, 0ms));
+  }
+
+  .sw > div {
+    min-height: 0;
+    overflow: clip;
+  }
+
+  .sw-t {
+    display: block;
+    transition:
+      transform 560ms var(--ease-mech) calc(var(--lead) + var(--sd, 0ms)),
+      opacity 280ms linear calc(var(--lead) + var(--sd, 0ms));
+  }
+
+  .sw-b {
+    visibility: hidden;
+    transition: visibility 0s linear calc(var(--lead) + var(--sd, 0ms) + 560ms);
+  }
+
+  .sw-b .sw-t {
+    opacity: 0;
+    transform: translate3d(0, -70%, 0);
+  }
+
+  .sw-url {
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: var(--ink-2);
+  }
+
+  .sw-title {
+    margin-top: 6px;
+    font-stretch: var(--wd-display);
+    font-size: 1.1875rem;
+    font-weight: 600;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+
+  .sw-title .sw-t {
+    text-wrap: balance;
+  }
+
+  .res-rule {
+    display: block;
+    height: 1px;
+    margin: 12px 0 11px;
+    background-color: var(--ink);
+    transform-origin: left center;
+    transition: transform 900ms var(--ease-quint) calc(var(--lead) + 260ms);
+  }
+
+  .sw-snip {
+    font-size: 0.875rem;
+    line-height: 1.55;
+    color: var(--ink-2);
+  }
+
+  .sw-snip .sw-t {
+    text-wrap: pretty;
+  }
+
+  /* structured data (state 3): hours + questions open out */
+  .rich {
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows 450ms var(--ease-mech) var(--lead);
+  }
+
+  .rich-in {
+    min-height: 0;
+    overflow: clip;
+  }
+
+  .hrs,
+  .faq li {
+    transition:
+      opacity 300ms linear calc(var(--lead) + 120ms + var(--r) * 60ms),
+      transform 600ms var(--ease-expo) calc(var(--lead) + 120ms + var(--r) * 60ms),
+      visibility 0s linear 0s;
+  }
+
+  .hrs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-top: 14px;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    color: var(--ink);
+  }
+
+  .sq {
+    flex: none;
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background-color: var(--violet);
+  }
+
+  .faq {
+    margin-top: 12px;
+    border-bottom: 1px solid var(--line-light);
+  }
+
+  .faq li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 9px 0;
+    border-top: 1px solid var(--line-light);
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    color: var(--ink);
+  }
+
+  .plus {
+    position: relative;
+    flex: none;
+    width: 9px;
+    height: 9px;
+  }
+
+  .plus::before,
+  .plus::after {
+    content: '';
+    position: absolute;
+    background-color: var(--ink-3);
+  }
+
+  .plus::before {
+    left: 0;
+    right: 0;
+    top: 4px;
+    height: 1px;
+  }
+
+  .plus::after {
+    top: 0;
+    bottom: 0;
+    left: 4px;
+    width: 1px;
+  }
+
+  /* ---- map card --------------------------------------------------------- */
+
+  .pz-map {
+    display: grid;
+    grid-template-columns: 112px minmax(0, 1fr);
+    column-gap: 16px;
+    align-items: center;
+    align-content: start;
+  }
+
+  .plot {
+    position: relative;
+    grid-column: 1;
+    grid-row: 1;
+    aspect-ratio: 1;
+    overflow: clip;
+    border: 1px solid var(--line-light);
+    background-color: var(--white);
+  }
+
+  .plot svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* graticule: ≤8% ink, static, the chart the business is placed on */
+  .grat path {
+    fill: none;
+    stroke: rgb(12 10 18 / 0.075);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+  }
+
+  /* streets: hairlines that draw in (state 4) */
+  .st {
+    fill: none;
+    stroke: rgb(12 10 18 / 0.2);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+    stroke-dasharray: 1 1;
+    stroke-dashoffset: 0;
+    transition:
+      stroke-dashoffset 900ms var(--ease-quint) calc(var(--lead) + var(--i) * 60ms),
+      visibility 0s linear 0s;
+  }
+
+  .st-main {
+    stroke: rgb(12 10 18 / 0.52);
+    stroke-width: 1.25;
+  }
+
+  /* the pin: a violet dot inside the site's orbit mark (the section-label
+     glyph at map scale: a 9:4 ellipse tilted -24deg, one planet on its rim).
+     The orbit traces from the planet's position and closes on it. */
+  .orb {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: min(120px, 54%);
+    aspect-ratio: 12 / 7;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+
+  .orb-e {
+    fill: none;
+    stroke: var(--violet);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+    stroke-dasharray: 1 1;
+    stroke-dashoffset: 0;
+    transition:
+      stroke-dashoffset 900ms var(--ease-quint) calc(var(--lead) + 520ms),
+      visibility 0s linear 0s;
+  }
+
+  /* (114, 35) rotated -24deg about (60, 35), as a share of the 120x70 box */
+  .orb-p {
+    position: absolute;
+    left: 91.11%;
+    top: 18.63%;
+    width: 5px;
+    height: 5px;
+    margin: -2.5px 0 0 -2.5px;
+    border-radius: 50%;
+    background-color: var(--violet);
+    transition:
+      transform 480ms var(--ease-expo) calc(var(--lead) + 1260ms),
+      opacity 160ms linear calc(var(--lead) + 1260ms),
+      visibility 0s linear 0s;
+  }
+
+  .pin {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 13px;
+    height: 13px;
+    margin: -6.5px 0 0 -6.5px;
+    border: 2px solid var(--white);
+    border-radius: 50%;
+    background-color: var(--violet);
+    transition:
+      transform 500ms var(--ease-mech) calc(var(--lead) + 300ms),
+      opacity 160ms linear calc(var(--lead) + 300ms),
+      visibility 0s linear 0s;
+  }
+
+  .coords {
+    position: absolute;
+    left: 8px;
+    bottom: 8px;
+    display: none;
+    padding: 2px 4px;
+    background-color: var(--white);
+    font-stretch: var(--wd-display);
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: 0.02em;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    color: var(--ink-3);
+    transition:
+      opacity 300ms linear calc(var(--lead) + 700ms),
+      visibility 0s linear 0s;
+  }
+
+  .pl-head {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .pl-head,
+  .acts {
+    transition:
+      transform 640ms var(--ease-expo) calc(var(--lead) + 140ms),
+      opacity 320ms linear calc(var(--lead) + 140ms),
+      visibility 0s linear 0s;
+  }
+
+  .pl-name {
+    font-stretch: var(--wd-display);
+    font-size: 0.9375rem;
+    font-weight: 620;
+    line-height: 1.3;
+    color: var(--ink);
+  }
+
+  .pl-meta {
+    margin-top: 4px;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: var(--ink-2);
+  }
+
+  .op {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+
+  .acts {
+    grid-column: 1 / -1;
+    display: flex;
+    margin-top: 16px;
+    margin-bottom: 34px;
+  }
+
+  .act {
+    display: flex;
+    align-items: center;
+    height: 30px;
+    padding: 0 10px;
+    border: 1px solid var(--line-light-strong);
+    background-color: var(--white);
+    font-stretch: var(--wd-display);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+
+  .act + .act {
+    margin-left: -1px;
+  }
+
+  .act-call {
+    position: relative;
+  }
+
+  /* leader: 3px square terminal on the Call button, elbow, label */
+  .ld-sq,
+  .ld-v,
+  .ld-h {
+    position: absolute;
+    background-color: var(--ink);
+  }
+
+  .ld-sq {
+    top: calc(100% + 2px);
+    left: 50%;
+    width: 3px;
+    height: 3px;
+    margin-left: -1.5px;
+    transition:
+      opacity 200ms linear calc(var(--lead) + 80ms),
+      visibility 0s linear 0s;
+  }
+
+  .ld-v {
+    top: calc(100% + 4px);
+    left: 50%;
+    width: 1px;
+    height: 16px;
+    margin-left: -0.5px;
+    transform-origin: 50% 0;
+    transition:
+      transform 360ms var(--ease-quint) calc(var(--lead) + 120ms),
+      visibility 0s linear 0s;
+  }
+
+  .ld-h {
+    top: calc(100% + 20px);
+    right: 50%;
+    width: 22px;
+    height: 1px;
+    margin-right: 0.5px;
+    transform-origin: 100% 50%;
+    transition:
+      transform 360ms var(--ease-quint) calc(var(--lead) + 420ms),
+      visibility 0s linear 0s;
+  }
+
+  .ld-l {
+    position: absolute;
+    top: calc(100% + 20px);
+    right: calc(50% + 32px);
+    margin-top: -0.62em;
+    white-space: nowrap;
+    color: var(--ink);
+    transition:
+      transform 620ms var(--ease-expo) calc(var(--lead) + 560ms),
+      opacity 280ms linear calc(var(--lead) + 560ms),
+      visibility 0s linear 0s;
+  }
+
+  /* gauge (state 5): this page's measured score */
+  .gz-row {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line-light);
+  }
+
+  .gz {
+    position: relative;
+    flex: none;
+    width: 56px;
+    height: 56px;
+  }
+
+  .gz svg {
+    overflow: visible;
+  }
+
+  .gz-track,
+  .gz-val,
+  .tk,
+  .gz-ndl path {
+    fill: none;
+  }
+
+  /* dial: fine ticks every 5, majors every 25, the 90–100 band in violet */
+  .tk {
+    stroke: var(--line-light-strong);
+    stroke-width: 0.75;
+  }
+
+  .tk.m {
+    stroke: var(--ink-3);
+    stroke-width: 1;
+  }
+
+  .tk.b {
+    stroke: var(--violet);
+    stroke-width: 1;
+  }
+
+  .gz-track {
+    stroke: var(--line-light);
+    stroke-width: 2;
+  }
+
+  .gz-val {
+    stroke: var(--ink);
+    stroke-width: 2;
+    stroke-dasharray: 100 100;
+    stroke-dashoffset: var(--off);
+    transition: stroke-dashoffset 1100ms var(--ease-expo) calc(var(--lead) + 100ms);
+  }
+
+  /* index needle: a violet hairline that sweeps to the value */
+  .gz-ndl {
+    transform-box: view-box;
+    transform-origin: 50% 50%;
+    transform: rotate(var(--deg));
+    transition: transform 1100ms var(--ease-expo) calc(var(--lead) + 100ms);
+  }
+
+  .gz-ndl path {
+    stroke: var(--violet);
+    stroke-width: 1.25;
+  }
+
+  .gz-n {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-top: 2px;
+    font-stretch: var(--wd-display);
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    transition:
+      opacity 240ms linear calc(var(--lead) + 100ms),
+      visibility 0s linear 0s;
+  }
+
+  .gz-txt {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+  }
+
+  .gz-l {
+    color: var(--ink);
+  }
+
+  .gz-note {
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    color: var(--ink-3);
+  }
+
+  .gz-note > span {
+    display: block;
+  }
+
+  @container pz (max-width: 479px) {
+    .pin {
+      width: 11px;
+      height: 11px;
+      margin: -5.5px 0 0 -5.5px;
+    }
+  }
+
+  @container pz (max-width: 299px) {
+    .pz-map {
+      grid-template-columns: 88px minmax(0, 1fr);
+      column-gap: 14px;
+    }
+  }
+
+  @container pz (min-width: 600px) {
+    .pz-map {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .plot {
+      aspect-ratio: 16 / 10;
+    }
+
+    .coords {
+      display: block;
+    }
+
+    .pl-head {
+      grid-column: 1;
+      grid-row: auto;
+      margin-top: 16px;
+    }
+
+    .acts {
+      margin-top: 14px;
+    }
+  }
+
+  /* =====================================================================
+     Armed states. Only serp.ts adds .is-armed; each rule below hides what
+     a state has not reached yet. Outgoing layers end at visibility:hidden.
+     Rules on results content are scoped to .pz-live so the sizer stays final.
+     ===================================================================== */
+
+  /* state 1: the result slides into the list; placeholders make room */
+  :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s1) .pz-live .slot {
+    grid-template-rows: 0fr;
+  }
+
+  :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s1) .pz-live .res-in {
+    visibility: hidden;
+    opacity: 0;
+    transform: translate3d(0, 16px, 0);
+    transition:
+      opacity 200ms linear,
+      transform 300ms var(--ease-expo),
+      visibility 0s linear 300ms;
+  }
+
+  /* state 2: title, address and description swap; the underline sweeps */
+  :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s2) .pz-live .sw {
+    grid-template-rows: 1fr 0fr;
+  }
+
+  /* inherit, never visible: inside a hidden result (state 0) it must stay
+     hidden with it, or it would render at the result's .02 opacity */
+  :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s2) .pz-live .sw-b {
+    visibility: inherit;
+    transition: visibility 0s linear 0s;
+  }
+
+  :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s2) .pz-live .sw-b .sw-t {
+    opacity: 1;
+    transform: none;
+  }
+
+  :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s2) .pz-live .sw-a {
+    visibility: hidden;
+    transition: visibility 0s linear calc(var(--lead) + var(--sd, 0ms) + 560ms);
+  }
+
+  :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s2) .pz-live .sw-a .sw-t {
+    opacity: 0;
+    transform: translate3d(0, 70%, 0);
+  }
+
+  :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s2) .pz-live .res-rule {
+    transform: scaleX(0);
+    transition-duration: 300ms;
+    transition-delay: 0ms;
+  }
+
+  /* state 3: hours and questions open out */
+  :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s3) .pz-live .rich {
+    grid-template-rows: 0fr;
+  }
+
+  :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s3) .pz-live .hrs,
+  :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s3) .pz-live .faq li {
+    visibility: hidden;
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+    transition:
+      opacity 160ms linear,
+      transform 300ms var(--ease-expo),
+      visibility 0s linear 300ms;
+  }
+
+  /* state 4: the map card arrives; streets draw, the pin drops into orbit */
+  :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s4) .st {
+    visibility: hidden;
+    stroke-dashoffset: 1;
+    transition:
+      stroke-dashoffset 300ms var(--ease-quint),
+      visibility 0s linear 300ms;
+  }
+
+  :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s4) .orb-e {
+    visibility: hidden;
+    stroke-dashoffset: 1;
+    transition:
+      stroke-dashoffset 300ms var(--ease-quint),
+      visibility 0s linear 300ms;
+  }
+
+  :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s4) .orb-p {
+    visibility: hidden;
+    opacity: 0;
+    transform: scale(0);
+    transition:
+      transform 200ms var(--ease-expo),
+      opacity 160ms linear,
+      visibility 0s linear 200ms;
+  }
+
+  :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s4) .pin {
+    visibility: hidden;
+    opacity: 0;
+    transform: translate3d(0, -40px, 0);
+    transition:
+      transform 300ms var(--ease-mech),
+      opacity 160ms linear,
+      visibility 0s linear 300ms;
+  }
+
+  :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s4) .coords {
+    visibility: hidden;
+    opacity: 0;
+    transition:
+      opacity 160ms linear,
+      visibility 0s linear 160ms;
+  }
+
+  :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s4) .pl-head,
+  :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s4) .acts {
+    visibility: hidden;
+    opacity: 0;
+    transform: translate3d(24px, 0, 0);
+    transition:
+      transform 300ms var(--ease-expo),
+      opacity 200ms linear,
+      visibility 0s linear 300ms;
+  }
+
+  /* state 5: the dial draws and the needle sweeps to this page's score */
+  :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s5) .gz-val {
+    stroke-dashoffset: 100;
+    transition: stroke-dashoffset 400ms var(--ease-expo);
+  }
+
+  :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s5) .gz-ndl {
+    transform: rotate(-120deg);
+    transition: transform 400ms var(--ease-expo);
+  }
+
+  :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s5) .gz-n {
+    visibility: hidden;
+    opacity: 0;
+    transition:
+      opacity 160ms linear,
+      visibility 0s linear 160ms;
+  }
+
+  /* state 6: calls tracked */
+  :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s6) .ld-sq {
+    visibility: hidden;
+    opacity: 0;
+    transition:
+      opacity 160ms linear,
+      visibility 0s linear 160ms;
+  }
+
+  :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s6) .ld-v {
+    visibility: hidden;
+    transform: scaleY(0);
+    transition:
+      transform 200ms var(--ease-quint),
+      visibility 0s linear 200ms;
+  }
+
+  :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s6) .ld-h {
+    visibility: hidden;
+    transform: scaleX(0);
+    transition:
+      transform 200ms var(--ease-quint),
+      visibility 0s linear 200ms;
+  }
+
+  :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s6) .ld-l {
+    visibility: hidden;
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+    transition:
+      opacity 160ms linear,
+      transform 300ms var(--ease-expo),
+      visibility 0s linear 300ms;
+  }
+
+  /* arming jumps straight to the start state; motion off never animates */
+  .vz.is-instant *,
+  .vz.is-instant *::before,
+  .vz.is-instant *::after,
+  :global(html.motion-reduced) .vz *,
+  :global(html.motion-reduced) .vz *::before,
+  :global(html.motion-reduced) .vz *::after {
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+  }
+</style>

@@ -1,0 +1,1173 @@
+---
+/**
+ * #configure (SPEC §5.8 + SPEC_COSMOS), deep-space void.
+ *
+ * A real <form>, one fieldset + legend per step, beside a live preview: the
+ * mini Concept plate with the visitor's business name on it and a listing
+ * card beneath (sticky on desktop). Under the form, the build sheet: odometer
+ * price, a delivery dimension line and one full-width violet CTA that opens
+ * WhatsApp with the build sheet written out.
+ *
+ * Division of labour (fail-open):
+ * - CSS alone (via :has) drives every VISUAL state that depends on the
+ *   choices: selected rows, the Rebuild URL field, the fixed "Google setup"
+ *   row, the Complete fan of 5 page plates, the Rebuild "Before" ghost and
+ *   the listing's Landing Page state. So all of it works with no JS.
+ * - src/scripts/configure.ts (dynamically imported near the viewport) writes
+ *   the TEXT: name + URL on the plate and listing, the build-sheet rows, the
+ *   odometer, the dimension line, the WhatsApp href, #configure?model=<id>
+ *   preselection and the mobile sticky-bar summary.
+ * - No JS: Landing Page + Google preselected, a static sheet for it, and the
+ *   CTA is the plain prefilled link (configure.noJsText).
+ * No storage, no network. Every word comes from src/data/site.ts.
+ */
+import SectionLabel from '../ui/SectionLabel.astro';
+import SplitText from '../ui/SplitText.astro';
+import Arrow from '../ui/Arrow.astro';
+import WaGlyph from '../ui/WaGlyph.astro';
+import ConceptPlate from '../ConceptPlate.astro';
+import Odometer from '../Odometer.astro';
+import { configure, packages, pricing, getPackage, wa, type ConfigSelection } from '../../data/site';
+
+const d = configure.defaults;
+const p0 = getPackage(d.packageId);
+const rows0 = configure.sheet.rows(d);
+const row = (key: string) => rows0.find((r) => r.key === key)!;
+
+/* ---- the text the script needs, derived from site.ts (never retyped) ---- */
+const TU = '{u}';
+const TB = '{b}';
+const msgLines = (patch: Partial<ConfigSelection>) => configure.message({ ...d, ...patch }).split('\n');
+const sheetVal = (patch: Partial<ConfigSelection>, key: string) =>
+  configure.sheet.rows({ ...d, ...patch }).find((r) => r.key === key)!;
+const base = msgLines({});
+
+const data = {
+  wa: wa(''),
+  pk: Object.fromEntries(
+    packages.map((p) => [
+      p.id,
+      {
+        name: p.name,
+        price: p.price.display,
+        days: p.daysLabel,
+        r: Math.min(1, p.dayRange[1] / pricing.dayScaleMax),
+        line: msgLines({ packageId: p.id })[1],
+        sticky: configure.sticky.summary(p.id),
+      },
+    ])
+  ),
+  msg: {
+    head: base[0],
+    tail: base[base.length - 1],
+    startNew: msgLines({ start: 'new' })[2],
+    startRe: msgLines({ start: 'rebuild', currentUrl: '' })[2],
+    startReUrl: msgLines({ start: 'rebuild', currentUrl: TU })[2],
+    care: msgLines({ care: true })[3],
+    none: msgLines({ care: false })[3],
+    biz: msgLines({ business: TB })[4],
+    noBiz: msgLines({ business: '' })[4],
+  },
+  sheet: {
+    startNew: sheetVal({ start: 'new' }, 'start').value,
+    startRe: sheetVal({ start: 'rebuild', currentUrl: '' }, 'start').value,
+    startReUrl: sheetVal({ start: 'rebuild', currentUrl: TU }, 'start').value,
+    care: sheetVal({ care: true }, 'options').value,
+    none: sheetVal({ care: false }, 'options').value,
+  },
+  listing: {
+    url0: configure.listing.defaultUrl,
+    title: configure.listing.title(TB),
+    name0: configure.listing.defaultName,
+  },
+  send: configure.sticky.send,
+};
+
+const S = configure.steps;
+const split = (s: string) => {
+  const i = s.lastIndexOf(' · ');
+  return i > 0 ? [s.slice(0, i), s.slice(i + 3)] : [s, ''];
+};
+const [careName, careNote] = split(S.options.care);
+const [gName, gNote] = split(S.options.googleIncluded);
+const fan = configure.preview.fanPages;
+const noJsHref = wa(configure.noJsText);
+const delivery0 = Math.min(1, p0.dayRange[1] / pricing.dayScaleMax);
+const priceNote = sheetVal({ care: true }, 'price').note;
+---
+
+<section id="configure" class="s-void section cfg" data-nav-theme="dark" aria-labelledby="configure-title" data-configure>
+  <div class="cfg-light" aria-hidden="true"></div>
+
+  <div class="wrap cfg-wrap">
+    <header class="head g">
+      <SectionLabel n={configure.label.index ?? undefined} name={configure.label.name} class="head-label" />
+      <SplitText as="h2" id="configure-title" class="d2 head-h" text={configure.h2} />
+      <p class="lead head-lead" data-reveal style="--d:140ms">{configure.lead}</p>
+    </header>
+
+    <div class="cfg-body g">
+      <!-- live preview: plate + listing (sticky on desktop) -->
+      <div class="pv">
+        <div class="pv-in">
+          <div class="pv-stage" data-reveal style="--d:80ms">
+            <div class="pv-plate">
+              <div class="pv-ghost" aria-hidden="true">
+                <i class="pv-ghost-bar"></i>
+                <i class="pv-ghost-rule"></i>
+                <span class="pv-ghost-tag label">{configure.preview.ghostLabel}</span>
+              </div>
+              <ol class="pv-sheets" aria-hidden="true">
+                {
+                  fan.slice(1).map((name, i) => (
+                    <li class="pv-sheet" style={`--i:${i + 1}`}>
+                      <span class="pv-sheet-bar label">{name}</span>
+                    </li>
+                  ))
+                }
+              </ol>
+              <ConceptPlate mode="mini" />
+              <span class="pv-home label" aria-hidden="true">{fan[0]}</span>
+            </div>
+          </div>
+          <p class="pv-cap label" data-reveal style="--d:160ms">
+            <span class="stripe" aria-hidden="true"></span>
+            <span>{configure.preview.siteLabel}</span>
+          </p>
+
+          <div class="lst-wrap" data-reveal style="--d:220ms">
+            <p class="pv-cap pv-cap--lst label">{configure.preview.listingLabel}</p>
+            <div class="lst">
+              <p class="lst-url" data-cfg-url>{configure.listing.defaultUrl}</p>
+              <p class="lst-title" data-cfg-title>{configure.listing.title('')}</p>
+              <div class="lst-x lst-x--on">
+                <div><p class="lst-text">{configure.listing.text}</p></div>
+              </div>
+              <div class="lst-x lst-x--off">
+                <div><p class="lst-text">{configure.listing.landingText}</p></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- the controls, then the build sheet -->
+      <div class="side">
+        <form class="ctl" data-config action="#configure" method="get" aria-describedby="cfg-note">
+          <fieldset class="step" data-reveal style="--i:0">
+            <legend class="step-lg label"><span class="step-n">{S.package.index}</span>{S.package.legend}</legend>
+            <div class="opts">
+              {
+                S.package.options.map((o) => {
+                  const [name, price] = split(o.label);
+                  return (
+                    <label class="opt">
+                      <input class="ind" type="radio" name="package" value={o.id} checked={o.id === d.packageId} />
+                      <span class="opt-t">{name}</span>
+                      {price && (
+                        <span class="opt-v">
+                          <span class="visually-hidden"> · </span>
+                          {price}
+                        </span>
+                      )}
+                    </label>
+                  );
+                })
+              }
+            </div>
+          </fieldset>
+
+          <fieldset class="step" data-reveal style="--i:1">
+            <legend class="step-lg label"><span class="step-n">{S.start.index}</span>{S.start.legend}</legend>
+            <div class="opts">
+              {
+                S.start.options.map((o) => (
+                  <label class="opt">
+                    <input class="ind" type="radio" name="start" value={o.id} checked={o.id === d.start} />
+                    <span class="opt-t">{o.label}</span>
+                  </label>
+                ))
+              }
+            </div>
+            <div class="url-x">
+              <div class="url-in">
+                <label class="fld">
+                  <span class="fld-l">{S.start.currentUrl.label}</span>
+                  <input
+                    class="inp"
+                    type="text"
+                    name="url"
+                    inputmode="url"
+                    autocomplete="url"
+                    autocapitalize="off"
+                    spellcheck="false"
+                    maxlength="80"
+                    placeholder={S.start.currentUrl.placeholder}
+                  />
+                </label>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset class="step" data-reveal style="--i:2">
+            <legend class="step-lg label"><span class="step-n">{S.options.index}</span>{S.options.legend}</legend>
+            <div class="opts">
+              <div class="opt opt-fixed">
+                <span class="ind ind-fixed" aria-hidden="true"></span>
+                <span class="opt-t">{gName}</span>
+                {
+                  gNote && (
+                    <span class="opt-v opt-v--on">
+                      <span class="visually-hidden"> · </span>
+                      {gNote}
+                    </span>
+                  )
+                }
+              </div>
+              <label class="opt">
+                <input class="ind" type="checkbox" name="care" value="1" checked={d.care} />
+                <span class="opt-t">{careName}</span>
+                {
+                  careNote && (
+                    <span class="opt-v opt-v--note">
+                      <span class="visually-hidden"> · </span>
+                      {careNote}
+                    </span>
+                  )
+                }
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset class="step" data-reveal style="--i:3">
+            <legend class="step-lg label"><span class="step-n">{S.name.index}</span>{S.name.legend}</legend>
+            <label class="fld">
+              <span class="fld-l">{S.name.business.label}</span>
+              <input
+                class="inp"
+                type="text"
+                name="business"
+                autocomplete="organization"
+                maxlength={S.name.business.maxLength}
+                placeholder={S.name.business.placeholder}
+              />
+            </label>
+          </fieldset>
+        </form>
+
+        <aside class="sheet" aria-labelledby="cfg-sheet-t" data-reveal>
+          <div class="sheet-in">
+            <p class="sheet-t label" id="cfg-sheet-t">
+              <span class="stripe" aria-hidden="true"></span>
+              <span>{configure.sheet.title}</span>
+            </p>
+            <dl class="rows">
+              <div class="row">
+                <dt>{row('package').label}</dt>
+                <dd data-sheet="package">{row('package').value}</dd>
+              </div>
+              <div class="row">
+                <dt>{row('start').label}</dt>
+                <dd data-sheet="start">{row('start').value}</dd>
+              </div>
+              <div class="row">
+                <dt>{row('options').label}</dt>
+                <dd data-sheet="options">{row('options').value}</dd>
+              </div>
+              <div class="row row-price">
+                <dt>{row('price').label}</dt>
+                <dd>
+                  <span class="price"><Odometer value={p0.price.display} delay={200} /></span>
+                  {priceNote && (
+                    <span class="p-note" data-sheet="note" hidden={!d.care}>
+                      {priceNote}
+                    </span>
+                  )}
+                </dd>
+              </div>
+              <div class="row row-del">
+                <dt>{row('delivery').label}</dt>
+                <dd>
+                  <span data-sheet="delivery">{row('delivery').value}</span>
+                  <span class="dl" data-sheet="dl" style={`--r:${delivery0.toFixed(4)}`} aria-hidden="true">
+                    <i class="dl-track"></i>
+                    <i class="dl-bar"></i>
+                    <i class="dl-t0"></i>
+                    <i class="dl-t1w"><i class="dl-t1"></i></i>
+                  </span>
+                </dd>
+              </div>
+              <div class="row">
+                <dt>{row('payment').label}</dt>
+                <dd>{row('payment').value}</dd>
+              </div>
+            </dl>
+
+            <a
+              class="btn cfg-cta"
+              href={noJsHref}
+              target="_blank"
+              rel="noopener"
+              data-wa-intent="configure"
+              data-magnetic=".2"
+              data-cfg-cta
+            >
+              <WaGlyph size={18} />
+              <span>{configure.cta}</span>
+              <Arrow />
+            </a>
+            <p class="cfg-note" id="cfg-note">{configure.note}</p>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </div>
+
+  <script is:inline type="application/json" data-config-data set:html={JSON.stringify(data)} />
+</section>
+
+<script>
+  /* configure.ts (~3 KB) loads only when the section nears the viewport, on
+     the first interaction, or at once when the URL asks for a model. */
+  const root = document.getElementById('configure');
+  if (root && root.querySelector('[data-config]')) {
+    let started = false;
+    let io: IntersectionObserver | null = null;
+    const start = () => {
+      if (started) return;
+      started = true;
+      io?.disconnect();
+      import('../../scripts/configure')
+        .then((m) => m.initConfigure(root))
+        .catch(() => {
+          /* the no-JS link stays in place */
+        });
+    };
+    if ('IntersectionObserver' in window) {
+      io = new IntersectionObserver((es) => es.some((e) => e.isIntersecting) && start(), { rootMargin: '900px 0px' });
+      io.observe(root);
+    } else start();
+    root.addEventListener('focusin', start, { once: true });
+    root.addEventListener('pointerdown', start, { once: true });
+    const wants = () => /^#configure\?/.test(location.hash);
+    if (wants()) start();
+    window.addEventListener('hashchange', () => wants() && start());
+  }
+</script>
+
+<style>
+  /* ------------------------------------------------------------ section */
+  .cfg {
+    overflow: clip;
+  }
+
+  /* one soft nebula radial behind the preview (violet, ≤10%) */
+  .cfg-light {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background:
+      radial-gradient(46% 36% at 26% 58%, rgb(98 54 232 / 0.1), rgb(98 54 232 / 0) 70%),
+      radial-gradient(40% 22% at 78% 8%, rgb(243 240 250 / 0.04), rgb(243 240 250 / 0) 70%);
+    pointer-events: none;
+  }
+
+  .cfg-wrap {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* --------------------------------------------------------------- head */
+  .head {
+    row-gap: 24px;
+  }
+
+  .head-h {
+    max-width: 14ch;
+  }
+
+  .head-lead {
+    color: var(--fg);
+    max-width: 44ch;
+  }
+
+  @media (min-width: 768px) {
+    .head {
+      row-gap: 32px;
+    }
+
+    .head-lead {
+      grid-column: 1 / span 6;
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .head-label {
+      margin-bottom: 8px;
+    }
+
+    .head-h {
+      grid-column: 1 / span 7;
+    }
+
+    .head-lead {
+      grid-column: 9 / span 4;
+      align-self: end;
+    }
+  }
+
+  /* --------------------------------------------------------------- body */
+  .cfg-body {
+    /* fan headroom (4 page plates), fan drift, ghost travel */
+    --fan-y: 16px;
+    --fan-x: 6px;
+    --ghost-x: 24px;
+    --fan-head: calc(4 * var(--fan-y));
+    margin-top: 16px;
+    row-gap: 56px;
+    align-items: start;
+  }
+
+  @media (min-width: 768px) {
+    .cfg-body {
+      --fan-y: 20px;
+      --fan-x: 10px;
+      --ghost-x: 44px;
+      margin-top: 40px;
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .cfg-body {
+      --fan-x: 12px;
+      --ghost-x: 56px;
+      margin-top: 56px;
+      align-items: stretch;
+    }
+
+    .pv {
+      grid-column: 1 / span 7;
+    }
+
+    .side {
+      grid-column: 8 / span 5;
+      padding-top: var(--fan-head);
+    }
+
+    .pv-in {
+      position: sticky;
+      top: 24px;
+    }
+  }
+
+  @media (min-width: 768px) and (max-width: 1099px) {
+    .pv-in {
+      max-width: 680px;
+    }
+  }
+
+  /* ------------------------------------------------------------ preview */
+  .pv-stage {
+    padding: var(--fan-head) calc(4 * var(--fan-x)) 0 var(--ghost-x);
+  }
+
+  .pv-plate {
+    position: relative;
+    container-type: inline-size;
+  }
+
+  .pv-plate > :global(.cp) {
+    position: relative;
+    z-index: 5;
+  }
+
+  /* Complete: the plate fans into 5 page plates. The four behind rise as
+     tabs, each one a step up and a little right, 640ms mech, 50ms apart. */
+  .pv-sheets {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .pv-sheet {
+    position: absolute;
+    inset: 0;
+    z-index: calc(5 - var(--i));
+    background-color: var(--plate);
+    border: 1px solid rgb(185 162 255 / 0.3);
+    visibility: hidden;
+    transform: translate3d(0, 0, 0);
+    transition:
+      transform 640ms var(--ease-mech) calc((4 - var(--i)) * 50ms),
+      visibility 0s linear calc(640ms + 200ms);
+  }
+
+  .pv-sheet-bar {
+    display: flex;
+    align-items: center;
+    height: var(--fan-y);
+    padding-inline: 10px;
+    background-color: var(--plate);
+    color: var(--dim);
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  .cfg:has(input[name='package'][value='complete']:checked) .pv-sheet {
+    visibility: visible;
+    transform: translate3d(calc(var(--i) * var(--fan-x)), calc(var(--i) * var(--fan-y) * -1), 0);
+    transition:
+      transform 640ms var(--ease-mech) calc((var(--i) - 1) * 50ms),
+      visibility 0s linear 0s;
+  }
+
+  /* the front plate names itself "Home" when the others fan out */
+  .pv-home {
+    position: absolute;
+    top: 1px;
+    right: 1px;
+    z-index: 7;
+    display: flex;
+    align-items: center;
+    height: calc(max(18px, calc(28 * 100cqi / 760)) - 2px);
+    padding-inline: 10px;
+    background-color: var(--plate);
+    color: var(--dim);
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    line-height: 1;
+    visibility: hidden;
+    opacity: 0;
+    transition:
+      opacity 320ms linear,
+      visibility 0s linear 320ms;
+  }
+
+  .cfg:has(input[name='package'][value='complete']:checked) .pv-home {
+    visibility: visible;
+    opacity: 1;
+    transition:
+      opacity 420ms linear 380ms,
+      visibility 0s linear 0s;
+  }
+
+  /* Rebuild: a hairline-only "Before" ghost slides out to the left */
+  .pv-ghost {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    border: 1px solid var(--line-dark-strong);
+    visibility: hidden;
+    transform: translate3d(0, 0, 0) scale(1);
+    transform-origin: left center;
+    transition:
+      transform 500ms var(--ease-mech),
+      visibility 0s linear 520ms;
+  }
+
+  .pv-ghost-bar,
+  .pv-ghost-rule {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background-color: var(--line-dark);
+  }
+
+  .pv-ghost-bar {
+    top: max(18px, calc(28 * 100cqi / 760));
+  }
+
+  .pv-ghost-rule {
+    top: 30%;
+  }
+
+  .pv-ghost-tag {
+    position: absolute;
+    left: calc(var(--ghost-x) / 2 - 7px);
+    bottom: 14px;
+    color: var(--haze);
+    background-color: var(--void);
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    line-height: 14px;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    white-space: nowrap;
+  }
+
+  .cfg:has(input[name='start'][value='rebuild']:checked) .pv-ghost {
+    visibility: visible;
+    transform: translate3d(calc(var(--ghost-x) * -1), 0, 0) scale(0.92);
+    transition:
+      transform 500ms var(--ease-mech),
+      visibility 0s linear 0s;
+  }
+
+  .pv-cap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 16px;
+    margin-left: var(--ghost-x);
+    color: var(--fg-3);
+  }
+
+  /* ------------------------------------------------------------ listing */
+  .lst-wrap {
+    margin-top: 40px;
+    margin-left: var(--ghost-x);
+    margin-right: calc(4 * var(--fan-x));
+  }
+
+  .pv-cap--lst {
+    margin: 0 0 12px;
+    text-wrap: balance;
+  }
+
+  .lst {
+    display: grid;
+    padding: 20px 20px 22px;
+    background-color: var(--night);
+    clip-path: var(--chamfer);
+  }
+
+  @media (min-width: 768px) {
+    .lst {
+      padding: 24px 28px 26px;
+    }
+  }
+
+  .lst-url {
+    color: var(--haze);
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+    transition: color var(--t-micro) linear;
+  }
+
+  .lst-title {
+    margin-top: 6px;
+    color: var(--starlight);
+    font-stretch: var(--wd-display);
+    font-size: clamp(1.125rem, 1rem + 0.45vw, 1.375rem);
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    overflow-wrap: anywhere;
+    transition: color var(--t-micro) linear;
+  }
+
+  .lst-x {
+    display: grid;
+    grid-template-rows: 1fr;
+    transition:
+      grid-template-rows 420ms var(--ease-mech),
+      visibility 0s linear 0s;
+  }
+
+  .lst-x > div {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .lst-text {
+    padding-top: 10px;
+    max-width: 54ch;
+    color: var(--haze);
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    text-wrap: pretty;
+  }
+
+  .lst-x--off {
+    grid-template-rows: 0fr;
+    visibility: hidden;
+    transition:
+      grid-template-rows 420ms var(--ease-mech),
+      visibility 0s linear 420ms;
+  }
+
+  /* Landing Page selected: the card turns dim and says how to get it */
+  .cfg:has(input[name='package'][value='landing']:checked) .lst-url,
+  .cfg:has(input[name='package'][value='landing']:checked) .lst-title,
+  .cfg:has(input[name='package'][value='landing']:checked) .lst-x--off .lst-text {
+    color: var(--dim);
+  }
+
+  .cfg:has(input[name='package'][value='landing']:checked) .lst-x--on {
+    grid-template-rows: 0fr;
+    visibility: hidden;
+    transition:
+      grid-template-rows 420ms var(--ease-mech),
+      visibility 0s linear 420ms;
+  }
+
+  .cfg:has(input[name='package'][value='landing']:checked) .lst-x--off {
+    grid-template-rows: 1fr;
+    visibility: visible;
+    transition:
+      grid-template-rows 420ms var(--ease-mech),
+      visibility 0s linear 0s;
+  }
+
+  /* ----------------------------------------------------------- controls */
+  .side {
+    display: grid;
+    row-gap: 56px;
+    min-width: 0;
+  }
+
+  .ctl {
+    display: grid;
+    row-gap: 40px;
+  }
+
+  .step {
+    min-width: 0;
+    margin: 0;
+    padding: 20px 0 0;
+    border: 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .step-lg {
+    float: left;
+    width: 100%;
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    margin: 0 0 16px;
+    padding: 0;
+    color: var(--haze);
+  }
+
+  .step-lg + * {
+    clear: both;
+  }
+
+  .step-n {
+    color: var(--lilac);
+  }
+
+  .opts {
+    display: grid;
+    border-top: 1px solid var(--line);
+  }
+
+  .opt {
+    position: relative;
+    display: grid;
+    grid-template-columns: 12px minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 16px;
+    min-height: 56px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--line);
+    background-color: var(--void);
+    color: var(--haze);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition:
+      background-color var(--t-micro) linear,
+      color var(--t-micro) linear;
+  }
+
+  .opt-t {
+    min-width: 0;
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1.3;
+    transition: transform var(--t-ui) var(--ease-expo);
+  }
+
+  .opt-v {
+    font-stretch: var(--wd-display);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    font-variant-numeric: lining-nums proportional-nums;
+    white-space: nowrap;
+  }
+
+  .opt-v--note {
+    font-stretch: 100%;
+    font-size: 0.8125rem;
+    font-weight: 450;
+    white-space: normal;
+    text-align: right;
+    max-width: 22ch;
+  }
+
+  .opt-v--on {
+    color: var(--lilac);
+  }
+
+  .opt:has(.ind:checked) {
+    background-color: var(--steel);
+    color: var(--starlight);
+  }
+
+  .opt:has(.ind:focus-visible) {
+    z-index: 1;
+    outline: 2px solid var(--starlight);
+    outline-offset: 3px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .opt:hover {
+      color: var(--starlight);
+    }
+
+    .opt:hover .opt-t {
+      transform: translateX(4px);
+    }
+  }
+
+  .opt:active {
+    background-color: var(--steel);
+  }
+
+  /* the 12×12 square indicator; fills lilac (violet as a mark on dark) */
+  .ind {
+    position: relative;
+    display: block;
+    width: 12px;
+    height: 12px;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--line-dark-strong);
+    border-radius: 0;
+    background-color: transparent;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    transition: border-color var(--t-micro) linear;
+  }
+
+  .ind:focus-visible {
+    outline: none;
+  }
+
+  .ind::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    background-color: var(--lilac);
+    transform: scale(0);
+    transition: transform var(--t-micro) var(--ease-expo);
+  }
+
+  .ind:checked {
+    border-color: var(--lilac);
+  }
+
+  .ind:checked::before {
+    transform: scale(1);
+  }
+
+  /* "Google setup · included" — fixed, not a control */
+  .opt-fixed {
+    cursor: default;
+    color: var(--haze);
+    background-color: var(--void);
+  }
+
+  .ind-fixed {
+    border-color: var(--lilac);
+    cursor: default;
+  }
+
+  .ind-fixed::before {
+    inset: 2px;
+    transform: scale(1);
+  }
+
+  .cfg:has(input[name='package'][value='landing']:checked) .opt-fixed {
+    display: none;
+  }
+
+  /* fields */
+  .fld {
+    display: grid;
+    row-gap: 10px;
+  }
+
+  .fld-l {
+    color: var(--haze);
+    font-size: 0.875rem;
+    line-height: 1.4;
+  }
+
+  .inp {
+    width: 100%;
+    height: 52px;
+    padding: 0 16px;
+    border: 1px solid var(--line-dark);
+    border-radius: 0;
+    background-color: var(--plate);
+    color: var(--starlight);
+    font-size: 1rem;
+    line-height: 1.2;
+    transition: border-color var(--t-micro) linear;
+  }
+
+  .inp::placeholder {
+    color: var(--dim);
+    opacity: 1;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .inp:hover {
+      border-color: var(--line-dark-strong);
+    }
+  }
+
+  .inp:focus {
+    border-color: var(--lilac);
+  }
+
+  .inp:focus-visible {
+    outline: 2px solid var(--starlight);
+    outline-offset: 3px;
+  }
+
+  /* Rebuild reveals the current-site field (grid rows, 420ms) */
+  .url-x {
+    display: grid;
+    grid-template-rows: 0fr;
+    visibility: hidden;
+    transition:
+      grid-template-rows 420ms var(--ease-mech),
+      visibility 0s linear 420ms;
+  }
+
+  .url-in {
+    min-height: 0;
+    overflow: hidden;
+    /* room for the focus ring inside the clip */
+    margin-inline: -6px;
+    padding: 0 6px;
+  }
+
+  .url-in > .fld {
+    padding: 20px 0 6px;
+  }
+
+  .cfg:has(input[name='start'][value='rebuild']:checked) .url-x {
+    grid-template-rows: 1fr;
+    visibility: visible;
+    transition:
+      grid-template-rows 420ms var(--ease-mech),
+      visibility 0s linear 0s;
+  }
+
+  /* -------------------------------------------------------- build sheet */
+  .sheet-in {
+    padding: 28px 20px 24px;
+    background-color: var(--plate);
+    clip-path: var(--chamfer);
+  }
+
+  @media (min-width: 768px) {
+    .sheet-in {
+      padding: 36px 32px 32px;
+    }
+  }
+
+  .sheet-t {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    color: var(--haze);
+  }
+
+  .rows {
+    display: grid;
+    margin: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: minmax(6.5rem, 34%) minmax(0, 1fr);
+    column-gap: 16px;
+    align-items: baseline;
+    padding: 14px 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .row dt {
+    color: var(--haze);
+    font-size: 0.875rem;
+    line-height: 1.4;
+  }
+
+  .row dd {
+    margin: 0;
+    min-width: 0;
+    color: var(--starlight);
+    font-stretch: var(--wd-display);
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
+  .row-price {
+    align-items: center;
+    padding-block: 18px;
+  }
+
+  .price {
+    display: block;
+    font-size: clamp(2.25rem, 1.7rem + 1.4vw, 3.25rem);
+    font-weight: 520;
+    letter-spacing: -0.015em;
+    line-height: 1;
+  }
+
+  .p-note {
+    display: block;
+    margin-top: 10px;
+    color: var(--haze);
+    font-stretch: 100%;
+    font-size: 0.8125rem;
+    font-weight: 450;
+    line-height: 1.4;
+  }
+
+  .p-note[hidden] {
+    display: none;
+  }
+
+  /* delivery: a dimension line proportional to the lead time (full = 3
+     weeks). Width changes by transform only: the bar scales, the far tick
+     travels. 600ms mech. */
+  .dl {
+    position: relative;
+    display: block;
+    height: 9px;
+    margin-top: 12px;
+    color: var(--lilac);
+  }
+
+  .dl-track,
+  .dl-bar,
+  .dl-t0,
+  .dl-t1w,
+  .dl-t1 {
+    position: absolute;
+    display: block;
+  }
+
+  .dl-track {
+    left: 0;
+    right: 0;
+    top: 4px;
+    height: 1px;
+    background-color: var(--line-dark);
+  }
+
+  .dl-bar {
+    left: 0;
+    right: 0;
+    top: 4px;
+    height: 1px;
+    background-color: currentColor;
+    transform: scaleX(var(--r));
+    transform-origin: left center;
+    transition: transform 600ms var(--ease-mech);
+  }
+
+  .dl-t0,
+  .dl-t1 {
+    top: 0;
+    width: 1px;
+    height: 9px;
+    background-color: currentColor;
+  }
+
+  .dl-t0 {
+    left: 0;
+  }
+
+  .dl-t1w {
+    inset: 0;
+    transform: translate3d(calc(var(--r) * 100%), 0, 0);
+    transition: transform 600ms var(--ease-mech);
+  }
+
+  .dl-t1 {
+    left: -1px;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .sheet:not(.is-in) .dl-bar {
+    transform: scaleX(0);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .sheet:not(.is-in) .dl-t1w {
+    transform: translate3d(0, 0, 0);
+  }
+
+  .sheet.is-in .dl-bar,
+  .sheet.is-in .dl-t1w {
+    transition-delay: 0ms;
+  }
+
+  /* the CTA: full width, 56px, violet */
+  .cfg-cta {
+    display: flex;
+    width: 100%;
+    margin-top: 28px;
+    justify-content: flex-start;
+    gap: 14px;
+    padding: 0 22px;
+  }
+
+  .cfg-cta > span {
+    min-width: 0;
+    padding-block: 12px;
+    white-space: normal;
+    line-height: 1.25;
+  }
+
+  @media (max-width: 767px) {
+    .cfg-cta {
+      gap: 12px;
+      padding: 0 16px;
+      letter-spacing: 0.04em;
+    }
+  }
+
+  .cfg-cta :global(.arrow) {
+    margin-left: auto;
+  }
+
+  .cfg-note {
+    margin-top: 14px;
+    max-width: 46ch;
+    color: var(--dim);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    text-wrap: pretty;
+  }
+
+  /* ---------------------------------------------------------- motion off */
+  :global(html.motion-reduced) .pv-sheet,
+  :global(html.motion-reduced) .pv-ghost,
+  :global(html.motion-reduced) .pv-home,
+  :global(html.motion-reduced) .lst-x,
+  :global(html.motion-reduced) .url-x,
+  :global(html.motion-reduced) .dl-bar,
+  :global(html.motion-reduced) .dl-t1w,
+  :global(html.motion-reduced) .ind::before {
+    transition: none !important;
+  }
+</style>

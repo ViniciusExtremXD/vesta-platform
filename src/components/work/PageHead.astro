@@ -1,0 +1,174 @@
+---
+/**
+ * Inner-page head (SPEC §7 "Shared"): void surface, label row on a full-width
+ * hairline (the hero's meta row, quieter), H1 at D2+ with a word mask, lead
+ * in haze. Load choreography is CSS-only (never waits on JS): label at 0,
+ * hairline draws from 60ms, H1 words from 80ms, lead at 400ms, aside at 520ms.
+ *
+ *   <PageHead label="Work" h1="No borrowed logos." lead="…" layout="split" />
+ *   <PageHead label="Concept 01" h1="…" lead="…"><div>aside</div></PageHead>
+ *
+ * layout
+ *   "stack"  (default) H1 in columns 1–8, lead under it in 1–6, the slotted
+ *            aside in 9–12, bottom-aligned with the lead.
+ *   "split"  H1 in 1–8, lead in 9–12 bottom-aligned with the H1's last line.
+ * The "meta" slot sits at the right end of the label row (desktop only).
+ * Owned by the pagesB unit (work, concept, case, industries pages).
+ */
+import SplitText from '../ui/SplitText.astro';
+
+export interface Props {
+  label: string;
+  h1: string;
+  lead?: string;
+  layout?: 'stack' | 'split';
+  id?: string;
+  class?: string;
+}
+
+const { label, h1, lead, layout = 'stack', id, class: cls = '' } = Astro.props;
+const hasAside = Astro.slots.has('default');
+const hasMeta = Astro.slots.has('meta');
+---
+
+<section id={id} class:list={['s-void ph', `ph--${layout}`, hasAside && 'ph--aside', cls]} data-nav-theme="dark">
+  <div class="wrap g ph-grid">
+    <div class="ph-row">
+      <p class="sec-label label ph-label" data-load>
+        <span class="stripe" aria-hidden="true"></span>
+        <span>{label}</span>
+      </p>
+      {
+        hasMeta && (
+          <p class="label ph-meta" data-load style="--d:120ms">
+            <slot name="meta" />
+          </p>
+        )
+      }
+      <span class="ph-rule" data-load="draw" style="--d:60ms" aria-hidden="true"></span>
+    </div>
+
+    <SplitText as="h1" load delay={80} class="ph-h1" text={h1} />
+
+    {
+      lead && (
+        <p class="lead ph-lead" data-load style="--d:400ms">
+          {lead}
+        </p>
+      )
+    }
+
+    {
+      hasAside && (
+        <div class="ph-aside" data-load style="--d:520ms">
+          <slot />
+        </div>
+      )
+    }
+  </div>
+</section>
+
+<style>
+  .ph {
+    position: relative;
+    padding-block: calc(var(--nav-h) + clamp(2rem, 1rem + 3vw, 3.5rem)) clamp(4.5rem, 2.5rem + 6vw, 8.5rem);
+    /* one soft nebula light, top right (≤10% alpha — SPEC_COSMOS §2) */
+    background-image: radial-gradient(52% 70% at 88% 0%, rgb(98 54 232 / 0.09), transparent 72%);
+    overflow: clip;
+  }
+
+  .ph-grid {
+    row-gap: 0;
+    align-items: end;
+  }
+
+  /* ------------------------------------------------------- label row */
+
+  .ph-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding-bottom: 18px;
+  }
+
+  .ph-meta {
+    display: none;
+    color: var(--dim);
+    letter-spacing: 0.16em;
+  }
+
+  .ph-rule {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background-color: var(--line-dark);
+  }
+
+  /* ------------------------------------------------------------- H1 */
+
+  .ph-h1 {
+    margin-top: clamp(3rem, 1.6rem + 5vw, 7rem);
+    font-size: clamp(2.5rem, 1.1rem + 5vw, 5.5rem);
+    font-weight: 640;
+    line-height: 0.98;
+    letter-spacing: -0.03em;
+    max-width: 14ch;
+    color: var(--starlight);
+  }
+
+  .ph-lead {
+    margin-top: 28px;
+    color: var(--haze);
+  }
+
+  .ph-aside {
+    margin-top: 48px;
+  }
+
+  @media (min-width: 768px) {
+    .ph-meta {
+      display: block;
+    }
+
+    .ph-lead {
+      grid-column: 1 / span 6;
+    }
+
+    .ph-aside {
+      grid-column: 1 / span 6;
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .ph-h1 {
+      grid-column: 1 / span 8;
+    }
+
+    .ph--split .ph-h1 {
+      grid-row: 2;
+    }
+
+    .ph--split .ph-lead {
+      grid-column: 9 / -1;
+      grid-row: 2;
+      margin-top: 0;
+      /* sit on the H1's last baseline, not its descender */
+      padding-bottom: 0.35em;
+    }
+
+    .ph--stack .ph-lead {
+      grid-column: 1 / span 6;
+    }
+
+    .ph--aside .ph-aside {
+      grid-column: 9 / -1;
+      grid-row: 2 / span 2;
+      align-self: end;
+      margin-top: 0;
+    }
+  }
+</style>

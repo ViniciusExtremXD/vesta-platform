@@ -1,0 +1,1449 @@
+---
+/**
+ * #pricing (§5.7 + SPEC_COSMOS), white paper. A price list, not a card grid:
+ * three packages that differ in surface — plain · a 2px violet bar · a
+ * faceted --void plate cut out of the night sky (faint star field, one
+ * hairline orbit) — rows aligned across columns with subgrid on desktop,
+ * odometer prices, lead times as proportional dimension lines, then the
+ * compare table, Care, Founding clients and the paperwork cells.
+ * Every word comes from src/data/site.ts.
+ */
+import SectionLabel from '../ui/SectionLabel.astro';
+import SplitText from '../ui/SplitText.astro';
+import Arrow from '../ui/Arrow.astro';
+import WaGlyph from '../ui/WaGlyph.astro';
+import Odometer from '../Odometer.astro';
+import DimensionLine from '../DimensionLine.astro';
+import Cosmos from '../Cosmos.astro';
+import { packages, pricing, compare, care, founding, paperwork, terms, wa, confirmedOnly } from '../../data/site';
+
+/* CTA labels carry a trailing "→" in site.ts; the arrow is drawn as a hairline SVG so it can nudge on hover. */
+const bare = (s: string) => s.replace(/\s*→\s*$/, '');
+
+const h2Lines = pricing.h2.split(/(?<=\.)\s+/).filter(Boolean);
+
+const COL_STEP = 120; /* ms between columns (§3.1 staggers) */
+const models = packages.map((p, i) => ({
+  ...p,
+  includesOn: confirmedOnly(p.includes),
+  ratio: p.dayRange[1] / pricing.dayScaleMax,
+  t: i * COL_STEP,
+}));
+
+/* subgrid rows: name, tagline, price, lead time, best for, includes × n, CTA */
+const incRows = Math.max(...models.map((m) => m.includesOn.length));
+const rowCount = 6 + incRows;
+
+const ctaClass: Record<string, string> = {
+  landing: 'btn btn-line',
+  google: 'btn',
+  complete: 'btn btn-line',
+};
+
+const compareRows = confirmedOnly(compare.rows);
+const slots = founding.slots;
+---
+
+<section id="pricing" class="s-paper section pricing" data-nav-theme="light" aria-labelledby="pricing-title">
+  <div class="wrap">
+    <!-- head -->
+    <header class="head g">
+      <SectionLabel n={pricing.label.index ?? undefined} name={pricing.label.name} class="head-label" />
+      <SplitText as="h2" id="pricing-title" class="d2 head-h" lines={h2Lines} />
+      <div class="head-copy">
+        <p class="lead head-lead" data-reveal style="--d:120ms">{pricing.lead}</p>
+        <p class="head-diff" data-reveal style="--d:220ms">{pricing.differentiator}</p>
+      </div>
+    </header>
+
+    <!-- the three models -->
+    <div class="models" style={`--rows:${rowCount};--inc:${incRows}`}>
+      {
+        models.map((m) => (
+          <article
+            class:list={['model', `m-${m.id}`, { 's-void': m.id === 'complete' }]}
+            aria-labelledby={`pk-${m.id}`}
+            data-inview={m.id === 'complete' ? '' : undefined}
+            data-model={m.id}
+          >
+            {m.id === 'complete' && (
+              <div class="m-sky" aria-hidden="true">
+                <Cosmos variant="stars" />
+                {/* one inclined circular orbit seen obliquely: star at the
+                    focus-centre, a planet on the near arc. Draws once. */}
+                <svg class="m-orbit" viewBox="0 0 640 640" fill="none" focusable="false">
+                  <g transform="rotate(-24 320 320)">
+                    <ellipse class="orb orb-far" cx="320" cy="320" rx="300" ry="92" data-draw-path />
+                    <ellipse class="orb orb-near" cx="320" cy="320" rx="196" ry="60" data-draw-path />
+                    <circle class="orb-star" cx="320" cy="320" r="2" />
+                    <circle class="orb-planet" cx="171.3" cy="359.1" r="3.5" />
+                  </g>
+                </svg>
+              </div>
+            )}
+            {m.id !== 'complete' && (
+              <span
+                class:list={['m-top', { 'm-bar': m.id === 'google', 'm-rule': m.id !== 'google' }]}
+                data-reveal="draw"
+                style={`--d:${m.t}ms`}
+                aria-hidden="true"
+              />
+            )}
+            {m.recommended && m.recommended.confirmed && (
+              <p class="m-flag label" data-reveal="fade" style={`--d:${m.t + 380}ms`}>
+                {m.recommended.text}
+              </p>
+            )}
+
+            <div class="m-a">
+              <h3 id={`pk-${m.id}`} class="m-name d3" data-reveal style={`--d:${m.t + 60}ms`}>
+                {m.name}
+              </h3>
+              <p class="m-tag" data-reveal style={`--d:${m.t + 120}ms`}>
+                {m.tagline}
+              </p>
+              <div class="m-price">
+                <p class="m-amt n2">
+                  <Odometer value={m.price.display} delay={m.t + 160} />
+                  <span class="m-usd" data-reveal="fade" style={`--d:${m.t + 700}ms`}>
+                    {pricing.labels.currency}
+                  </span>
+                </p>
+                {m.price.sub && (
+                  <p class="m-sub" data-reveal style={`--d:${m.t + 260}ms`}>
+                    {m.price.sub}
+                  </p>
+                )}
+                {m.price.note && m.price.note.confirmed && (
+                  <p class="m-sub" data-reveal style={`--d:${m.t + 300}ms`}>
+                    {m.price.note.text}
+                  </p>
+                )}
+              </div>
+              <div class="m-dim">
+                <DimensionLine label={m.daysLabel} ratio={m.ratio} delay={m.t + 280} />
+              </div>
+            </div>
+
+            <div class="m-b">
+              <div class="m-best" data-reveal style={`--d:${m.t + 200}ms`}>
+                <p class="label m-best-l">{pricing.labels.bestFor}</p>
+                <p class="m-best-t">{m.bestFor}</p>
+              </div>
+              <ul class="m-inc">
+                {m.includesOn.map((it, k) => (
+                  <li data-reveal style={`--d:${m.t + 160 + k * 40}ms`}>
+                    {it.text}
+                  </li>
+                ))}
+              </ul>
+              <div class="m-cta" data-reveal style={`--d:${m.t + 200}ms`}>
+                <a
+                  class={ctaClass[m.id]}
+                  href={wa(m.waText)}
+                  target="_blank"
+                  rel="noopener"
+                  data-wa-intent={`pricing-${m.id}`}
+                >
+                  <WaGlyph size={16} />
+                  <span class="btn-t">{bare(m.cta)}</span>
+                  <Arrow />
+                </a>
+                <a class="tlink m-conf" href={m.configure.href} data-configure={m.id}>
+                  <span>{m.configure.label}</span>
+                  <Arrow />
+                </a>
+              </div>
+            </div>
+          </article>
+        ))
+      }
+    </div>
+
+    <!-- compare table: open on tablet/desktop, a <details> on phones -->
+    <div class="cmp-block">
+      <details class="cmp" open data-cmp>
+        <summary class="cmp-sum" data-reveal>
+          <span class="cmp-sum-t">{compare.summary}</span>
+          <span class="plus" aria-hidden="true"></span>
+        </summary>
+        <div class="cmp-scroll" role="region" aria-labelledby="cmp-cap" tabindex="0" data-cmp-scroll>
+          <table class="cmp-t" data-inview>
+            <caption id="cmp-cap" class="cmp-cap label">{compare.caption}</caption>
+            <colgroup>
+              <col class="cmp-col-l" />
+              <col class="cmp-col-v" />
+              <col class="cmp-col-v" />
+              <col class="cmp-col-v" />
+            </colgroup>
+            <thead>
+              <tr style="--r:0">
+                <th scope="col" class="cmp-corner">
+                  <span class="visually-hidden">{compare.rowHeader}</span>
+                </th>
+                {compare.columns.map((c, i) => (
+                  <th scope="col" class:list={['cmp-h', { 'cmp-h-rec': i === 1 }]}>
+                    <span class="cmp-h-t">{c}</span>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {compareRows.map((row, r) => (
+                <tr style={`--r:${r + 1}`}>
+                  <th scope="row" style="--c:0">
+                    <span class="cmp-l">{row.label}</span>
+                  </th>
+                  {row.values.map((v, c) => (
+                    <td class:list={{ 'cmp-rec': c === 1 }} style={`--c:${c + 1}`}>
+                      {v === true ? (
+                        <Fragment>
+                          <span class="mk mk-y" aria-hidden="true" />
+                          <span class="visually-hidden">{compare.included.label}</span>
+                        </Fragment>
+                      ) : v === false ? (
+                        <Fragment>
+                          <span class="mk mk-n" aria-hidden="true" />
+                          <span class="visually-hidden">{compare.notIncluded.label}</span>
+                        </Fragment>
+                      ) : (
+                        <span class="cv">{v}</span>
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </div>
+
+    <!-- Care and Founding clients: full-width hairline bands -->
+    <div class="bands">
+      <div class="band g">
+        <span class="band-rule" data-reveal="draw" aria-hidden="true"></span>
+        <h3 class="band-t d3" data-reveal>{care.title}</h3>
+        <p class="band-b" data-reveal style="--d:90ms">{care.body}</p>
+        <div class="band-c" data-reveal style="--d:180ms">
+          <a class="tlink" href={wa(care.cta.text)} target="_blank" rel="noopener" data-wa-intent="pricing-care">
+            <WaGlyph size={14} />
+            <span>{bare(care.cta.label)}</span>
+            <Arrow />
+          </a>
+        </div>
+      </div>
+
+      {
+        founding.confirmed && (
+          <div class="band g band-founding">
+            <span class="band-rule" data-reveal="draw" aria-hidden="true" />
+            <h3 class="band-t d3" data-reveal>
+              {founding.title}
+            </h3>
+            <div class="band-b">
+              <p data-reveal style="--d:90ms">
+                {founding.body}
+              </p>
+              <ol class="slots" data-reveal style="--d:180ms">
+                {slots.map((s) => (
+                  <li class:list={['slot', `is-${s.status}`]}>
+                    <span class:list={['node', { 'is-on': s.status === 'taken' }]} aria-hidden="true" />
+                    <span class="slot-n">{String(s.n).padStart(2, '0')}</span>
+                    <span class="slot-s">{founding.statusLabels[s.status]}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+            <div class="band-c" data-reveal style="--d:180ms">
+              <a class="tlink" href={wa(founding.cta.text)} target="_blank" rel="noopener" data-wa-intent="pricing-founding">
+                <WaGlyph size={14} />
+                <span>{bare(founding.cta.label)}</span>
+                <Arrow />
+              </a>
+            </div>
+          </div>
+        )
+      }
+    </div>
+
+    <!-- paperwork -->
+    <div class="pw">
+      <SplitText as="h3" class="d3 pw-h" text={paperwork.title} />
+      <dl class="pw-cells">
+        {
+          paperwork.cells.map((c, i) => (
+            <div class="pw-cell" data-reveal style={`--d:${i * 60}ms`}>
+              <dt class="pw-v">{c.value}</dt>
+              <dd class="pw-c">{c.caption}</dd>
+            </div>
+          ))
+        }
+      </dl>
+      {
+        terms.assurance.confirmed && (
+          <p class="pw-assure" data-reveal style="--d:120ms">
+            <span class="node" aria-hidden="true" />
+            <span>{terms.assurance.text}</span>
+          </p>
+        )
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  /* ------------------------------------------------------------ section */
+  .pricing {
+    /* the plate overhang and the hover plates never push the page sideways */
+    overflow: clip;
+    --oh: 12px; /* Complete plate overhang */
+  }
+
+  @media (min-width: 768px) {
+    .pricing {
+      --oh: 16px;
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .pricing {
+      --oh: 24px;
+    }
+  }
+
+  /* --------------------------------------------------------------- head */
+  .head {
+    row-gap: 24px;
+  }
+
+  .head-h {
+    max-width: 18ch;
+  }
+
+  .head-copy {
+    display: grid;
+    row-gap: 20px;
+  }
+
+  .head-lead {
+    color: var(--fg);
+  }
+
+  .head-diff {
+    max-width: 46ch;
+    color: var(--fg-2);
+    text-wrap: pretty;
+  }
+
+  @media (min-width: 768px) {
+    .head {
+      row-gap: 32px;
+    }
+
+    .head-copy {
+      grid-column: 1 / span 6;
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .head-label {
+      margin-bottom: 8px;
+    }
+
+    .head-h {
+      grid-column: 1 / span 7;
+    }
+
+    .head-copy {
+      grid-column: 9 / span 4;
+      align-self: end;
+    }
+  }
+
+  /* ------------------------------------------------------------- models */
+  .models {
+    display: grid;
+    row-gap: 80px;
+    margin-top: 88px;
+  }
+
+  .model {
+    position: relative;
+    padding-top: 32px;
+  }
+
+  /* top edge: a hairline on Landing, the 2px violet bar on + Google */
+  .m-top {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    display: block;
+  }
+
+  .m-rule {
+    height: 1px;
+    background-color: var(--line-strong);
+  }
+
+  .m-bar {
+    height: 2px;
+    background-color: var(--violet);
+  }
+
+  /* sits above the column's top edge; wraps upward on the narrowest phones */
+  .m-flag {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: calc(100% + 14px);
+    color: var(--accent-text);
+    text-wrap: balance;
+  }
+
+  /* the Complete plate: a facet of night sky standing proud of the row. The
+     element paints the rectangle (so the contrast gate sees --void behind the
+     text); ::before adds the overhang with the 45° facet cuts, and .m-sky
+     carries the stars and the orbit inside the same facet. */
+  .m-complete {
+    margin-block: var(--oh);
+    padding-block: 20px 16px;
+    background-color: var(--void);
+    isolation: isolate;
+    transition:
+      transform 1000ms var(--ease-mech),
+      opacity 360ms linear;
+    transition-delay: 160ms;
+  }
+
+  .m-complete::before {
+    content: '';
+    position: absolute;
+    inset: calc(-1 * var(--oh)) 0;
+    z-index: -1;
+    background-color: var(--void);
+    clip-path: var(--chamfer);
+  }
+
+  /* below desktop the plate runs edge to edge; its padding equals the page
+     gutter, so its text keeps the same left edge as every other block */
+  @media (max-width: 1099px) {
+    .m-complete {
+      margin-inline: calc(-1 * var(--gut));
+      padding-inline: var(--gut);
+    }
+  }
+
+  .m-sky {
+    position: absolute;
+    inset: calc(-1 * var(--oh)) 0;
+    z-index: -1;
+    overflow: clip;
+    clip-path: var(--chamfer);
+    pointer-events: none;
+    /* one faint nebula pool in the far corner (≤10%, cosmos imagery only) */
+    background-image: radial-gradient(70% 38% at 100% 100%, rgb(98 54 232 / 0.1), transparent 72%);
+  }
+
+  /* keep the star field a whisper under the text */
+  .m-sky :global(.cosmos) {
+    opacity: 0.6;
+  }
+
+  /* the orbit system sits just below the plate's lower-right corner: the
+     star (the SVG's centre) 90px in from the edge and 40px under the facet,
+     so only the upper arcs sweep in, under the empty end of the CTA row */
+  .m-orbit {
+    position: absolute;
+    right: -230px;
+    bottom: -360px;
+    width: 640px;
+    height: 640px;
+    max-width: none;
+    overflow: visible;
+  }
+
+  @media (max-width: 767px) {
+    .orb-far {
+      display: none;
+    }
+  }
+
+  .orb {
+    stroke-width: 1;
+    stroke-dasharray: var(--len);
+    stroke-dashoffset: 0;
+    transition:
+      stroke-dashoffset 2400ms var(--ease-quint),
+      opacity 400ms linear;
+  }
+
+  .orb-far {
+    stroke: rgb(243 240 250 / 0.12);
+    transition-delay: 900ms;
+  }
+
+  .orb-near {
+    stroke: rgb(185 162 255 / 0.42);
+    transition-delay: 700ms;
+  }
+
+  .orb-star {
+    fill: var(--starlight);
+  }
+
+  .orb-planet {
+    fill: var(--lilac);
+    transform-box: fill-box;
+    transform-origin: center;
+    transition:
+      transform 900ms var(--ease-expo),
+      opacity 300ms linear;
+    transition-delay: 1900ms;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .orb:not(.is-in) {
+    stroke-dashoffset: var(--len);
+    opacity: 0;
+  }
+
+  /* the planet lands once its orbit has drawn */
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .orb-near:not(.is-in) ~ .orb-planet {
+    opacity: 0;
+    transform: scale(0);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .m-complete:not(.is-in) {
+    opacity: 0;
+    transform: translate3d(0, 32px, 0);
+  }
+
+  .m-name {
+    max-width: 16ch;
+  }
+
+  .m-tag {
+    margin-top: 12px;
+    max-width: 36ch;
+    color: var(--fg-2);
+    text-wrap: pretty;
+  }
+
+  .m-price {
+    margin-top: 32px;
+  }
+
+  /* Lining proportional figures, not tabular: Mona Sans's tabular set is
+     the code-style one (slashed zero), which reads as monospace. */
+  .m-amt {
+    display: flex;
+    align-items: flex-end;
+    column-gap: 0.18em;
+    color: var(--fg);
+    font-variant-numeric: lining-nums proportional-nums;
+  }
+
+  .m-usd {
+    font-stretch: var(--wd-display);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: 0.18em;
+    color: var(--fg-2);
+    /* on the figures' baseline: measured, the figure baseline sits 0.126em
+       above the bottom of the 1em odometer line; the label's own descent is
+       ~1.4px */
+    margin-bottom: calc(var(--t-n2) * 0.116 - 1.4px);
+  }
+
+  .m-sub {
+    margin-top: 16px;
+    max-width: 34ch;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--fg-2);
+    text-wrap: pretty;
+  }
+
+  .m-dim {
+    margin-top: 28px;
+  }
+
+  .m-best {
+    margin-top: 32px;
+  }
+
+  .m-best-l {
+    color: var(--fg-2);
+  }
+
+  .m-best-t {
+    margin-top: 10px;
+    max-width: 38ch;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    color: var(--fg);
+    text-wrap: pretty;
+  }
+
+  .m-inc {
+    margin-top: 28px;
+    list-style: none;
+    padding: 0;
+  }
+
+  .m-inc li {
+    padding: 13px 0 14px;
+    border-top: 1px solid var(--line);
+    font-size: 0.9375rem;
+    line-height: 1.45;
+    color: var(--fg);
+    text-wrap: pretty;
+  }
+
+  .m-inc li:last-child {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .m-cta {
+    margin-top: 28px;
+    display: grid;
+    justify-items: start;
+    row-gap: 14px;
+  }
+
+  /* phones: full-width 52px CTAs, label left, arrow to the far edge */
+  .m-cta .btn {
+    width: 100%;
+    min-height: 52px;
+    padding-inline: 18px;
+    justify-content: flex-start;
+    white-space: normal;
+    text-align: left;
+    line-height: 1.25;
+  }
+
+  .m-cta .btn .arrow {
+    margin-left: auto;
+  }
+
+  /* The violet button paints its faceted fill on ::before. Repeat the fill
+     on the element, clipped to the content box (clear of the cut corners and
+     under ::before), so the contrast gate reads white on violet, not on paper. */
+  .m-cta .btn:not(.btn-line) {
+    background-color: var(--btn-bg);
+    background-clip: content-box;
+    transition:
+      transform 120ms var(--ease-expo),
+      background-color var(--t-micro) linear;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .m-cta .btn:not(.btn-line):hover {
+      background-color: var(--btn-bg-hover);
+    }
+  }
+
+  .m-cta .btn:not(.btn-line):focus-visible {
+    background-color: var(--btn-bg-hover);
+  }
+
+  .m-conf {
+    font-size: 0.8125rem;
+  }
+
+  /* tablet: each model is a row, identity + price on the left, contents on the right */
+  @media (min-width: 768px) and (max-width: 1099px) {
+    .models {
+      row-gap: 96px;
+      margin-top: 112px;
+    }
+
+    .model {
+      display: grid;
+      grid-template-columns: repeat(8, minmax(0, 1fr));
+      column-gap: var(--gap);
+      padding-top: 40px;
+    }
+
+    .m-a {
+      grid-column: 1 / span 4;
+    }
+
+    .m-b {
+      grid-column: 5 / span 4;
+    }
+
+    .m-best {
+      margin-top: 0;
+    }
+
+    .m-complete {
+      padding-block: 32px 28px;
+    }
+
+    .m-cta .btn {
+      width: auto;
+      min-height: 56px;
+      padding-inline: 24px;
+      white-space: nowrap;
+    }
+
+    .m-cta .btn .arrow {
+      margin-left: 0;
+    }
+  }
+
+  /* desktop: one 12-column grid, three 4-column models, rows shared through subgrid */
+  @media (min-width: 1100px) {
+    .models {
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      grid-template-rows: repeat(var(--rows), auto);
+      column-gap: var(--gap);
+      row-gap: 0;
+      margin-top: 136px;
+    }
+
+    .model {
+      grid-column: span 4;
+      grid-row: 1 / span var(--rows);
+      display: grid;
+      grid-template-rows: subgrid;
+      padding-top: 40px;
+    }
+
+    .m-a,
+    .m-b {
+      display: contents;
+    }
+
+    .m-name {
+      grid-row: 1;
+    }
+
+    .m-tag {
+      grid-row: 2;
+    }
+
+    .m-price {
+      grid-row: 3;
+      margin-top: 40px;
+    }
+
+    .m-dim {
+      grid-row: 4;
+      margin-top: 32px;
+    }
+
+    .m-best {
+      grid-row: 5;
+      margin-top: 36px;
+    }
+
+    .m-inc {
+      grid-row: 6 / span var(--inc);
+      display: grid;
+      grid-template-rows: subgrid;
+      margin-top: 32px;
+    }
+
+    .m-cta {
+      grid-row: -2 / -1;
+      align-self: start;
+      margin-top: 36px;
+    }
+
+    .m-cta .btn {
+      width: auto;
+      min-height: 56px;
+      padding-inline: 24px;
+      white-space: nowrap;
+    }
+
+    .m-cta .btn .arrow {
+      margin-left: 0;
+    }
+
+    /* + Google: the vertical hairline between models, content inset from it */
+    .m-google {
+      padding-inline: 36px;
+      border-left: 1px solid var(--line);
+    }
+
+    .m-google .m-flag {
+      left: 36px;
+    }
+
+    .m-landing {
+      padding-right: 8px;
+    }
+
+    .m-complete {
+      margin-block: 0;
+      padding: 40px 36px 0;
+    }
+
+    /* hover (fine pointers): paper columns lift to paper-2 */
+    .m-landing::before,
+    .m-google::before {
+      content: '';
+      position: absolute;
+      z-index: -1;
+      background-color: var(--paper-2);
+      opacity: 0;
+      transition: opacity var(--t-ui) var(--ease-expo);
+      pointer-events: none;
+    }
+
+    /* the hover plate ends on the same line as the Complete plate's facet */
+    .m-landing::before {
+      inset: 0 -24px calc(-1 * var(--oh)) -24px;
+    }
+
+    .m-google::before {
+      inset: 0 0 calc(-1 * var(--oh)) 0;
+    }
+
+    .m-landing,
+    .m-google {
+      isolation: isolate;
+    }
+  }
+
+  @media (min-width: 1100px) and (hover: hover) and (pointer: fine) {
+    .m-landing:hover::before,
+    .m-google:hover::before {
+      opacity: 1;
+    }
+  }
+
+  /* ------------------------------------------------------ compare table */
+  .cmp-block {
+    margin-top: 80px;
+  }
+
+  .cmp-sum {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 64px;
+    border-block: 1px solid var(--line-strong);
+    font-stretch: var(--wd-display);
+    font-size: 1.0625rem;
+    font-weight: 620;
+    letter-spacing: -0.005em;
+    color: var(--fg);
+    cursor: pointer;
+    list-style: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .cmp-sum::-webkit-details-marker {
+    display: none;
+  }
+
+  .plus {
+    position: relative;
+    flex: 0 0 auto;
+    width: 14px;
+    height: 14px;
+  }
+
+  .plus::before,
+  .plus::after {
+    content: '';
+    position: absolute;
+    background-color: currentColor;
+  }
+
+  .plus::before {
+    left: 0;
+    right: 0;
+    top: 6.5px;
+    height: 1px;
+  }
+
+  .plus::after {
+    top: 0;
+    bottom: 0;
+    left: 6.5px;
+    width: 1px;
+    transition: transform var(--t-ui) var(--ease-mech);
+  }
+
+  .cmp[open] .plus::after {
+    transform: rotate(90deg);
+  }
+
+  /* its own scroll box: the table may be wider than a phone, the page never is */
+  .cmp-scroll {
+    width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .cmp-scroll:focus-visible {
+    outline-offset: -2px;
+  }
+
+  .cmp-t {
+    width: 100%;
+    min-width: 560px;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 0.9375rem;
+    line-height: 1.4;
+  }
+
+  .cmp-col-l {
+    width: 34%;
+  }
+
+  .cmp-cap {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .cmp-t th,
+  .cmp-t td {
+    padding: 15px 12px 15px 0;
+    text-align: left;
+    vertical-align: middle;
+    font-weight: inherit;
+    transition:
+      opacity 700ms var(--ease-expo),
+      transform 700ms var(--ease-expo);
+    transition-delay: calc(var(--r, 0) * 50ms + 60ms);
+  }
+
+  .cmp-t thead th {
+    padding-top: 24px;
+    padding-bottom: 14px;
+    vertical-align: bottom;
+    border-bottom: 1px solid var(--line-strong);
+  }
+
+  .cmp-h-t {
+    display: block;
+    font-stretch: var(--wd-display);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--fg);
+  }
+
+  /* the recommended column carries the same 2px violet bar as its model */
+  .cmp-h-rec {
+    position: relative;
+  }
+
+  .cmp-h-rec::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 12px;
+    top: 0;
+    height: 2px;
+    background-color: var(--violet);
+    transform-origin: left center;
+    transition: transform 1100ms var(--ease-quint);
+    transition-delay: 200ms;
+  }
+
+  /* Row hairlines are drawn per cell, not on the <tr>: an absolutely
+     positioned ::after on a table row is counted as a phantom column by
+     Chrome's fixed table layout. Each segment waits for the one on its left
+     (--c), so a row still reads as one line drawing left to right. */
+  .cmp-t tbody :is(th, td) {
+    position: relative;
+  }
+
+  .cmp-t tbody :is(th, td)::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background-color: var(--line);
+    transform-origin: left center;
+    transition: transform 700ms var(--ease-quint);
+    transition-delay: calc(var(--r, 0) * 50ms + var(--c, 0) * 110ms);
+  }
+
+  .cmp-t tbody th {
+    padding-right: 20px;
+  }
+
+  .cmp-l {
+    display: inline-block;
+    color: var(--fg-2);
+    transition:
+      transform var(--t-ui) var(--ease-expo),
+      color var(--t-micro) linear;
+  }
+
+  .cmp-t tbody tr:hover .cmp-l {
+    color: var(--fg);
+    transform: translate3d(4px, 0, 0);
+  }
+
+  .cv {
+    font-stretch: var(--wd-display);
+    font-weight: 560;
+    font-variant-numeric: lining-nums proportional-nums;
+    color: var(--fg);
+  }
+
+  /* ■ included · — not included (drawn, so no glyph fallback) */
+  .mk {
+    display: inline-block;
+    vertical-align: middle;
+  }
+
+  .mk-y {
+    width: 9px;
+    height: 9px;
+    background-color: var(--ink);
+  }
+
+  .mk-n {
+    width: 14px;
+    height: 1px;
+    background-color: var(--ink-3);
+  }
+
+  /* phones: sticky first column inside the scroll box */
+  @media (max-width: 767px) {
+    .cmp-t thead th:first-child,
+    .cmp-t tbody th {
+      position: sticky;
+      left: 0;
+      z-index: 1;
+      background-color: var(--paper);
+    }
+
+    .cmp-t thead th:first-child::before,
+    .cmp-t tbody th::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      right: 8px;
+      width: 1px;
+      background-color: var(--line);
+    }
+
+    .cmp-t tbody th {
+      padding-right: 24px;
+    }
+
+    .cmp-col-l {
+      width: 168px;
+    }
+
+    .cmp-t {
+      font-size: 0.875rem;
+    }
+
+    .cmp-t th,
+    .cmp-t td {
+      padding-block: 13px;
+    }
+
+    .cmp-t thead th {
+      padding-top: 20px;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .cmp-block {
+      margin-top: 144px;
+    }
+
+    .cmp-sum {
+      display: none;
+    }
+
+    .cmp-cap {
+      position: static;
+      width: auto;
+      height: auto;
+      overflow: visible;
+      clip: auto;
+      caption-side: top;
+      text-align: left;
+      padding-bottom: 8px;
+      color: var(--fg-2);
+    }
+
+    .cmp-t {
+      min-width: 0;
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .cmp-block {
+      margin-top: 176px;
+    }
+
+    /* row labels in columns 1–3, values in 4–6, 7–9 and 10–12, exactly on
+       the page grid: a 3-column span plus its gap is 25% + gap/4 */
+    .cmp-scroll {
+      container-type: inline-size;
+    }
+
+    /* Chrome drops calc(% + px) on <col>; container units resolve to a length */
+    .cmp-col-l,
+    .cmp-col-v {
+      width: calc(25cqi + var(--gap) / 4);
+    }
+
+    .cmp-col-v:last-child {
+      width: calc(25cqi - var(--gap) * 3 / 4);
+    }
+
+    .cmp-t {
+      font-size: 1rem;
+    }
+
+    .cmp-t th,
+    .cmp-t td {
+      padding-block: 17px;
+    }
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .cmp-t:not(.is-in) tbody :is(th, td)::after,
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .cmp-t:not(.is-in) .cmp-h-rec::before {
+    transform: scaleX(0);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .cmp-t:not(.is-in) :is(th, td) {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+
+  /* ------------------------------------------------------------- bands */
+  .bands {
+    margin-top: 72px;
+  }
+
+  .band {
+    position: relative;
+    row-gap: 16px;
+    padding-block: 36px 40px;
+  }
+
+  .band-rule {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    display: block;
+    height: 1px;
+    background-color: var(--line-strong);
+  }
+
+  .band:last-child {
+    border-bottom: 1px solid var(--line-strong);
+  }
+
+  .band-t {
+    max-width: 16ch;
+  }
+
+  .band-b {
+    max-width: 54ch;
+    color: var(--fg-2);
+    text-wrap: pretty;
+  }
+
+  .band-b > p {
+    text-wrap: pretty;
+  }
+
+  .band-c {
+    padding-top: 4px;
+  }
+
+  .band .tlink {
+    font-size: 0.875rem;
+  }
+
+  .slots {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 28px;
+    margin-top: 24px;
+    padding: 0;
+    list-style: none;
+  }
+
+  .slot {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-stretch: var(--wd-display);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--fg);
+  }
+
+  .slot .node {
+    color: var(--fg);
+  }
+
+  .slot-n {
+    font-variant-numeric: lining-nums proportional-nums;
+    color: var(--accent-text);
+  }
+
+  @media (min-width: 768px) {
+    .bands {
+      margin-top: 144px;
+    }
+
+    .band {
+      padding-block: 44px 48px;
+    }
+
+    .band-t {
+      grid-column: 1 / span 3;
+    }
+
+    .band-b {
+      grid-column: 4 / span 5;
+    }
+
+    .band-c {
+      grid-column: 4 / span 5;
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .bands {
+      margin-top: 176px;
+    }
+
+    .band {
+      padding-block: 48px 56px;
+    }
+
+    .band-t {
+      grid-column: 1 / span 4;
+    }
+
+    .band-b {
+      grid-column: 5 / span 5;
+      font-size: 1.0625rem;
+    }
+
+    .band-c {
+      grid-column: 10 / span 3;
+      padding-top: 6px;
+    }
+  }
+
+  /* --------------------------------------------------------- paperwork */
+  .pw {
+    margin-top: 96px;
+  }
+
+  .pw-h {
+    max-width: 18ch;
+  }
+
+  .pw-cells {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: 32px;
+    border-top: 1px solid var(--line-strong);
+  }
+
+  /* a spec sheet: strong rule on top, verticals only BETWEEN cells, so the
+     first column's figures sit on the page's left edge with the headline */
+  .pw-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 22px 12px 24px 16px;
+    border-bottom: 1px solid var(--line);
+    border-left: 1px solid var(--line);
+    min-width: 0;
+  }
+
+  .pw-cell:nth-child(2n + 1) {
+    border-left: 0;
+    padding-left: 0;
+  }
+
+  /* the large print: sized to the cell, so the longest value (W-8BEN-E,
+     ~5.4em) always fits on one line from 320px to 1440px */
+  .pw-cells {
+    container-type: inline-size;
+    --pw-n: 2;
+    --pw-pad: 28px;
+  }
+
+  .pw-v {
+    font-stretch: var(--wd-display);
+    font-size: min(2.25rem, calc((100cqi / var(--pw-n) - var(--pw-pad)) * 0.17));
+    font-weight: 560;
+    line-height: 1;
+    letter-spacing: -0.01em;
+    font-variant-numeric: lining-nums proportional-nums;
+    white-space: nowrap;
+    color: var(--fg);
+  }
+
+  .pw-c {
+    font-size: 0.875rem;
+    line-height: 1.45;
+    color: var(--fg-2);
+    text-wrap: pretty;
+  }
+
+  .pw-assure {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    margin-top: 36px;
+    max-width: 58ch;
+    font-size: var(--t-body);
+    line-height: 1.55;
+    color: var(--fg);
+    text-wrap: pretty;
+  }
+
+  .pw-assure .node {
+    flex: 0 0 auto;
+    color: var(--fg);
+    transform: translateY(-1px);
+  }
+
+  @media (min-width: 768px) {
+    .pw {
+      margin-top: 128px;
+    }
+
+    .pw-cells {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      --pw-n: 3;
+      --pw-pad: 36px;
+    }
+
+    .pw-cell {
+      padding: 28px 16px 30px 20px;
+    }
+
+    .pw-cell:nth-child(2n + 1) {
+      border-left: 1px solid var(--line);
+      padding-left: 20px;
+    }
+
+    .pw-cell:nth-child(3n + 1) {
+      border-left: 0;
+      padding-left: 0;
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .pw {
+      margin-top: 160px;
+    }
+
+    .pw-cells {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      margin-top: 40px;
+      --pw-n: 6;
+    }
+
+    .pw-cell {
+      padding: 32px 16px 36px 20px;
+      border-bottom: 0;
+    }
+
+    .pw-cell:nth-child(n) {
+      border-left: 1px solid var(--line);
+      padding-left: 20px;
+    }
+
+    .pw-cell:first-child {
+      border-left: 0;
+      padding-left: 0;
+    }
+
+    .pw-cells {
+      border-bottom: 1px solid var(--line-strong);
+    }
+
+    .pw-assure {
+      margin-top: 40px;
+      font-size: 1.125rem;
+    }
+  }
+</style>
+
+<script>
+  import { isReduced } from '../../scripts/motion';
+
+  const section = document.getElementById('pricing');
+
+  if (section) {
+    /* compare table: always open from 768px up; a collapsed <details> on phones */
+    const details = section.querySelector<HTMLDetailsElement>('[data-cmp]');
+    const table = details?.querySelector<HTMLElement>('.cmp-t') ?? null;
+    const scroller = section.querySelector<HTMLElement>('[data-cmp-scroll]');
+    const wide = window.matchMedia('(min-width: 768px)');
+
+    const syncScroller = () => {
+      if (!scroller) return;
+      const scrollable = scroller.scrollWidth > scroller.clientWidth + 1;
+      if (scrollable) scroller.setAttribute('tabindex', '0');
+      else scroller.removeAttribute('tabindex');
+    };
+
+    if (details) {
+      if (!wide.matches) details.open = false;
+      const onWide = () => {
+        if (wide.matches) details.open = true;
+        syncScroller();
+      };
+      wide.addEventListener?.('change', onWide);
+
+      /* replay the row draw when a phone user opens it */
+      details.addEventListener('toggle', () => {
+        syncScroller();
+        if (!details.open || wide.matches || !table || isReduced()) return;
+        table.classList.remove('is-in');
+        void table.offsetWidth;
+        requestAnimationFrame(() => requestAnimationFrame(() => table.classList.add('is-in')));
+      });
+    }
+    syncScroller();
+
+    /* "Configure" hands the package to #configure through the hash; make sure
+       the configurator is actually brought into view. */
+    section.querySelectorAll<HTMLAnchorElement>('[data-configure]').forEach((a) => {
+      a.addEventListener('click', () => {
+        const target = document.getElementById('configure');
+        if (!target) return;
+        requestAnimationFrame(() =>
+          target.scrollIntoView({ behavior: isReduced() ? 'auto' : 'smooth', block: 'start' })
+        );
+      });
+    });
+  }
+</script>

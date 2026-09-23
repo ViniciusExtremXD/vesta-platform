@@ -1,332 +1,1118 @@
 ---
+/**
+ * /contact/ (SPEC §7 /contact/, re-skinned by SPEC_COSMOS; no clocks, no QR).
+ *
+ * 1. Head (void, a quiet star field): label, H1 (word mask on load), haze
+ *    lead. Beside it (below it on phones) the primary panel: a faceted violet
+ *    plate with the WhatsApp number at N2 and three starlight quick-start
+ *    buttons, each with its own prefill. The panel is the page's sticky-bar
+ *    anchor: the mobile bar only appears once the panel has scrolled away.
+ * 2. Compose (paper): "What to include in your first message" (four
+ *    numbered hairline rows) and the message helper — an optional composer
+ *    that runs in the browser, shows the exact message and opens WhatsApp
+ *    with it. It stores nothing and sends nothing. Without JS it stays
+ *    hidden (the `hidden` attribute is removed by the script) and the
+ *    quick-start links above remain. While the helper fills the bottom of
+ *    the screen the mobile sticky bar steps aside (data-sticky-hide), so it
+ *    never sits over the fields or competes with the helper's own button.
+ * 3. Details (paper-2): LinkedIn, static hours, company details, and
+ *    "Or configure a build →" (/#configure).
+ */
 import Base from '../layouts/Base.astro';
-import Icon from '../components/Icon.astro';
-import { brand, contact, process } from '../data/site';
+import Cosmos from '../components/Cosmos.astro';
+import SectionLabel from '../components/ui/SectionLabel.astro';
+import SplitText from '../components/ui/SplitText.astro';
+import Arrow from '../components/ui/Arrow.astro';
+import WaGlyph from '../components/ui/WaGlyph.astro';
+import { contact, contactPage, finale, wa, type HelperNeed } from '../data/site';
+import { url, absolute } from '../lib/url';
 
-const title = `Contact ${brand.name} — book a 15-minute call`;
-const description =
-  'Book a fifteen-minute call with the founder, or message on WhatsApp. São Paulo hours, one to two hours ahead of New York — replies inside your business day.';
+/* Strings the page needs that site.ts does not carry yet (reported). */
+const TODO_SITE = {
+  /** Label at the top of the violet panel. */
+  panelLabel: 'WhatsApp',
+  /** Heading of the live message preview in the helper. */
+  preview: 'Your message',
+};
 
-const bring = [
-  'The URL your ads land on today',
-  'Roughly what you spend per month, and where',
-  'What a good month looks like in leads or jobs',
-  'The tool you run the business on (CRM, dispatch, booking)',
-];
+/* ---- typesetting helpers (the words are unchanged) --------------------- */
+const WJ = String.fromCharCode(0x2060);
+const NBSP = String.fromCharCode(160);
+const keepRange = (s: string) => s.replace(/(\w)–(\w)/g, `$1${WJ}–${WJ}$2`);
+const tie = (t: string) => t.replace(/(^|\s)([AaI])\s+/g, (_m, pre: string, w: string) => pre + w + NBSP);
 
-const after = [
-  { when: 'On the call', text: 'We open your page together and read the numbers. You leave knowing whether a rebuild pays off.' },
-  { when: 'Within 48 hours', text: 'A one-page scope with a fixed price and a date — if it makes sense for both sides.' },
-  { when: 'Then', text: 'You sign, pay the first half, and the work starts. No retainer, no discovery fee.' },
-];
+/* ---- the number: country + area code set small, the line at N2 -------- */
+const numParts = contactPage.panel.number.match(/^(\+\d+\s\d+)\s(.+)$/);
+const [cc, local] = numParts ? [numParts[1], numParts[2]] : ['', contactPage.panel.number];
+const copyValue = `+${contact.whatsapp.e164}`;
+
+/* ---- the helper's message template -------------------------------------
+   The message wording lives in site.ts (contactPage.helper.message). To keep
+   that one source without shipping site.ts to the browser, the template is
+   derived here: the function runs with private-use sentinels in place of the
+   visitor's words, and with empty fields to learn its defaults ("not
+   given", "none"). The browser only substitutes. */
+const SENT = { business: String.fromCharCode(0xe000), currentUrl: String.fromCharCode(0xe001), extra: String.fromCharCode(0xe002) };
+const msg = contactPage.helper.message;
+const needs = contactPage.helper.fields.need.options.map((o) => o.id) as HelperNeed[];
+const withExtra = Object.fromEntries(needs.map((need) => [need, msg({ ...SENT, need })]));
+const noExtra = Object.fromEntries(needs.map((need) => [need, msg({ ...SENT, need, extra: '' })]));
+/** the text the function puts where an empty field would go */
+const defaultFor = (field: 'business' | 'currentUrl') => {
+  const tpl = noExtra[needs[0]];
+  const filled = msg({ ...SENT, [field]: '', need: needs[0], extra: '' });
+  const at = tpl.indexOf(SENT[field]);
+  if (at < 0) return '';
+  const tail = tpl.length - at - 1;
+  return filled.slice(at, filled.length - tail);
+};
+const helperTpl = JSON.stringify({
+  sent: SENT,
+  withExtra,
+  noExtra,
+  defaults: { business: defaultFor('business'), currentUrl: defaultFor('currentUrl') },
+});
+const firstNeed = needs[0];
+const initialMessage = msg({ business: '', currentUrl: '', need: firstNeed, extra: '' });
+
+const linkedinText = contactPage.linkedin.label;
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'ContactPage',
+  name: contactPage.seo.title,
+  url: absolute('/contact/', Astro.site),
+  description: contactPage.seo.description,
+  about: { '@id': `${absolute('/', Astro.site).replace(/\/$/, '')}/#organization` },
+};
 ---
 
-<Base title={title} description={description} canonical="/contact/">
-  <section class="page-head on-void">
-    <div class="wrap wrap-wide">
-      <p class="kicker" data-reveal="up">Contact</p>
-      <h1 data-split>Direct brief, <em>immediate alignment.</em></h1>
-      <p class="lead" data-reveal="up" style="--i:2">
-        Pick a channel. Every one of them reaches the founder directly — there is nobody else here.
-      </p>
-    </div>
-  </section>
+<Base title={contactPage.seo.title} description={contactPage.seo.description} canonical="/contact/" jsonLd={jsonLd}>
+  {/* ----------------------------------------------------------------- head */}
+  <section class="head s-void" data-nav-theme="dark" aria-labelledby="contact-title">
+    <div class="sky" aria-hidden="true"><Cosmos variant="stars" /></div>
 
-  <section class="contact section-tight on-void">
-    <div class="wrap wrap-wide contact-grid">
-      <div class="contact-main">
+    <div class="wrap g head-grid">
+      <header class="head-copy">
+        <div data-load>
+          <SectionLabel name={contactPage.label.name} reveal={false} />
+        </div>
+        <SplitText as="h1" id="contact-title" class="h1" text={contactPage.h1} load delay={80} />
+        <p class="lead head-lead" data-load style="--d:400ms">{keepRange(contactPage.lead)}</p>
         {
-          contact.booking.confirmed ? (
-            <div class="card booking" data-booking data-booking-url={contact.booking.calendlyUrl} data-reveal="up" style="--i:1">
-              <p class="kicker">Scheduler</p>
-              <h2>{contact.booking.label}</h2>
-              <p class="muted">
-                Calendly detects your time zone. It loads only when you press the button — nothing from a third party runs
-                on this page until then.
-              </p>
-              <button type="button" class="btn btn-primary btn-lg" data-booking-load data-magnetic>
-                Load the scheduler
-                <Icon name="arrow" class="arrow" />
-              </button>
-              <p class="booking-status mono" data-booking-status aria-live="polite" />
-              <div class="booking-slot" data-booking-slot hidden />
-            </div>
-          ) : (
-            <div class="card booking" data-reveal="up" style="--i:1">
-              <p class="kicker">Book a call</p>
-              <h2>{contact.booking.label}</h2>
-              <p class="muted">
-                Send a message with two or three times that suit you, in your time zone. You will get a confirmed slot back
-                inside the same business day.
-              </p>
-            </div>
+          contact.linkedin.confirmed && (
+            <p class="head-alt" data-load style="--d:620ms">
+              <a class="tlink" href={contactPage.linkedin.href} target="_blank" rel="noopener">
+                <span>{linkedinText}</span>
+                <Arrow dir="up-right" />
+              </a>
+            </p>
           )
         }
+      </header>
 
-        <ul class="channels">
-          {
-            contact.whatsapp.confirmed && (
-              <li data-reveal="up" style="--i:2">
-                <a class="card channel" href={contact.whatsapp.url} target="_blank" rel="noopener" data-glow>
-                  <span class="channel-icon is-wa">
-                    <Icon name="whatsapp" size={20} />
-                  </span>
-                  <span class="channel-body">
-                    <span class="channel-title">WhatsApp</span>
-                    <span class="channel-meta mono">{contact.whatsapp.display}</span>
-                  </span>
-                  <Icon name="arrow" class="arrow" />
-                </a>
-              </li>
-            )
-          }
-          {
-            contact.email.confirmed && (
-              <li data-reveal="up" style="--i:3">
-                <a class="card channel" href={`mailto:${contact.email.address}`} data-glow>
-                  <span class="channel-icon">
-                    <Icon name="mail" size={20} />
-                  </span>
-                  <span class="channel-body">
-                    <span class="channel-title">E-mail</span>
-                    <span class="channel-meta mono">{contact.email.address}</span>
-                  </span>
-                  <Icon name="arrow" class="arrow" />
-                </a>
-              </li>
-            )
-          }
-          {
-            contact.linkedin.confirmed && (
-              <li data-reveal="up" style="--i:4">
-                <a class="card channel" href={contact.linkedin.url} target="_blank" rel="noopener" data-glow>
-                  <span class="channel-icon">
-                    <Icon name="linkedin" size={20} />
-                  </span>
-                  <span class="channel-body">
-                    <span class="channel-title">LinkedIn</span>
-                    <span class="channel-meta mono">Vinícius Magno</span>
-                  </span>
-                  <Icon name="external" class="arrow" />
-                </a>
-              </li>
-            )
-          }
-        </ul>
-      </div>
+      {
+        contact.whatsapp.confirmed && (
+          <div class="panel" data-sticky-anchor data-load style="--d:520ms" data-contact-panel>
+            <svg class="panel-orbit" viewBox="0 0 400 300" preserveAspectRatio="xMaxYMin slice" aria-hidden="true" focusable="false">
+              <g transform="rotate(-24 330 40)">
+                <ellipse cx="330" cy="40" rx="190" ry="72" />
+                <circle cx="520" cy="40" r="3" />
+              </g>
+            </svg>
 
-      <aside class="contact-aside">
-        <div class="card" data-reveal="left" style="--i:2">
-          <p class="kicker">✦ Alignment</p>
-          <h3>Vesta Consultoria</h3>
-          <p class="muted contact-hours-note">
-            CNPJ {brand.cnpj} · Official corporate entity. Direct execution with founder Vinícius Magno.
-          </p>
-        </div>
+            <p class="panel-label label">
+              <WaGlyph size={16} />
+              <span>{TODO_SITE.panelLabel}</span>
+            </p>
 
-        <div class="card" data-reveal="left" style="--i:3">
-          <p class="kicker">Bring to the call</p>
-          <ul class="bring">
-            {
-              bring.map((b) => (
-                <li>
-                  <Icon name="check" size={14} />
-                  <span>{b}</span>
-                </li>
-              ))
-            }
-          </ul>
-        </div>
-      </aside>
+            <p class="panel-number">
+              <a class="n2 number" href={contact.whatsapp.url} target="_blank" rel="noopener" data-wa-intent="contact-number">
+                {cc && <span class="cc">{cc}</span>}
+                {cc && ' '}
+                <span class="local">{local}</span>
+              </a>
+            </p>
+            <p class="small panel-note">{finale.reassurance}</p>
+
+            <ul class="quick">
+              {
+                contactPage.panel.quickStarts.map((q) => (
+                  <li>
+                    <a class="btn btn-star q" href={wa(q.text)} target="_blank" rel="noopener" data-wa-intent={`contact-${q.id}`}>
+                      <span class="q-lbl">{q.label}</span>
+                      <Arrow />
+                    </a>
+                  </li>
+                ))
+              }
+            </ul>
+
+            <p class="panel-copy">
+              <button type="button" class="copy" data-copy={copyValue} data-copied={finale.number.copied} data-copied-ms={finale.number.copiedMs}>
+                <span class="copy-text">
+                  <span class="copy-label" data-copy-label>{finale.number.copy}</span>
+                  <span class="copy-sizer" aria-hidden="true">{finale.number.copy}</span>
+                </span>
+              </button>
+              <span class="visually-hidden" role="status" aria-live="polite" data-copy-status></span>
+            </p>
+          </div>
+        )
+      }
     </div>
   </section>
 
-  <section class="after section on-paper">
-    <div class="wrap wrap-wide">
-      <div class="section-head">
-        <p class="kicker" data-reveal="up">What happens next</p>
-        <h2 data-split>Three steps, <em>none of them a sales call.</em></h2>
+  {/* -------------------------------------------------------------- compose */}
+  <section class="compose s-paper section" data-nav-theme="light" aria-labelledby="include-title">
+    <div class="wrap g compose-grid">
+      <div class="include">
+        <SplitText as="h2" id="include-title" class="d3 include-title" text={contactPage.include.title} />
+        <ol class="inc-list">
+          {
+            contactPage.include.items.map((it, r) => (
+              <li class="inc-row" data-inview style={`--r:${r}`}>
+                <span class="inc-line" aria-hidden="true" />
+                <span class="label inc-n" aria-hidden="true">{it.index}</span>
+                <span class="inc-text">{it.text}</span>
+                {r === contactPage.include.items.length - 1 && <span class="inc-line inc-line-end" aria-hidden="true" />}
+              </li>
+            ))
+          }
+        </ol>
       </div>
-      <ol class="after-list">
-        {
-          after.map((a, i) => (
-            <li data-reveal="up" style={`--i:${i + 1}`}>
-              <span class="after-when mono">{a.when}</span>
-              <p>{a.text}</p>
-            </li>
-          ))
-        }
-      </ol>
-      <p class="after-note muted" data-reveal="fade" style="--i:4">
-        You provide: {process.youProvide.slice(0, 3).join('; ').toLowerCase()}.
+
+      <div class="helper" hidden data-helper data-sticky-hide data-tpl={helperTpl}>
+        <h2 class="d3 helper-title" data-reveal>{contactPage.helper.title}</h2>
+        <form class="form" data-helper-form novalidate autocomplete="off">
+          <div class="field" data-reveal style="--i:1">
+            <label class="label f-label" for="h-business">{contactPage.helper.fields.business.label}</label>
+            <input class="input" id="h-business" name="business" type="text" autocomplete="organization" maxlength="120" />
+          </div>
+          <div class="field" data-reveal style="--i:2">
+            <label class="label f-label" for="h-url">{contactPage.helper.fields.currentUrl.label}</label>
+            <input
+              class="input"
+              id="h-url"
+              name="currentUrl"
+              type="text"
+              inputmode="url"
+              autocapitalize="off"
+              spellcheck="false"
+              maxlength="200"
+              placeholder={contactPage.helper.fields.currentUrl.placeholder}
+            />
+          </div>
+          <fieldset class="field needs" data-reveal style="--i:3">
+            <legend class="label f-label">{contactPage.helper.fields.need.legend}</legend>
+            <div class="chips">
+              {
+                contactPage.helper.fields.need.options.map((o, k) => (
+                  <label class="chip">
+                    <input class="visually-hidden" type="radio" name="need" value={o.id} checked={k === 0} />
+                    <span class="chip-face">
+                      <span class="chip-node" aria-hidden="true" />
+                      <span class="chip-text">{o.label}</span>
+                    </span>
+                  </label>
+                ))
+              }
+            </div>
+          </fieldset>
+          <div class="field" data-reveal style="--i:4">
+            <label class="label f-label" for="h-extra">{contactPage.helper.fields.extra.label}</label>
+            <textarea class="input area" id="h-extra" name="extra" rows="3" maxlength="600"></textarea>
+          </div>
+
+          <div class="preview" data-reveal style="--i:5">
+            <p class="label preview-label" id="h-preview-label">{TODO_SITE.preview}</p>
+            <p class="preview-text" data-helper-preview aria-labelledby="h-preview-label">{initialMessage}</p>
+          </div>
+
+          <div class="send" data-reveal style="--i:6">
+            <a class="btn send-btn" href={wa(initialMessage)} target="_blank" rel="noopener" data-wa-intent="contact-helper" data-helper-send>
+              <WaGlyph size={16} />
+              <span class="b-lbl">{contactPage.helper.button}</span>
+              <Arrow />
+            </a>
+            <p class="small send-note">{contactPage.helper.note}</p>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  {/* -------------------------------------------------------------- details */}
+  <section class="details s-paper-2 section" data-nav-theme="light">
+    <div class="wrap g details-grid">
+      {
+        contact.linkedin.confirmed && (
+          <div class="d-block d-li">
+            <h2 class="label d-title" data-reveal>{contactPage.linkedin.title}</h2>
+            <span class="rule d-rule" data-reveal="draw" aria-hidden="true" />
+            <p class="d-li-link" data-reveal style="--i:1">
+              <a class="tlink li" href={contactPage.linkedin.href} target="_blank" rel="noopener">
+                <span>{linkedinText}</span>
+                <Arrow dir="up-right" />
+              </a>
+            </p>
+          </div>
+        )
+      }
+
+      <div class="d-block d-hours">
+        <h2 class="label d-title" data-reveal>{contactPage.hours.title}</h2>
+        <span class="rule d-rule" data-reveal="draw" style="--d:90ms" aria-hidden="true" />
+        <p class="d-hours-text" data-reveal style="--i:1">{keepRange(contactPage.hours.text)}</p>
+        <p class="small d-hours-offset" data-reveal style="--i:2">{keepRange(contactPage.hours.offset)}</p>
+      </div>
+
+      <div class="d-block d-company">
+        <h2 class="label d-title" data-reveal>{contactPage.company.title}</h2>
+        <span class="rule d-rule" data-reveal="draw" style="--d:180ms" aria-hidden="true" />
+        <dl class="d-table">
+          {
+            contactPage.company.rows.map((row, r) => (
+              <div class="d-row" data-reveal style={`--i:${r + 1}`}>
+                <dt class="small">{row.label}</dt>
+                <dd>{row.value}</dd>
+              </div>
+            ))
+          }
+        </dl>
+      </div>
+
+      <p class="configure" data-reveal>
+        <a class="conf-link" href={url(contactPage.configureLink.href)}>
+          <span>{contactPage.configureLink.label.replace(/\s*→\s*$/, '')}</span>
+          <Arrow size={22} />
+        </a>
       </p>
     </div>
   </section>
 </Base>
 
 <style>
-  .page-head {
-    padding-block: calc(var(--nav-h) + clamp(3rem, 2rem + 5vw, 6rem)) clamp(2rem, 1.5rem + 3vw, 3rem);
+  /* =====================================================================
+     1. head + the panel
+     ===================================================================== */
+  .head {
+    position: relative;
+    overflow: clip;
+    padding-block: calc(var(--nav-h) + clamp(3rem, 1.6rem + 5.4vw, 7.5rem)) clamp(4.5rem, 3rem + 5vw, 8.5rem);
   }
 
-  .page-head > .wrap > * + * {
-    margin-top: var(--space-m);
+  .sky {
+    position: absolute;
+    inset: 0;
   }
 
-  .page-head h1 {
-    max-width: 14ch;
-  }
-
-  .contact-grid {
-    display: grid;
-    gap: var(--space-l);
+  .head-grid {
+    position: relative;
+    z-index: 1;
     align-items: start;
   }
 
-  .contact-main {
-    display: grid;
-    gap: var(--space-m);
+  .h1 {
+    max-width: 10.5ch;
+    margin-top: 28px;
+    font-size: clamp(2.5rem, 1.1rem + 5vw, 5.5rem);
+    line-height: 0.98;
   }
 
-  .booking {
-    gap: var(--space-s);
-    align-items: flex-start;
+  .head-lead {
+    max-width: 32ch;
+    margin-top: 32px;
+    color: var(--haze);
   }
 
-  .booking h2 {
-    font-size: var(--step-3);
+  /* the second channel, for readers who would rather start on LinkedIn */
+  .head-alt {
+    margin-top: 36px;
   }
 
-  .booking-status {
-    font-size: var(--step--2);
-    color: var(--text-dark-muted);
-    min-height: 1.2em;
+  /* ---- the panel: a faceted violet plate ---- */
+  .panel {
+    --pcut: 18px;
+    position: relative;
+    isolation: isolate;
+    margin-top: 48px;
+    padding: 28px 20px 20px;
+    color: var(--starlight);
   }
 
-  .booking-slot {
+  .panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    background-color: var(--violet);
+    clip-path: polygon(var(--pcut) 0, 100% 0, 100% calc(100% - var(--pcut)), calc(100% - var(--pcut)) 100%, 0 100%, 0 var(--pcut));
+  }
+
+  /* one hairline orbit through the top-right corner of the plate */
+  .panel-orbit {
+    position: absolute;
+    z-index: -1;
+    top: 0;
+    right: 0;
     width: 100%;
-    min-height: 44rem;
-    border-radius: var(--radius-m);
-    overflow: hidden;
+    height: 100%;
+    pointer-events: none;
+    clip-path: polygon(var(--pcut) 0, 100% 0, 100% calc(100% - var(--pcut)), calc(100% - var(--pcut)) 100%, 0 100%, 0 var(--pcut));
   }
 
-  .channels {
-    display: grid;
-    gap: var(--space-s);
+  .panel-orbit ellipse {
+    fill: none;
+    stroke: rgb(243 240 250 / 0.3);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
   }
 
-  .channel {
-    flex-direction: row;
-    align-items: center;
-    gap: var(--space-m);
-    text-decoration: none;
-    padding: 1.1rem 1.4rem;
+  .panel-orbit circle {
+    fill: var(--starlight);
   }
 
-  .channel:hover {
-    transform: translateY(-2px);
-  }
-
-  .channel-icon {
-    display: grid;
-    place-items: center;
-    width: 2.8rem;
-    height: 2.8rem;
-    border-radius: var(--radius-s);
-    background: rgb(124 58 237 / 0.16);
-    color: var(--violet-ink-dark);
-    flex: 0 0 auto;
-  }
-
-  .channel-icon.is-wa {
-    background: rgb(34 197 94 / 0.14);
-    color: #4ade80;
-  }
-
-  .channel-body {
-    display: grid;
-    gap: 0.15rem;
-    flex: 1 1 auto;
-  }
-
-  .channel-title {
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: var(--step-1);
-  }
-
-  .channel-meta {
-    font-size: var(--step--2);
-    color: var(--text-dark-muted);
-  }
-
-  .contact-aside {
-    display: grid;
-    gap: var(--space-m);
-  }
-
-  .contact-hours-note {
-    font-size: var(--step--1);
-    margin-block: var(--space-xs) var(--space-m);
-  }
-
-  .bring {
-    display: grid;
-    gap: 0.6rem;
-    margin-top: var(--space-s);
-  }
-
-  .bring li {
+  .panel-label {
     display: flex;
-    gap: 0.6em;
-    align-items: flex-start;
-    font-size: var(--step--1);
+    align-items: center;
+    gap: 10px;
+    color: var(--starlight);
   }
 
-  .bring svg {
-    flex: 0 0 auto;
-    margin-top: 0.3em;
-    color: var(--pulse);
+  .panel-number {
+    margin-top: 20px;
   }
 
-  .after-list {
+  /* country + area code as a quiet line above; the local number at N2 in
+     proportional figures (tabular zeros read as monospace at this size) */
+  .number {
+    display: inline-grid;
+    justify-items: start;
+    row-gap: 10px;
+    color: var(--white);
+    text-decoration: none;
+    white-space: nowrap;
+    font-variant-numeric: normal;
+  }
+
+  .cc {
+    font-size: max(0.8125rem, 0.3em);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    color: var(--starlight);
+  }
+
+  .local {
+    letter-spacing: -0.025em;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .number .local {
+      text-decoration: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 0.14em;
+      text-decoration-color: transparent;
+      transition: text-decoration-color var(--t-micro) linear;
+    }
+
+    .number:hover .local {
+      text-decoration-color: rgb(255 255 255 / 0.6);
+    }
+  }
+
+  .panel-note {
+    max-width: 34ch;
+    margin-top: 14px;
+    color: var(--starlight);
+  }
+
+  .quick {
     display: grid;
-    gap: var(--space-m);
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
-    counter-reset: step;
+    gap: 8px;
+    margin-top: 28px;
   }
 
-  .after-list li {
-    padding-top: var(--space-s);
-    border-top: 2px solid var(--ink);
+  .q {
+    display: flex;
+    width: 100%;
+    min-height: 56px;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 20px;
+    font-size: 0.875rem;
+    letter-spacing: 0.02em;
+    white-space: normal;
+    text-align: left;
+    line-height: 1.25;
   }
 
-  .after-when {
-    display: block;
-    font-size: var(--step--2);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
+  /* the label carries the fill as its own background too, so the contrast
+     gate reads ink on starlight (the plate itself is painted by ::before) */
+  .q-lbl {
+    background-color: var(--starlight);
+    transition: background-color var(--t-micro) linear;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .q:hover .q-lbl {
+      background-color: var(--white);
+    }
+  }
+
+  .q:focus-visible .q-lbl {
+    background-color: var(--white);
+  }
+
+  .q:focus-visible {
+    outline-color: var(--starlight);
+  }
+
+  .panel-copy {
+    margin-top: 16px;
+  }
+
+  .copy {
+    position: relative;
+    padding: 8px 0;
+    color: var(--starlight);
+    font-stretch: var(--wd-display);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
+  }
+
+  .copy::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 4px;
+    height: 1px;
+    background-color: currentColor;
+    transform-origin: left center;
+  }
+
+  .copy-text {
+    display: grid;
+  }
+
+  .copy-text > * {
+    grid-area: 1 / 1;
+  }
+
+  .copy-sizer {
+    visibility: hidden;
+  }
+
+  .copy:focus-visible {
+    outline-color: var(--starlight);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .copy:hover::after {
+      animation: underline-redraw 360ms var(--ease-quint) both;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .head-copy {
+      grid-column: 1 / -1;
+    }
+
+    .panel {
+      grid-column: 1 / 7;
+      padding: 32px 32px 28px;
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .head-copy {
+      grid-column: 1 / 7;
+    }
+
+    .panel {
+      --pcut: 26px;
+      grid-column: 8 / 13;
+      grid-row: 1;
+      margin-top: 44px;
+      padding: 40px 40px 32px;
+    }
+
+    .quick {
+      margin-top: 36px;
+    }
+  }
+
+  /* =====================================================================
+     2. compose: what to include + the helper
+     ===================================================================== */
+  .include-title {
+    max-width: 16ch;
+  }
+
+  .inc-list {
+    margin-top: 40px;
+  }
+
+  .inc-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr);
+    align-items: baseline;
+    padding-block: 20px 22px;
+  }
+
+  .inc-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 1px;
+    background-color: var(--line-strong);
+    transform-origin: left center;
+    transition:
+      transform 1000ms var(--ease-quint),
+      opacity 200ms linear;
+    transition-delay: calc(var(--r, 0) * 60ms);
+  }
+
+  .inc-line-end {
+    top: auto;
+    bottom: 0;
+    background-color: var(--line);
+  }
+
+  .inc-n {
     color: var(--violet-ink);
-    margin-bottom: 0.5rem;
   }
 
-  .after-list p {
-    color: var(--ink-muted);
+  .inc-text {
+    font-stretch: var(--wd-display);
+    font-size: clamp(1.0625rem, 0.98rem + 0.35vw, 1.25rem);
+    font-weight: 540;
+    line-height: 1.35;
+    letter-spacing: -0.005em;
+    color: var(--ink);
   }
 
-  .after-note {
-    margin-top: var(--space-l);
-    font-size: var(--step--1);
+  .inc-n,
+  .inc-text {
+    transition:
+      transform var(--t-reveal) var(--ease-expo),
+      opacity var(--t-reveal) var(--ease-expo);
+    transition-delay: calc(var(--r, 0) * 60ms + 140ms);
   }
 
-  @media (min-width: 60rem) {
-    .contact-grid {
-      grid-template-columns: minmax(0, 1.25fr) minmax(18rem, 0.75fr);
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .inc-row:not(.is-in) .inc-line {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .inc-row:not(.is-in) .inc-n,
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .inc-row:not(.is-in) .inc-text {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+
+  /* without JS the helper never appears: the list takes the wider measure */
+  @media (min-width: 1100px) {
+    :global(html:not(.js)) .include {
+      grid-column: 1 / 8;
+    }
+  }
+
+  /* ---- the helper ---- */
+  .helper {
+    margin-top: 88px;
+  }
+
+  .helper[hidden] {
+    display: none;
+  }
+
+  .helper-title {
+    max-width: 16ch;
+  }
+
+  .form {
+    display: grid;
+    gap: 24px;
+    margin-top: 32px;
+  }
+
+  .field {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .f-label {
+    color: var(--ink-2);
+  }
+
+  legend.f-label {
+    padding: 0;
+    margin-bottom: 10px;
+  }
+
+  .input {
+    width: 100%;
+    min-height: 52px;
+    padding: 12px 16px;
+    border: 1px solid var(--line-strong);
+    border-radius: 0;
+    background-color: var(--white);
+    color: var(--ink);
+    font-size: 1rem;
+    line-height: 1.4;
+    transition: border-color var(--t-micro) linear;
+    appearance: none;
+  }
+
+  .input::placeholder {
+    color: var(--ink-3);
+    opacity: 1;
+  }
+
+  .input:hover {
+    border-color: var(--ink-3);
+  }
+
+  .input:focus {
+    border-color: var(--ink);
+  }
+
+  .input:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 3px;
+  }
+
+  .area {
+    min-height: 112px;
+    resize: vertical;
+  }
+
+  .chips {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .chip {
+    position: relative;
+    display: block;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .chip-face {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 48px;
+    height: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--line-strong);
+    background-color: var(--white);
+    color: var(--ink);
+    font-stretch: var(--wd-display);
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    line-height: 1.2;
+    transition:
+      background-color var(--t-micro) linear,
+      border-color var(--t-micro) linear,
+      color var(--t-micro) linear,
+      transform 120ms var(--ease-expo);
+  }
+
+  .chip-node {
+    flex: 0 0 auto;
+    width: 9px;
+    height: 9px;
+    border: 1px solid currentColor;
+    background-color: transparent;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .chip:hover .chip-face {
+      border-color: var(--ink);
+    }
+  }
+
+  .chip input:checked + .chip-face {
+    border-color: var(--ink);
+    background-color: var(--ink);
+    color: var(--paper);
+  }
+
+  .chip input:checked + .chip-face .chip-node {
+    border-color: var(--lilac);
+    background-color: var(--lilac);
+  }
+
+  .chip input:focus-visible + .chip-face {
+    outline: 2px solid var(--ink);
+    outline-offset: 3px;
+  }
+
+  .chip:active .chip-face {
+    transform: scale(0.98);
+  }
+
+  .preview {
+    padding: 18px 20px 20px;
+    background-color: var(--paper-2);
+    border-left: 2px solid var(--violet);
+  }
+
+  .preview-label {
+    color: var(--ink-2);
+  }
+
+  .preview-text {
+    margin-top: 12px;
+    font-size: 0.9375rem;
+    line-height: 1.55;
+    color: var(--ink);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .send {
+    display: grid;
+    gap: 16px;
+    margin-top: 4px;
+  }
+
+  .send-btn {
+    justify-content: flex-start;
+  }
+
+  .send-btn .b-lbl {
+    flex: 1 1 auto;
+    background-color: var(--violet);
+    transition: background-color var(--t-micro) linear;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .send-btn:hover .b-lbl {
+      background-color: var(--violet-deep);
+    }
+  }
+
+  .send-btn:focus-visible .b-lbl {
+    background-color: var(--violet-deep);
+  }
+
+  .send-note {
+    max-width: 52ch;
+    color: var(--ink-3);
+  }
+
+  @media (min-width: 768px) {
+    .send {
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: center;
+      column-gap: 24px;
+    }
+
+    .send-btn {
+      min-width: 260px;
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .include {
+      grid-column: 1 / 6;
+      position: sticky;
+      top: calc(var(--nav-h) + 48px);
+      align-self: start;
+    }
+
+    .helper {
+      grid-column: 7 / 13;
+      margin-top: 0;
+    }
+
+    .compose-grid {
+      align-items: start;
+    }
+
+    .send {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .send-btn {
+      justify-self: start;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .send {
+      grid-template-columns: auto minmax(0, 1fr);
+    }
+  }
+
+  /* =====================================================================
+     3. details
+     ===================================================================== */
+  .details {
+    padding-block: clamp(4rem, 2.8rem + 4.5vw, 7.5rem);
+  }
+
+  .d-block + .d-block {
+    margin-top: 48px;
+  }
+
+  .d-title {
+    color: var(--ink-2);
+  }
+
+  .d-rule {
+    margin-top: 14px;
+    background-color: var(--line-strong);
+  }
+
+  .d-li-link {
+    margin-top: 18px;
+  }
+
+  .li {
+    color: var(--ink);
+    font-size: 1.0625rem;
+  }
+
+  .d-hours-text {
+    margin-top: 18px;
+    max-width: 24ch;
+    font-stretch: var(--wd-display);
+    font-size: 1.0625rem;
+    font-weight: 540;
+    line-height: 1.4;
+    color: var(--ink);
+  }
+
+  .d-hours-offset {
+    margin-top: 8px;
+    color: var(--ink-2);
+  }
+
+  .d-table {
+    margin-top: 12px;
+  }
+
+  .d-row {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    align-items: baseline;
+    gap: 12px;
+    padding-block: 7px;
+  }
+
+  .d-row dt {
+    color: var(--ink-2);
+  }
+
+  .d-row dd {
+    margin: 0;
+    font-stretch: var(--wd-display);
+    font-size: 1rem;
+    font-weight: 520;
+    color: var(--ink);
+  }
+
+  .configure {
+    margin-top: 72px;
+    padding-top: 28px;
+    border-top: 1px solid var(--line-strong);
+  }
+
+  .conf-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 16px;
+    padding-block: 6px;
+    font-stretch: var(--wd-display);
+    font-size: var(--t-d3);
+    font-weight: 600;
+    letter-spacing: -0.012em;
+    line-height: 1.1;
+    color: var(--ink);
+    text-decoration: none;
+  }
+
+  .conf-link :global(.arrow) {
+    flex: 0 0 auto;
+    color: var(--violet-ink);
+    transition: transform var(--t-ui) var(--ease-expo);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .conf-link:hover :global(.arrow) {
+      transform: translateX(8px);
+    }
+
+    .conf-link:hover span {
+      text-decoration: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 0.16em;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .d-block + .d-block {
+      margin-top: 0;
+    }
+
+    .d-li {
+      grid-column: 1 / 5;
+    }
+
+    .d-hours {
+      grid-column: 5 / 9;
+    }
+
+    .d-company {
+      grid-column: 1 / 5;
+      margin-top: 48px !important;
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .d-li {
+      grid-column: 1 / 4;
+    }
+
+    .d-hours {
+      grid-column: 5 / 8;
+    }
+
+    .d-company {
+      grid-column: 9 / 13;
+      margin-top: 0 !important;
+    }
+
+    .configure {
+      margin-top: 96px;
     }
   }
 </style>
 
 <script>
-  import { initBooking } from '../scripts/booking';
-  initBooking();
+  /* ---- copy number (panel) ---------------------------------------------- */
+  const panel = document.querySelector<HTMLElement>('[data-contact-panel]');
+  const copyBtn = panel?.querySelector<HTMLButtonElement>('[data-copy]');
+  const copyLabel = copyBtn?.querySelector<HTMLElement>('[data-copy-label]');
+  const copyStatus = panel?.querySelector<HTMLElement>('[data-copy-status]');
+
+  if (copyBtn && copyLabel) {
+    const idle = copyLabel.textContent ?? '';
+    const done = copyBtn.dataset.copied || 'Copied';
+    const ms = Number(copyBtn.dataset.copiedMs) || 1600;
+    let timer = 0;
+    copyBtn.addEventListener('click', async () => {
+      const value = copyBtn.dataset.copy || '';
+      let ok = false;
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(value);
+          ok = true;
+        }
+      } catch {
+        ok = false;
+      }
+      if (!ok) {
+        /* fallback: select the number so the visitor can copy it by hand */
+        const num = panel?.querySelector('.number');
+        const sel = window.getSelection();
+        if (num && sel) {
+          const range = document.createRange();
+          range.selectNodeContents(num);
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+        return;
+      }
+      copyLabel.textContent = done;
+      if (copyStatus) copyStatus.textContent = done;
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        copyLabel.textContent = idle;
+        if (copyStatus) copyStatus.textContent = '';
+      }, ms);
+    });
+  }
+
+  /* ---- message helper ----------------------------------------------------
+     Runs entirely in the browser: reads the fields, fills the template that
+     site.ts produced at build time, shows the exact message and points the
+     button at WhatsApp with it. Nothing is stored or sent anywhere. */
+  interface Tpl {
+    sent: { business: string; currentUrl: string; extra: string };
+    withExtra: Record<string, string>;
+    noExtra: Record<string, string>;
+    defaults: { business: string; currentUrl: string };
+  }
+
+  const helper = document.querySelector<HTMLElement>('[data-helper]');
+  const form = helper?.querySelector<HTMLFormElement>('[data-helper-form]');
+  const preview = helper?.querySelector<HTMLElement>('[data-helper-preview]');
+  const send = helper?.querySelector<HTMLAnchorElement>('[data-helper-send]');
+
+  if (helper && form && preview && send) {
+    let tpl: Tpl | null = null;
+    try {
+      tpl = JSON.parse(helper.dataset.tpl || 'null') as Tpl;
+    } catch {
+      tpl = null;
+    }
+    const base = send.href.split('?')[0];
+
+    if (tpl) {
+      const t = tpl;
+      const field = (name: string) => {
+        const el = form.elements.namedItem(name);
+        return el && 'value' in el ? String((el as HTMLInputElement).value).trim() : '';
+      };
+      const compose = () => {
+        const need = (form.querySelector<HTMLInputElement>('input[name="need"]:checked')?.value || Object.keys(t.noExtra)[0]) as string;
+        const extra = field('extra').replace(/\s*\n\s*/g, ' ');
+        const source = extra ? t.withExtra[need] : t.noExtra[need];
+        if (!source) return '';
+        return source
+          .split(t.sent.business)
+          .join(field('business').replace(/\s+/g, ' ') || t.defaults.business)
+          .split(t.sent.currentUrl)
+          .join(field('currentUrl').replace(/\s+/g, '') || t.defaults.currentUrl)
+          .split(t.sent.extra)
+          .join(extra);
+      };
+      const sync = () => {
+        const text = compose();
+        if (!text) return;
+        preview.textContent = text;
+        send.href = `${base}?text=${encodeURIComponent(text)}`;
+      };
+
+      form.addEventListener('input', sync);
+      form.addEventListener('change', sync);
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        sync();
+        send.click();
+      });
+      /* fields restored by back/forward navigation */
+      window.addEventListener('pageshow', sync);
+      sync();
+      helper.hidden = false;
+    }
+  }
 </script>

@@ -1,0 +1,810 @@
+---
+/**
+ * §5.12 #finale (violet) — the close. SPEC.md §5.12, re-skinned by
+ * SPEC_COSMOS.md §2: the violet field with a quiet star field behind it, and
+ * the ECLIPSE REVEAL in place of the carbon curtain.
+ *
+ * The eclipse. A --void disc (section::after, [data-cover]) covers the whole
+ * section and shrinks, scale 1 → 0 on the 1200ms quint curve, into the
+ * eclipsed body in the upper right: the night opens and what is left of the
+ * dark is one small eclipse with a hairline limb, a faint corona and one
+ * bead of light on the −24° diagonal. The disc exists only in the armed
+ * state (html.js, motion on, engine alive) and ends at scale 0 + opacity 0 +
+ * visibility hidden, so it is never left over content.
+ *   Trigger: the engine's .is-in on the section (data-inview). Because the
+ *   engine marks sections as soon as a sliver shows (and marks everything
+ *   after 6s), the script below HOLDS the open (.is-held) until half of the
+ *   viewport is violet, then releases it: the content in view plays the
+ *   §5.12 choreography, timed to the moment the disc uncovers it (H2 words
+ *   from 260ms, chips at 50ms steps, button 660ms); content below the fold
+ *   is handed back to the engine and rises on entry.
+ *   The hold is only ever added by this script, so if it fails the disc
+ *   simply opens on .is-in; once the section is on screen it is released
+ *   within 2.4s whatever happens.
+ *
+ * Desktop: H2 (D1) in columns 1–10, one sentence per line block; body in
+ * columns 1–5 closed by a hairline and the secondary links; the console
+ * (intent chips 2×2, the 64px starlight button, the number line) in 7–12.
+ * The button is sized for its longest label, so choosing a chip moves
+ * nothing. From 960px the same two columns on the 8-column grid (1–4 and
+ * 5–8); portrait tablets stack, console in 1–6. 390px: stacked, chips 2×2
+ * (one column under 380px), full-width 64px button, number under it.
+ *
+ * No live clock line (owner decision). Root carries data-sticky-hide so the
+ * mobile WhatsApp bar steps aside here.
+ */
+import Cosmos from '../Cosmos.astro';
+import SplitText from '../ui/SplitText.astro';
+import Arrow from '../ui/Arrow.astro';
+import WaGlyph from '../ui/WaGlyph.astro';
+import { finale, contact, wa } from '../../data/site';
+import { url } from '../../lib/url';
+
+/* "Send your current website." / "Get a fixed price." — one sentence per
+   line block, each balanced on its own. */
+const lines = finale.h2.split(/(?<=\.)\s+/);
+
+const intents = finale.intents.map((it) => ({
+  id: it.id,
+  label: it.label,
+  href: wa(it.text),
+  cta: finale.button.withIntent(it.label),
+}));
+
+/* The button is sized once for its longest label, so choosing a chip never
+   moves anything (the sizer is aria-hidden and visibility: hidden). */
+const longest = intents.reduce((a, b) => (b.cta.length > a.length ? b.cta : a), finale.button.label);
+
+const [linkedin, prices] = finale.secondary;
+/* the ↗ in the label is drawn by <Arrow dir="up-right"> as a hairline glyph */
+const linkedinText = linkedin.label.replace(/\s*↗\s*$/, '');
+/* E.164 with the plus: pastes cleanly into WhatsApp, a dialer or a contact */
+const copyValue = `+${contact.whatsapp.e164}`;
+
+/* Choreography offsets (ms after the eclipse opens), used only for content
+   that is on screen at that moment. Everything else rises on entry with the
+   small default delays in its style attribute. */
+const STAGE = { h2: 260, body: 420, legend: 500, chip: 540, button: 660, number: 740, rule: 700, links: 800 };
+---
+
+<section
+  id={finale.id}
+  class="finale s-violet section"
+  data-nav-theme="dark"
+  data-inview
+  data-cover
+  data-sticky-hide
+  data-finale
+  aria-labelledby="finale-title"
+>
+  <Cosmos variant="stars" />
+
+  <div class="eclipse" data-eclipse aria-hidden="true">
+    <span class="corona"></span>
+    <span class="moon"></span>
+    <span class="bead"></span>
+  </div>
+
+  <div class="wrap g grid">
+    <SplitText as="h2" id="finale-title" class="d1 title" lines={lines} data-stage={STAGE.h2} />
+
+    <p class="lead intro" data-reveal data-stage={STAGE.body}>{finale.body}</p>
+
+    <div class="console">
+      <fieldset class="intents" data-wa-intent="finale-intents">
+        <legend class="label legend" data-reveal data-stage={STAGE.legend}>{finale.intentsLabel}</legend>
+        <div class="chips">
+          {
+            intents.map((it, k) => (
+              <label class="chip" data-reveal style={`--d:${k * 50}ms`} data-stage={STAGE.chip + k * 50}>
+                <input class="visually-hidden" type="radio" name="finale-intent" value={it.id} data-href={it.href} data-cta={it.cta} />
+                <span class="chip-face">
+                  <span class="chip-node" aria-hidden="true" />
+                  <span class="chip-text">{it.label}</span>
+                </span>
+              </label>
+            ))
+          }
+        </div>
+      </fieldset>
+
+      <div class="cta-wrap" data-reveal style="--d:120ms" data-stage={STAGE.button}>
+        <a
+          class="btn btn-star btn-lg cta"
+          href={wa(finale.button.text)}
+          target="_blank"
+          rel="noopener"
+          data-magnetic=".25"
+          data-wa-intent="finale"
+          data-finale-cta
+        >
+          <WaGlyph size={18} />
+          <span class="cta-text">
+            <span class="cta-label" data-finale-label>{finale.button.label}</span>
+            <span class="cta-sizer" aria-hidden="true">{longest}</span>
+          </span>
+          <Arrow />
+        </a>
+      </div>
+
+      <div class="numline" data-reveal style="--d:200ms" data-stage={STAGE.number}>
+        <p class="number">
+          <span class="num-value" data-number>{finale.number.display}</span>
+          <button type="button" class="copy" data-copy={copyValue} data-copied={finale.number.copied} data-copied-ms={finale.number.copiedMs}>
+            <span class="copy-label" data-copy-label>{finale.number.copy}</span>
+          </button>
+          <span class="visually-hidden" role="status" aria-live="polite" data-copy-status></span>
+        </p>
+        <p class="small reassure">{finale.reassurance}</p>
+      </div>
+    </div>
+
+    <div class="foot">
+      <span class="rule foot-rule" data-reveal="draw" data-stage={STAGE.rule} aria-hidden="true"></span>
+      <ul class="links" data-reveal style="--d:80ms" data-stage={STAGE.links}>
+        <li>
+          <a class="tlink" href={linkedin.href} target="_blank" rel="noopener">
+            <span>{linkedinText}</span>
+            <Arrow dir="up-right" />
+          </a>
+        </li>
+        <li>
+          <a class="tlink" href={url(prices.href)}>
+            <span>{prices.label}</span>
+            <Arrow dir="up" />
+          </a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<script>
+  import { addFrame, isReduced, observeReveals } from '../../scripts/motion';
+
+  const root = document.querySelector<HTMLElement>('[data-finale]');
+  if (root) {
+    initIntents(root);
+    initCopy(root);
+    initEclipse(root);
+  }
+
+  /* ---- intent chips: prefill + label ---------------------------------- */
+  function initIntents(section: HTMLElement): void {
+    const cta = section.querySelector<HTMLAnchorElement>('[data-finale-cta]');
+    const label = section.querySelector<HTMLElement>('[data-finale-label]');
+    const radios = Array.from(section.querySelectorAll<HTMLInputElement>('input[name="finale-intent"]'));
+    if (!cta || !label || !radios.length) return;
+
+    const sync = () => {
+      const on = radios.find((r) => r.checked);
+      if (!on) return;
+      if (on.dataset.href) cta.href = on.dataset.href;
+      if (on.dataset.cta) label.textContent = on.dataset.cta;
+      cta.dataset.waIntent = on.value;
+    };
+    radios.forEach((r) => r.addEventListener('change', sync));
+    // a selection restored by back/forward navigation
+    sync();
+    window.addEventListener('pageshow', sync);
+  }
+
+  /* ---- copy number ------------------------------------------------------ */
+  function initCopy(section: HTMLElement): void {
+    const btn = section.querySelector<HTMLButtonElement>('[data-copy]');
+    const label = btn?.querySelector<HTMLElement>('[data-copy-label]');
+    const status = section.querySelector<HTMLElement>('[data-copy-status]');
+    const number = section.querySelector<HTMLElement>('[data-number]');
+    if (!btn || !label) return;
+
+    const idle = label.textContent ?? '';
+    const done = btn.dataset.copied || 'Copied';
+    const ms = Number(btn.dataset.copiedMs) || 1600;
+    let timer = 0;
+
+    const selectNumber = () => {
+      if (!number) return;
+      const range = document.createRange();
+      range.selectNodeContents(number);
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+    };
+
+    btn.addEventListener('click', async () => {
+      let ok = false;
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(btn.dataset.copy ?? '');
+          ok = true;
+        }
+      } catch {
+        ok = false;
+      }
+      // No clipboard access: select the number so Ctrl/Cmd+C works.
+      if (!ok) return selectNumber();
+
+      label.textContent = done;
+      btn.classList.add('is-copied');
+      if (status) status.textContent = done;
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        label.textContent = idle;
+        btn.classList.remove('is-copied');
+        if (status) status.textContent = '';
+      }, ms);
+    });
+  }
+
+  /* ---- the eclipse -------------------------------------------------------
+     Geometry: the disc is centred on the eclipsed body; its diameter is
+     measured so it covers the farthest corner of the section.
+     Timing: see the component header (hold until half the viewport is
+     violet, then stage what is on screen). */
+  function initEclipse(section: HTMLElement): void {
+    const html = document.documentElement;
+    const body = section.querySelector<HTMLElement>('[data-eclipse]');
+
+    const measure = () => {
+      const s = section.getBoundingClientRect();
+      let cx = s.width - 160;
+      let cy = 200;
+      if (body && body.offsetWidth) {
+        const b = body.getBoundingClientRect();
+        cx = b.left - s.left + b.width / 2;
+        cy = b.top - s.top + b.height / 2;
+      }
+      const d = 2 * Math.hypot(Math.max(cx, s.width - cx), Math.max(cy, s.height - cy)) + 8;
+      section.style.setProperty('--ecl-d', `${Math.ceil(d)}px`);
+    };
+    measure();
+    if ('ResizeObserver' in window) new ResizeObserver(measure).observe(section);
+
+    const armed = () => html.classList.contains('js') && !html.classList.contains('motion-failed') && !isReduced();
+    const openAt = (r: DOMRect, vh: number) => r.top <= vh * 0.5 || r.bottom <= vh;
+    const staged = Array.from(section.querySelectorAll<HTMLElement>('[data-stage]'));
+    const reveals = Array.from(section.querySelectorAll<HTMLElement>('[data-reveal], [data-split]'));
+
+    let held = false;
+    let deadline = 0;
+    let release = false;
+    const onScreen: HTMLElement[] = [];
+    const offScreen: HTMLElement[] = [];
+
+    /* layout reads: who is on screen right now */
+    const survey = (vh: number) => {
+      onScreen.length = 0;
+      offScreen.length = 0;
+      for (const el of staged) {
+        const r = el.getBoundingClientRect();
+        if (r.top < vh && r.bottom > 0) onScreen.push(el);
+      }
+      for (const el of reveals) {
+        const r = el.getBoundingClientRect();
+        if (r.top >= vh || r.bottom <= 0) offScreen.push(el);
+      }
+    };
+
+    /* style writes: stage the visible, hand the rest back to the engine */
+    const open = () => {
+      for (const el of onScreen) el.style.setProperty('--d', `${el.dataset.stage}ms`);
+      const rearm = offScreen.filter((el) => el.classList.contains('is-in'));
+      rearm.forEach((el) => el.classList.remove('is-in'));
+      held = false;
+      window.clearTimeout(deadline);
+      section.classList.remove('is-held');
+      if (rearm.length) observeReveals(section);
+    };
+
+    const forceOpen = () => {
+      if (!held) return;
+      survey(window.innerHeight);
+      open();
+    };
+
+    section.addEventListener('vesta:reveal', (e) => {
+      if (e.target !== section || !armed()) return;
+      const vh = window.innerHeight;
+      survey(vh);
+      if (openAt(section.getBoundingClientRect(), vh)) {
+        // already half on screen (anchor jump, reload): open right away
+        for (const el of onScreen) el.style.setProperty('--d', `${el.dataset.stage}ms`);
+        return;
+      }
+      held = true;
+      section.classList.add('is-held');
+      // Already partly on screen (e.g. a restored scroll position) and the
+      // visitor may not scroll again: start the clock now, not on a frame.
+      const r = section.getBoundingClientRect();
+      if (r.top < vh && r.bottom > 0) deadline = window.setTimeout(forceOpen, 2400);
+    });
+
+    addFrame({
+      read(_y, vh) {
+        if (!held) return;
+        const r = section.getBoundingClientRect();
+        if (openAt(r, vh)) {
+          survey(vh);
+          release = true;
+        } else if (!deadline && r.top < vh && r.bottom > 0) {
+          // on screen but parked short of half: never hold longer than this
+          deadline = window.setTimeout(forceOpen, 2400);
+        }
+      },
+      write() {
+        if (!release) return;
+        release = false;
+        if (held) open();
+      },
+    });
+
+    // Motion switched off from the footer: nothing may stay held.
+    document.addEventListener('vesta:motion', () => {
+      if (isReduced()) forceOpen();
+    });
+  }
+</script>
+
+<style>
+  /* ---- section ------------------------------------------------------------
+     The field is --violet-deep (starlight 10.2:1). --ecl-* place the eclipsed
+     body; the covering disc (::after) is centred on the same point, and its
+     diameter (--ecl-d) is measured by the script (400vmax until then). */
+  .finale {
+    --ecl-size: clamp(76px, 14.5vw, 208px);
+    --ecl-edge: max(var(--gut), (100% - var(--content-max)) / 2);
+    --ecl-cx: calc(100% - var(--ecl-edge) - var(--ecl-size) / 2);
+    --ecl-cy: calc(var(--section-y) * 0.4 + var(--ecl-size) / 2);
+    --ecl-d: 400vmax;
+    display: flex;
+    flex-direction: column;
+    min-height: 80svh;
+    overflow: clip;
+    isolation: isolate;
+  }
+
+  @media (min-width: 768px) {
+    .finale {
+      min-height: 88svh;
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .finale {
+      --ecl-cy: calc(var(--section-y) + var(--ecl-size) * 0.42);
+    }
+  }
+
+  /* ---- the eclipse cover (data-cover) ------------------------------------ */
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .finale::after {
+    content: '';
+    position: absolute;
+    z-index: 5;
+    left: calc(var(--ecl-cx) - var(--ecl-d) / 2);
+    top: calc(var(--ecl-cy) - var(--ecl-d) / 2);
+    width: var(--ecl-d);
+    height: var(--ecl-d);
+    border-radius: 50%;
+    background-color: var(--void);
+    pointer-events: none;
+    transform: scale(1);
+    /* 1200ms quint entered 180ms in: the curve's flat first 15% (no visible
+       change) is skipped, so the sky answers the scroll at once. Ends at
+       1020ms, then opacity 0 + visibility hidden. */
+    transition:
+      transform 1200ms var(--ease-quint) -180ms,
+      opacity 0s linear 1020ms,
+      visibility 0s linear 1020ms;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .finale.is-in:not(.is-held)::after {
+    transform: scale(0);
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  /* While the open is held, content already marked in stays down with it. */
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .finale.is-held [data-reveal] {
+    opacity: 0;
+    transform: translate3d(0, var(--rise), 0);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .finale.is-held [data-reveal='draw'] {
+    transform: scaleX(0);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .finale.is-held [data-split] .w {
+    opacity: 0;
+    transform: translate3d(0, 112%, 0);
+  }
+
+  /* ---- the eclipsed body (decorative) ------------------------------------ */
+  .eclipse {
+    position: absolute;
+    z-index: 1;
+    left: calc(var(--ecl-cx) - var(--ecl-size) / 2);
+    top: calc(var(--ecl-cy) - var(--ecl-size) / 2);
+    width: var(--ecl-size);
+    height: var(--ecl-size);
+    pointer-events: none;
+  }
+
+  .eclipse > span {
+    position: absolute;
+    border-radius: 50%;
+  }
+
+  /* corona: one radial, ≤10% starlight at the limb, fading out to 2.6× the
+     disc (the moon is 38.5% of its radius) */
+  .corona {
+    inset: -80%;
+    background-image: radial-gradient(
+      closest-side,
+      rgb(243 240 250 / 0.1) 38%,
+      rgb(243 240 250 / 0.066) 43%,
+      rgb(243 240 250 / 0.036) 52%,
+      rgb(243 240 250 / 0.016) 66%,
+      rgb(243 240 250 / 0.005) 82%,
+      transparent 100%
+    );
+  }
+
+  .moon {
+    inset: 0;
+    border: 1px solid rgb(243 240 250 / 0.9);
+    background-color: var(--void);
+  }
+
+  /* one bead of light on the limb, on the site's −24° diagonal (lower left) */
+  .bead {
+    left: 50%;
+    top: 50%;
+    width: 6px;
+    height: 6px;
+    margin: -3px 0 0 -3px;
+    background-color: var(--starlight);
+    transform: rotate(156deg) translateX(calc(var(--ecl-size) / 2));
+  }
+
+  /* ---- grid -------------------------------------------------------------- */
+  .grid {
+    position: relative;
+    z-index: 2;
+    flex: 1 1 auto;
+    grid-template-rows: auto auto auto 1fr auto;
+    align-content: start;
+  }
+
+  /* D1, held to one line per sentence down to 320px (the sentence
+     "Get a fixed price." sets the floor: ≈ 8ch wide per 100% of font size). */
+  .title {
+    grid-row: 1;
+    max-width: 16ch;
+    margin-top: 20px;
+    font-size: min(var(--t-d1), 10.8vw);
+  }
+
+  .title :global(.ln) {
+    text-wrap: balance;
+  }
+
+  .intro {
+    grid-row: 2;
+    margin-top: 28px;
+    max-width: 36ch;
+  }
+
+  .console {
+    grid-row: 3;
+    margin-top: 48px;
+  }
+
+  .foot {
+    grid-row: 5;
+    margin-top: 64px;
+  }
+
+  @media (min-width: 768px) {
+    .title {
+      grid-column: 1 / 8;
+      margin-top: 0;
+    }
+
+    .intro {
+      grid-column: 1 / 6;
+      margin-top: 40px;
+    }
+
+    .console {
+      grid-column: 1 / 7;
+      margin-top: 56px;
+    }
+
+    .foot {
+      margin-top: 88px;
+    }
+  }
+
+  /* Two columns from 960px (landscape tablets on the 8-column grid): body
+     left, console right; the secondary links close the left column, level
+     with the bottom of the console. */
+  @media (min-width: 960px) {
+    .grid {
+      grid-template-rows: auto auto 1fr;
+    }
+
+    .intro {
+      grid-column: 1 / 5;
+      grid-row: 2;
+      margin-top: 56px;
+    }
+
+    .console {
+      grid-column: 5 / 9;
+      grid-row: 2 / 4;
+      margin-top: 56px;
+    }
+
+    .foot {
+      grid-column: 1 / 5;
+      grid-row: 3;
+      align-self: end;
+      margin-top: 48px;
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .title {
+      grid-column: 1 / 11;
+    }
+
+    .intro {
+      grid-column: 1 / 6;
+      margin-top: 64px;
+    }
+
+    .console {
+      grid-column: 7 / 13;
+      margin-top: 64px;
+    }
+
+    .foot {
+      grid-column: 1 / 6;
+    }
+  }
+
+  /* ---- intent chips (radio group) ---------------------------------------- */
+  .intents {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .legend {
+    display: block;
+    float: left; /* keeps the legend inside the fieldset flow */
+    width: 100%;
+    margin-bottom: 16px;
+    padding: 0;
+    color: var(--fg);
+  }
+
+  .chips {
+    clear: both;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  /* below 380px a 2×2 grid would break every label: one column instead */
+  @media (max-width: 379.98px) {
+    .chips {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  .chip {
+    position: relative;
+    display: block;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .chip-face {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 44px;
+    height: 100%;
+    padding: 9px 14px;
+    border: 1px solid rgb(243 240 250 / 0.5);
+    border-radius: 0;
+    background-color: transparent;
+    color: var(--starlight);
+    font-stretch: var(--wd-display);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    line-height: 1.2;
+    transition:
+      background-color var(--t-micro) linear,
+      border-color var(--t-micro) linear,
+      color var(--t-micro) linear;
+  }
+
+  .chip-node {
+    flex: 0 0 auto;
+    width: 9px;
+    height: 9px;
+    border: 1px solid currentColor;
+    background-color: transparent;
+    transition: background-color var(--t-micro) linear;
+  }
+
+  .chip-text {
+    min-width: 0;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .chip:hover .chip-face {
+      border-color: var(--starlight);
+      background-color: rgb(243 240 250 / 0.08);
+    }
+  }
+
+  .chip input:checked + .chip-face {
+    border-color: var(--starlight);
+    background-color: var(--starlight);
+    color: var(--ink);
+  }
+
+  .chip input:checked + .chip-face .chip-node {
+    background-color: currentColor;
+  }
+
+  .chip input:focus-visible + .chip-face {
+    outline: 2px solid var(--starlight);
+    outline-offset: 3px;
+  }
+
+  .chip:active .chip-face {
+    transform: scale(0.98);
+  }
+
+  @media (min-width: 768px) {
+    .chip-face {
+      font-size: 0.875rem;
+      padding-inline: 16px;
+    }
+  }
+
+  /* ---- the button -------------------------------------------------------- */
+  .cta-wrap {
+    margin-top: 24px;
+  }
+
+  .cta {
+    display: flex;
+    width: 100%;
+    min-height: 64px;
+    justify-content: flex-start;
+    gap: 14px;
+    padding: 12px 24px;
+    white-space: normal;
+    text-align: left;
+  }
+
+  .cta-text {
+    display: grid;
+    flex: 1 1 auto;
+    min-width: 0;
+    line-height: 1.25;
+  }
+
+  .cta-text > * {
+    grid-area: 1 / 1;
+    align-self: center;
+  }
+
+  .cta-sizer {
+    visibility: hidden;
+  }
+
+  /* The fill is painted by ::before (so the facet never clips the focus
+     ring); the label carries the same starlight as a real background-color,
+     so the text sits on an opaque colour the contrast gate can see (ink on
+     starlight 17:1). It steps aside on hover/focus, where the fill turns
+     white and the gleam crosses. */
+  .cta-label {
+    background-color: var(--starlight);
+  }
+
+  .cta:focus-visible .cta-label {
+    background-color: transparent;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .cta:hover .cta-label {
+      background-color: transparent;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .cta {
+      padding-inline: 28px;
+    }
+  }
+
+  /* ---- number line ------------------------------------------------------- */
+  .numline {
+    margin-top: 20px;
+  }
+
+  .number {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 20px;
+  }
+
+  .num-value {
+    font-stretch: var(--wd-display);
+    font-size: clamp(1.125rem, 1rem + 0.4vw, 1.375rem);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  /* last item on its line, so the label may change width freely */
+  .copy {
+    position: relative;
+    padding: 6px 0;
+    text-align: left;
+    color: var(--starlight);
+    font-stretch: var(--wd-display);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
+  }
+
+  .copy::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 2px;
+    height: 1px;
+    background-color: currentColor;
+    transform-origin: left center;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .copy:hover::after {
+      animation: underline-redraw 360ms var(--ease-quint) both;
+    }
+  }
+
+  .reassure {
+    margin-top: 8px;
+    max-width: 62ch;
+    text-wrap: balance;
+    color: var(--fg);
+  }
+
+  /* ---- foot -------------------------------------------------------------- */
+  .foot-rule {
+    background-color: var(--line);
+  }
+
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 32px;
+    margin: 20px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+</style>

@@ -1,0 +1,283 @@
+---
+/**
+ * Odometer price (§4 "Price"). The real text lives in a visually-hidden span;
+ * the figures you see are aria-hidden digit windows, each holding a strip of
+ * 0–9 twice. Default CSS shows the final digit (strip at d × −5%), so no-JS,
+ * a failed engine and motion-off all render the right price. Armed, the
+ * strips sit at 0; on .is-in they roll to the second copy of their digit,
+ * right to left, 60ms apart.
+ *
+ *   <Odometer value="$500–$700" delay={120} />
+ *   <Odometer value="from $750" />
+ *
+ * Figures are tabular by construction. Mona Sans's own tabular set is the
+ * code-style one (slashed zero, flagged one), which reads as monospace on a
+ * price list, so the odometer keeps the lining proportional glyphs and puts
+ * each one, centred, in a wheel exactly as wide as the font's tabular advance
+ * (--odo-tab: .67em, measured at wdth 115). Every digit occupies the same
+ * width, so figures line up column to column and a wheel never changes width
+ * while it turns — the way a real odometer drum works.
+ *
+ * Size comes from the parent's font-size (everything is in em). Non-digits:
+ * "$" is set small and hung from the cap line, the en dash small and centred
+ * on the figures, words ("from") small on the baseline.
+ *
+ * Update API (for the configurator): dispatch on the element
+ *   el.dispatchEvent(new CustomEvent('vesta:odometer', { detail: { value: '$750' } }))
+ * and it re-rolls to the new value (320ms per digit, see --odo-dur).
+ */
+export interface Props {
+  value: string;
+  /** Screen-reader text; defaults to value. */
+  label?: string;
+  /** ms before the rightmost digit starts rolling. */
+  delay?: number;
+  class?: string;
+}
+
+const { value, label, delay = 0, class: cls = '' } = Astro.props;
+
+type Part =
+  | { kind: 'digit'; d: number; k: number }
+  | { kind: 'cur' | 'dash' | 'word' | 'sep'; s: string };
+
+function parse(v: string): Part[] {
+  const out: Part[] = [];
+  const total = (v.match(/\d/g) || []).length;
+  let seen = 0;
+  let word = '';
+  const flush = () => {
+    if (word) out.push({ kind: 'word', s: word });
+    word = '';
+  };
+  for (const ch of v) {
+    if (/[A-Za-z]/.test(ch)) {
+      word += ch;
+      continue;
+    }
+    flush();
+    if (/\d/.test(ch)) {
+      out.push({ kind: 'digit', d: Number(ch), k: total - 1 - seen });
+      seen++;
+    } else if (ch === '$') out.push({ kind: 'cur', s: ch });
+    else if (ch === '–' || ch === '-') out.push({ kind: 'dash', s: '–' });
+    else if (ch === ',' || ch === '.' || ch === '/' || ch === '%' || ch === '+') out.push({ kind: 'sep', s: ch });
+    /* spaces are carried by margins */
+  }
+  flush();
+  return out;
+}
+
+const parts = parse(value);
+const strip = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9].join('<br>');
+---
+
+<span class={`odo ${cls}`} data-odometer data-inview style={`--odo-delay:${delay}ms`}>
+  <span class="visually-hidden" data-odo-text>{label ?? value}</span>
+  <span class="odo-v" aria-hidden="true">
+    {
+      parts.map((p) =>
+        p.kind === 'digit' ? (
+          <span class="odo-n" style={`--d:${p.d};--k:${p.k}`}>
+            <span class="odo-s" set:html={strip} />
+          </span>
+        ) : p.kind === 'cur' ? (
+          <span class="odo-c">{p.s}</span>
+        ) : p.kind === 'dash' ? (
+          <span class="odo-x">{p.s}</span>
+        ) : p.kind === 'word' ? (
+          <span class="odo-w">{p.s}</span>
+        ) : (
+          <span class="odo-p">{p.s}</span>
+        )
+      )
+    }
+  </span>
+</span>
+
+<style>
+  .odo {
+    display: inline-block;
+    line-height: 1;
+    font-variant-numeric: lining-nums proportional-nums;
+    white-space: nowrap;
+    vertical-align: top;
+  }
+
+  .odo-v {
+    display: inline-flex;
+    align-items: flex-start;
+    /* top-aligned, so the inline-flex never grows the line box below 1em */
+    vertical-align: top;
+    user-select: none;
+  }
+
+  /* one wheel: one line tall, one tabular advance wide, strip clipped */
+  .odo {
+    --odo-tab: 0.67em;
+  }
+
+  .odo-n {
+    position: relative;
+    display: block;
+    flex: 0 0 auto;
+    width: var(--odo-tab);
+    height: 1em;
+    overflow: clip;
+  }
+
+  .odo-s {
+    position: absolute;
+    top: 0;
+    left: -0.25em;
+    right: -0.25em;
+    display: block;
+    line-height: 1;
+    text-align: center;
+    /* default = the final digit, first copy */
+    transform: translate3d(0, calc(var(--d) * -5%), 0);
+  }
+
+  /* armed: every window rests on 0 until the price enters the viewport */
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .odo:not(.is-in) .odo-s {
+    transform: translate3d(0, 0, 0);
+  }
+
+  /* rolled: the same digit on the second copy, so each wheel turns 10+d steps */
+  .odo.is-in .odo-s {
+    transform: translate3d(0, calc((10 + var(--d)) * -5%), 0);
+    transition: transform var(--odo-dur, 1200ms) var(--ease-expo);
+    transition-delay: calc(var(--odo-delay, 0ms) + var(--k) * 60ms);
+  }
+
+  :global(html.motion-reduced) .odo .odo-s {
+    transition: none !important;
+  }
+
+  /* "$" small and hung from the cap line */
+  .odo-c {
+    display: block;
+    font-size: 0.45em;
+    line-height: 1;
+    margin-top: 0.2em;
+    margin-right: 0.04em;
+  }
+
+  /* en dash at .6em, its bar centred on the figures: the digits' optical
+     centre sits .52em below the top of the 1em line (baseline .885em, figure
+     height .73em); the dash bar sits .265em above its own baseline */
+  .odo-x {
+    display: block;
+    font-size: 0.6em;
+    line-height: 1;
+    margin: 0.25em 0.14em 0 0.1em;
+  }
+
+  /* words ("from") sit small on the figure baseline */
+  .odo-w {
+    display: block;
+    align-self: flex-end;
+    font-size: 0.28em;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    margin: 0 0.42em 0.29em 0;
+  }
+
+  .odo-p {
+    display: block;
+    line-height: 1;
+  }
+</style>
+
+<script>
+  /* Re-roll on demand: el.dispatchEvent(new CustomEvent('vesta:odometer', { detail: { value } })). */
+  const STRIP = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+
+  function scopeAttr(root: HTMLElement): string | null {
+    for (const a of Array.from(root.attributes)) if (a.name.startsWith('data-astro-cid-')) return a.name;
+    return null;
+  }
+
+  function make(tag: string, cls: string, cid: string | null, text?: string): HTMLElement {
+    const el = document.createElement(tag);
+    el.className = cls;
+    if (cid) el.setAttribute(cid, '');
+    if (text !== undefined) el.textContent = text;
+    return el;
+  }
+
+  function rebuild(root: HTMLElement, value: string): void {
+    const visual = root.querySelector<HTMLElement>('.odo-v');
+    const sr = root.querySelector<HTMLElement>('[data-odo-text]');
+    if (!visual) return;
+    const cid = scopeAttr(root);
+
+    /* where each wheel currently rests, by position from the right */
+    const prev = new Map<number, number>();
+    visual.querySelectorAll<HTMLElement>('.odo-n').forEach((n) => {
+      prev.set(Number(n.style.getPropertyValue('--k')), Number(n.style.getPropertyValue('--d')));
+    });
+
+    const total = (value.match(/\d/g) || []).length;
+    let seen = 0;
+    let word = '';
+    const next = make('span', 'odo-v', cid);
+    next.setAttribute('aria-hidden', 'true');
+    const strips: HTMLElement[] = [];
+    const flush = () => {
+      if (word) next.appendChild(make('span', 'odo-w', cid, word));
+      word = '';
+    };
+    for (const ch of value) {
+      if (/[A-Za-z]/.test(ch)) {
+        word += ch;
+        continue;
+      }
+      flush();
+      if (/\d/.test(ch)) {
+        const k = total - 1 - seen++;
+        const n = make('span', 'odo-n', cid);
+        n.style.setProperty('--d', ch);
+        n.style.setProperty('--k', String(k));
+        const s = make('span', 'odo-s', cid);
+        STRIP.forEach((d, i) => {
+          if (i) s.appendChild(document.createElement('br'));
+          s.appendChild(document.createTextNode(String(d)));
+        });
+        const from = prev.get(k) ?? 0;
+        s.style.transition = 'none';
+        s.style.transform = `translate3d(0, ${from * -5}%, 0)`;
+        n.appendChild(s);
+        next.appendChild(n);
+        strips.push(s);
+      } else if (ch === '$') next.appendChild(make('span', 'odo-c', cid, ch));
+      else if (ch === '–' || ch === '-') next.appendChild(make('span', 'odo-x', cid, '–'));
+      else if (/[,./%+]/.test(ch)) next.appendChild(make('span', 'odo-p', cid, ch));
+    }
+    flush();
+
+    visual.replaceWith(next);
+    if (sr) sr.textContent = value;
+    root.style.setProperty('--odo-dur', '320ms');
+    root.style.setProperty('--odo-delay', '0ms');
+    void next.offsetHeight;
+    requestAnimationFrame(() => {
+      strips.forEach((s) => {
+        s.style.transition = '';
+        s.style.transform = '';
+      });
+    });
+  }
+
+  document.addEventListener(
+    'vesta:odometer',
+    (e) => {
+      const target = e.target as Element | null;
+      const root = target?.closest?.('[data-odometer]') as HTMLElement | null;
+      const value = String((e as CustomEvent).detail?.value ?? '').trim();
+      if (!root || !value) return;
+      rebuild(root, value);
+    },
+    { capture: true }
+  );
+</script>

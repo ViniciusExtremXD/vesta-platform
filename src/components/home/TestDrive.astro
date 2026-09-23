@@ -1,0 +1,658 @@
+---
+/**
+ * §5.6 #test-drive, labelled "Telemetry" (SPEC_COSMOS §2) — night surface.
+ * Honest proof without clients: this page's own Lighthouse data read off four
+ * observatory instruments (§6.5 Ignition sweep), a hairline data table, one
+ * sourced research line, and a check module that sends the visitor's own
+ * site to Google's PageSpeed test.
+ *
+ * Render rule: only when testDrive.renders(measurements) — all four scores at
+ * or above testDrive.minScore. Otherwise the section is omitted at build with
+ * a console warning. `force` renders it anyway (lab pages only).
+ */
+import SectionLabel from '../ui/SectionLabel.astro';
+import SplitText from '../ui/SplitText.astro';
+import Arrow from '../ui/Arrow.astro';
+import WaGlyph from '../ui/WaGlyph.astro';
+import Gauge from '../Gauge.astro';
+import measurements from '../../data/measurements.json';
+import { testDrive, wa, type Measurements } from '../../data/site';
+import { formatDate } from '../../lib/url';
+
+export interface Props {
+  /** Render even when a score is under the threshold (lab only). */
+  force?: boolean;
+}
+
+const { force = false } = Astro.props;
+const m = measurements as Measurements;
+const passes = testDrive.renders(m);
+const show = force || passes;
+
+if (!passes && !force) {
+  console.warn(
+    `[test-drive] section omitted: every score must be ≥ ${testDrive.minScore} ` +
+      `(performance ${m.performance}, accessibility ${m.accessibility}, best practices ${m.bestPractices}, seo ${m.seo}).`
+  );
+}
+
+/* Table values come from site.ts as finished strings ("2.1 s"). Split the
+   number from its unit so the number can count and the unit can be set as a
+   small label. */
+const rows = testDrive.table.map((row, r) => {
+  const text = row.value(m);
+  const hit = text.match(/^(-?\d+(?:\.\d+)?)\s*(.*)$/);
+  const num = hit ? hit[1] : text;
+  const unit = hit ? hit[2] : '';
+  const decimals = num.includes('.') ? num.split('.')[1].length : 0;
+  return { label: row.label, num, unit, decimals, countable: Boolean(hit), r };
+});
+
+/* "Why speed matters: a 0.1-second …" → lead-in in starlight, the rest in haze. */
+const rsCut = testDrive.research.text.indexOf(': ');
+const rsHead = rsCut > 0 ? testDrive.research.text.slice(0, rsCut + 1) : '';
+const rsBody = rsCut > 0 ? testDrive.research.text.slice(rsCut + 2) : testDrive.research.text;
+
+/* Caption: the second sentence gets the lilac band key in front of it. */
+const capCut = testDrive.gaugeCaption.indexOf('. ');
+const capA = capCut > 0 ? testDrive.gaugeCaption.slice(0, capCut + 1) : testDrive.gaugeCaption;
+const capB = capCut > 0 ? testDrive.gaugeCaption.slice(capCut + 2) : '';
+/* the key glyph is bound to the first word after it, so it never ends a line alone */
+const capBSplit = capB.indexOf(' ');
+const capBHead = capBSplit > 0 ? capB.slice(0, capBSplit) : capB;
+const capBTail = capBSplit > 0 ? capB.slice(capBSplit) : '';
+
+const check = testDrive.check;
+/* The hairline <Arrow> replaces the typed arrow in the label. */
+const followLabel = check.follow.label.replace(/\s*→\s*$/, '');
+const footnote = testDrive.footnote(formatDate(m.date), m.tool);
+---
+
+{
+  show && (
+    <section id={testDrive.id} class="s-night section td" data-nav-theme="dark" aria-labelledby="td-title">
+      <div class="wrap g td-grid">
+        <header class="td-head">
+          <SectionLabel n={testDrive.label.index ?? undefined} name={testDrive.label.name} />
+          <SplitText as="h2" id="td-title" class="d2 td-h2" text={testDrive.h2} />
+          <p class="lead td-lead" data-reveal style="--d:240ms">
+            {testDrive.lead}
+          </p>
+        </header>
+
+        <div class="td-panel">
+          <span class="rule-h rule-top" data-reveal="draw" aria-hidden="true" />
+          <ul class="bays" role="list">
+            {testDrive.gauges.map((g, i) => (
+              <li class="bay" style={`--i:${i}`}>
+                <span class="rule-v" data-reveal="draw-y" style={`--d:${200 + i * 90}ms`} aria-hidden="true" />
+                <span class="rule-h rule-mid" data-reveal="draw" style="--d:300ms" aria-hidden="true" />
+                <Gauge metric={g.key} label={g.label} i={i} />
+              </li>
+            ))}
+          </ul>
+          <span class="rule-h rule-bot" data-reveal="draw" style="--d:200ms" aria-hidden="true" />
+          <p class="small td-caption" data-reveal style="--d:500ms">
+            {capA}
+            {capB && (
+              <Fragment>
+                {' '}
+                <span class="nw">
+                  <span class="key" aria-hidden="true">
+                    <svg width="18" height="10" viewBox="0 0 18 10">
+                      <path class="key-arc" d="M1 9.5A16 16 0 0 1 17 3.2" />
+                      <path class="key-t" d="M5 7.2 4.2 4.6M9 5.3 8.6 2.6M13 4 12.9 1.3" />
+                    </svg>
+                  </span>
+                  {capBHead}
+                </span>
+                {capBTail}
+              </Fragment>
+            )}
+          </p>
+        </div>
+
+        <div class="td-data">
+          <dl class="spec">
+            {rows.map((row) => (
+              <div class="row" data-inview style={`--r:${row.r}`}>
+                <dt class="row-k" data-reveal="fade" style={`--d:${row.r * 70 + 160}ms`}>
+                  {row.label}
+                </dt>
+                <dd class="row-v" data-reveal="fade" style={`--d:${row.r * 70 + 220}ms`}>
+                  {row.countable ? (
+                    <span
+                      class="row-n"
+                      data-count={row.num}
+                      data-count-decimals={row.decimals ? String(row.decimals) : undefined}
+                      data-count-delay={String(row.r * 70 + 220)}
+                      data-count-dur="1200">
+                      {row.num}
+                    </span>
+                  ) : (
+                    <span class="row-n">{row.num}</span>
+                  )}
+                  <span class="row-u">{row.unit}</span>
+                </dd>
+              </div>
+            ))}
+          </dl>
+          <p class="small td-foot" data-reveal>
+            {footnote}
+          </p>
+
+          <div class="td-research" data-reveal>
+            <p class="rs-text">
+              {rsHead && <strong>{rsHead}</strong>} {rsBody}
+            </p>
+            <p class="small rs-src">
+              <a class="cite" href={testDrive.research.source.href} target="_blank" rel="noopener">
+                <span>{testDrive.research.source.label}</span>
+                <Arrow dir="up-right" size={12} />
+              </a>
+            </p>
+          </div>
+        </div>
+
+        <aside class="td-check chamfer" data-reveal aria-labelledby="td-check-title">
+          <h3 id="td-check-title" class="d3 ck-title">
+            {check.title}
+          </h3>
+          <p class="ck-body">{check.body}</p>
+
+          <form class="ck-form" data-psi action={check.form.action} method={check.form.method} target={check.form.target} rel={check.form.rel}>
+            <label class="label ck-label" for="td-url">
+              {check.input.label}
+            </label>
+            <input
+              class="ck-input"
+              id="td-url"
+              name={check.form.name}
+              type="text"
+              inputmode="url"
+              autocomplete="url"
+              autocapitalize="off"
+              spellcheck="false"
+              placeholder={check.input.placeholder}
+              required
+            />
+            <button class="btn ck-btn" type="submit">
+              <span>{check.button}</span>
+              <Arrow dir="up-right" />
+            </button>
+          </form>
+
+          <a class="tlink ck-follow" href={wa(check.follow.text)} target="_blank" rel="noopener" data-wa-intent="test-drive">
+            <WaGlyph size={15} />
+            <span>{followLabel}</span>
+            <Arrow />
+          </a>
+        </aside>
+      </div>
+    </section>
+  )
+}
+
+<script>
+  /* Progressive enhancement for the check module: people type
+     "yourbusiness.com", PageSpeed wants a full URL. Without JS the form still
+     submits what was typed. Nothing is stored or sent anywhere else. */
+  const form = document.querySelector<HTMLFormElement>('form[data-psi]');
+  const input = form?.querySelector<HTMLInputElement>('input[name="url"]');
+  if (form && input) {
+    form.addEventListener('submit', () => {
+      const raw = input.value.trim().replace(/\s+/g, '');
+      if (raw && !/^https?:\/\//i.test(raw)) input.value = `https://${raw.replace(/^\/+/, '')}`;
+      else input.value = raw;
+    });
+  }
+</script>
+
+<style>
+  .td {
+    overflow: clip;
+    /* nebula light: two radials, both ≤10% alpha (SPEC_COSMOS §2) */
+    background-image:
+      radial-gradient(42% 38% at 74% 46%, rgb(98 54 232 / 0.1), transparent 70%),
+      radial-gradient(36% 30% at 6% 96%, rgb(243 240 250 / 0.035), transparent 70%);
+  }
+
+  .td-grid {
+    row-gap: 0;
+  }
+
+  /* ---------------------------------------------------------------- head */
+
+  .td-head {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 24px;
+  }
+
+  .td-head :global(.td-h2) {
+    max-width: 18ch;
+    color: var(--starlight);
+  }
+
+  .td-lead {
+    color: var(--haze);
+  }
+
+  /* --------------------------------------------------------------- panel */
+  /* The four instruments sit in bays divided by hairlines, like a sheet of
+     observatory readings: a top and bottom rule across the full width, one
+     vertical rule between bays (and a cross on mobile). */
+
+  .td-panel {
+    position: relative;
+    margin-top: clamp(3.5rem, 2rem + 4.5vw, 6.5rem);
+  }
+
+  .rule-h,
+  .rule-v {
+    position: absolute;
+    display: block;
+    pointer-events: none;
+  }
+
+  .rule-h {
+    inset-inline: 0;
+    height: 1px;
+    background-color: var(--line-dark-strong);
+  }
+
+  .rule-top {
+    top: 0;
+  }
+
+  .rule-bot {
+    position: relative;
+    background-color: var(--line-dark);
+  }
+
+  /* Bays are separated by a grid gap, and each rule sits in the middle of
+     its gap: every bay gets the same content width, so every dial renders
+     at the same size and the captions share one baseline. */
+  .rule-v {
+    top: 0;
+    bottom: 0;
+    left: calc(var(--bay-gap) / -2);
+    width: 1px;
+    background-color: var(--line-dark);
+  }
+
+  .bays {
+    --bay-gap: 24px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--bay-gap);
+  }
+
+  .bay {
+    position: relative;
+    min-width: 0;
+    padding: 28px 0 24px;
+  }
+
+  .bay :global(.gauge) {
+    max-width: 150px;
+  }
+
+  /* mobile: 2 × 2 with a hairline cross */
+  .bay:nth-child(odd) .rule-v {
+    display: none;
+  }
+
+  .bay:nth-child(-n + 2) .rule-mid {
+    display: none;
+  }
+
+  .rule-mid {
+    top: 0;
+    background-color: var(--line-dark);
+  }
+
+  .bay:nth-child(odd) .rule-mid {
+    inset-inline: 0 calc(var(--bay-gap) / -2);
+  }
+
+  .bay:nth-child(even) .rule-mid {
+    inset-inline: calc(var(--bay-gap) / -2) 0;
+  }
+
+  /* the longest caption ("Code quality") keeps to one line at 320 */
+  @media (max-width: 359.98px) {
+    .bay :global(.cap-name) {
+      letter-spacing: 0.1em;
+    }
+  }
+
+  .td-caption {
+    margin-top: 20px;
+    max-width: 62ch;
+    color: var(--dim);
+  }
+
+  .nw {
+    white-space: nowrap;
+  }
+
+  .key {
+    display: inline-block;
+    margin-inline: 2px 6px;
+    vertical-align: -1px;
+  }
+
+  .key svg {
+    display: inline-block;
+    fill: none;
+    stroke: var(--lilac);
+  }
+
+  .key-arc {
+    stroke-width: 1.4;
+  }
+
+  .key-t {
+    stroke-width: 1;
+  }
+
+  /* ---------------------------------------------------------------- data */
+
+  .td-data {
+    margin-top: clamp(4.5rem, 2.8rem + 5vw, 8rem);
+  }
+
+  .spec {
+    margin: 0;
+  }
+
+  .row {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    column-gap: 24px;
+    padding-block: 18px 17px;
+  }
+
+  .row::before,
+  .row:last-child::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    top: 0;
+    height: 1px;
+    background-color: var(--line-dark-strong);
+    transform-origin: left center;
+    transition:
+      opacity 200ms linear,
+      transform var(--t-line) var(--ease-quint);
+    transition-delay: calc(var(--r, 0) * 70ms);
+  }
+
+  .row + .row::before {
+    background-color: var(--line-dark);
+  }
+
+  .row:last-child::after {
+    top: auto;
+    bottom: 0;
+    background-color: var(--line-dark-strong);
+    transition-delay: calc(var(--r, 0) * 70ms + 70ms);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .row:not(.is-in)::before,
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .row:last-child:not(.is-in)::after {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+
+  .row-k {
+    color: var(--haze);
+    font-size: 0.9375rem;
+    line-height: 1.4;
+    transition:
+      opacity var(--t-reveal) var(--ease-expo),
+      color var(--t-ui) linear;
+    transition-delay: var(--d, 0ms), 0ms;
+  }
+
+  .row-v {
+    margin: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    color: var(--starlight);
+    font-stretch: var(--wd-display);
+    font-size: 1.375rem;
+    font-weight: 480;
+    line-height: 1;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+  }
+
+  /* proportional figures: Mona Sans's tabular set is its code-style set */
+  .row-n[data-count],
+  .row-n {
+    font-variant-numeric: proportional-nums;
+  }
+
+  /* the unit column is always there (empty for unitless values), so every
+     number ends on the same right edge */
+  .row-u {
+    min-width: 2.6em;
+    color: var(--dim);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .row:hover .row-k {
+      color: var(--starlight);
+    }
+  }
+
+  .td-foot {
+    margin-top: 20px;
+    max-width: 62ch;
+    color: var(--dim);
+  }
+
+  .td-research {
+    margin-top: 48px;
+    padding-top: 28px;
+    border-top: 1px solid var(--line-dark);
+  }
+
+  .rs-text {
+    max-width: 38ch;
+    color: var(--haze);
+    font-size: var(--t-lead);
+    line-height: 1.45;
+    letter-spacing: -0.01em;
+    text-wrap: pretty;
+  }
+
+  .rs-text strong {
+    color: var(--starlight);
+    font-weight: 600;
+  }
+
+  .rs-src {
+    margin-top: 14px;
+  }
+
+  .cite {
+    color: var(--haze);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 4px;
+    text-decoration-color: var(--line-dark-strong);
+    transition:
+      color var(--t-micro) linear,
+      text-decoration-color var(--t-micro) linear;
+  }
+
+  .cite span {
+    margin-inline-end: 6px;
+  }
+
+  .cite :global(.arrow) {
+    display: inline-block;
+    vertical-align: -1px;
+    transition: transform var(--t-ui) var(--ease-expo);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .cite:hover {
+      color: var(--starlight);
+      text-decoration-color: var(--starlight);
+    }
+
+    .cite:hover :global(.arrow) {
+      transform: translate(2px, -2px);
+    }
+  }
+
+  /* -------------------------------------------------------- check module */
+
+  .td-check {
+    --chamfer-bg: var(--plate);
+    margin-top: 64px;
+    padding: 36px 24px 32px;
+  }
+
+  .ck-title {
+    max-width: 16ch;
+    color: var(--starlight);
+  }
+
+  .ck-body {
+    margin-top: 16px;
+    max-width: 44ch;
+    color: var(--haze);
+    font-size: 0.9375rem;
+    line-height: 1.55;
+    text-wrap: pretty;
+  }
+
+  .ck-form {
+    display: flex;
+    flex-direction: column;
+    margin-top: 32px;
+  }
+
+  .ck-label {
+    color: var(--haze);
+  }
+
+  .ck-input {
+    width: 100%;
+    height: 52px;
+    margin-top: 4px;
+    padding: 0;
+    border: 0;
+    border-bottom: 1px solid var(--line-dark-strong);
+    border-radius: 0;
+    background-color: var(--plate);
+    color: var(--starlight);
+    font-size: 1.0625rem;
+    font-weight: 450;
+    letter-spacing: 0;
+    outline-offset: 6px;
+    transition: border-color var(--t-micro) linear;
+  }
+
+  .ck-input::placeholder {
+    color: var(--dim);
+    opacity: 1;
+  }
+
+  .ck-input:focus {
+    border-bottom-color: var(--lilac);
+  }
+
+  .ck-btn {
+    width: 100%;
+    margin-top: 24px;
+    justify-content: space-between;
+  }
+
+  .ck-follow {
+    margin-top: 22px;
+    color: var(--starlight);
+  }
+
+  /* ---------------------------------------------------------------- 768+ */
+
+  @media (min-width: 768px) {
+    .td-head {
+      grid-column: 1 / span 7;
+    }
+
+    .bays {
+      --bay-gap: 40px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .bay {
+      padding: 40px 0 32px;
+    }
+
+    .bay:nth-child(odd) .rule-v {
+      display: block;
+    }
+
+    .bay:first-child .rule-v,
+    .rule-mid {
+      display: none;
+    }
+
+    .bay :global(.gauge) {
+      max-width: 240px;
+    }
+
+    .td-caption {
+      max-width: none;
+    }
+
+    .row {
+      padding-block: 22px 21px;
+    }
+
+    .row-v {
+      font-size: 1.75rem;
+    }
+
+    .td-check {
+      grid-column: 1 / span 6;
+      padding: 44px 40px 36px;
+    }
+  }
+
+  /* --------------------------------------------------------------- 1100+ */
+
+  @media (min-width: 1100px) {
+    .bays {
+      --bay-gap: 48px;
+    }
+
+    .bay {
+      padding: 48px 0 36px;
+    }
+
+    .td-data {
+      grid-column: 1 / span 7;
+    }
+
+    .td-check {
+      grid-column: 9 / span 4;
+      align-self: start;
+      margin-top: clamp(4.5rem, 2.8rem + 5vw, 8rem);
+    }
+  }
+</style>

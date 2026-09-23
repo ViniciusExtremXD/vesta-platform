@@ -1,0 +1,125 @@
+---
+/**
+ * Mobile sticky WhatsApp bar (SPEC §4). Below 768px only.
+ *
+ * 56px + the safe-area inset, night with a top hairline. The engine
+ * (motion.ts) owns the state: it adds .is-shown and drops `inert` once the
+ * [data-sticky-anchor] element has scrolled above the viewport, and hides it
+ * again while any [data-sticky-hide] (finale, footer) covers the bottom of
+ * the viewport or the menu is open. Without JS it simply never appears.
+ *
+ * The page gets matching bottom padding on mobile (main), so the bar never
+ * sits over the last lines of content.
+ *
+ * Hooks for the configurator (§5.8, "swaps to the build summary"):
+ * [data-sticky-copy] holds the left line, [data-sticky-link] the button.
+ */
+import { stickyBar, wa } from '../data/site';
+import WaGlyph from './ui/WaGlyph.astro';
+---
+
+<div class="sticky" data-sticky-cta inert>
+  <div class="sticky-in">
+    <p class="sticky-copy small" data-sticky-copy>
+      <span class="stripe sticky-mark" aria-hidden="true"></span><span class="sticky-price num">{stickyBar.price}</span><span
+        class="sticky-sep"
+        aria-hidden="true"> · </span><span class="sticky-note">{stickyBar.note}</span>
+    </p>
+    <a class="btn btn-sm sticky-btn" href={wa(stickyBar.text)} target="_blank" rel="noopener" data-wa-intent="sticky" data-sticky-link>
+      <WaGlyph size={16} />
+      <span>{stickyBar.button}</span>
+    </a>
+  </div>
+</div>
+
+<style>
+  .sticky {
+    --fg: var(--starlight);
+    --mark: var(--lilac);
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: var(--z-sticky-bar);
+    padding-bottom: env(safe-area-inset-bottom);
+    color: var(--starlight);
+    background-color: var(--night);
+    border-top: 1px solid var(--line-dark);
+    transform: translate3d(0, 100%, 0);
+    visibility: hidden;
+    transition:
+      transform var(--t-ui) var(--ease-quint),
+      visibility 0s linear var(--t-ui);
+  }
+
+  .sticky.is-shown {
+    transform: none;
+    visibility: visible;
+    transition:
+      transform var(--t-ui) var(--ease-expo),
+      visibility 0s linear 0s;
+  }
+
+  .sticky-in {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-16);
+    height: 56px;
+    padding-inline: var(--gut);
+  }
+
+  .sticky-copy {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    color: var(--haze);
+    background-color: var(--night);
+  }
+
+  .sticky-mark {
+    margin-inline-end: 12px;
+  }
+
+  .sticky-price {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--starlight);
+    font-weight: 600;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .sticky-sep {
+    white-space: pre;
+  }
+
+  .sticky-note {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .sticky-btn {
+    flex: 0 0 auto;
+    padding: 0 18px 0 16px;
+    gap: 10px;
+  }
+
+  @media (max-width: 767px) {
+    :global(main#content) {
+      padding-bottom: calc(56px + env(safe-area-inset-bottom));
+    }
+  }
+
+  @media (min-width: 768px) {
+    .sticky {
+      display: none;
+    }
+  }
+
+  :global(html.motion-reduced) .sticky {
+    transition: none;
+  }
+</style>
+

@@ -1,107 +1,1401 @@
 ---
+/**
+ * /about/ (SPEC §7 /about/, SPEC_COSMOS §4).
+ *
+ * 1. Intro (void, a quiet star field): label, H1 (word mask on load), haze
+ *    lead; the founder portrait holds the right-hand columns from the first
+ *    screen (wipe reveal, 2px violet bar on its right edge); the bio follows
+ *    under the lead.
+ * 2. How Vesta works (paper): five numbered lines, hairline rows whose nodes
+ *    fill as they arrive.
+ * 3. Company facts (paper-2): the hairline table, and the working hours set
+ *    as one large static numeral (no clocks, owner decision).
+ * 4. The name (night, stars): the 4 Vesta story from site.ts with its NASA
+ *    source, beside a to-scale, face-on diagram of the orbits of Mars,
+ *    4 Vesta and Jupiter. On reveal the orbits draw once and Vesta's planet
+ *    rides the head of its own line for one lap, then rests.
+ * 5. Closing (violet): the finale module, compact.
+ *
+ * Portrait gate: founder.portrait.confirmed. Without it the bio takes the
+ * full measure and nothing else changes.
+ */
+import { Picture } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
 import Base from '../layouts/Base.astro';
-import Founder from '../components/home/Founder.astro';
-import Process from '../components/home/Process.astro';
-import FinalCta from '../components/home/FinalCta.astro';
-import { brand, terms } from '../data/site';
-import Icon from '../components/Icon.astro';
+import Cosmos from '../components/Cosmos.astro';
+import SectionLabel from '../components/ui/SectionLabel.astro';
+import SplitText from '../components/ui/SplitText.astro';
+import Arrow from '../components/ui/Arrow.astro';
+import WaGlyph from '../components/ui/WaGlyph.astro';
+import { about, brand, contact, finale, footer, founder, wa } from '../data/site';
+import { absolute } from '../lib/url';
 
-const termCards = [
-  { icon: 'bolt', title: 'How you pay', body: terms.payment },
-  { icon: 'shield', title: 'What you receive', body: terms.documents },
-  { icon: 'check', title: 'The contract', body: terms.contract },
-  { icon: 'check', title: 'Who owns the work', body: terms.ownership },
-  { icon: 'shield', title: 'If it is not right', body: terms.revisions },
-] as const;
+/* Strings the page needs that site.ts does not carry yet (reported). */
+const TODO_SITE = {
+  /** Label beside the Sun in the orbit diagram. */
+  sun: 'Sun',
+};
 
-const title = `About ${brand.name} — High-Converting Landing Pages & Google SEO`;
-const description =
-  'Vesta Consultoria (CNPJ 61.465.539/0001-00) is founded by Vinícius Magno, specializing in sub-second landing pages and technical Google SEO architecture for businesses worldwide.';
+/* ---- portrait: the grayscale master if the builder unit produced it ---- */
+const portraits = import.meta.glob<{ default: ImageMetadata }>('../assets/vinicius-magno*.jpg', { eager: true });
+const portrait = (portraits['../assets/vinicius-magno-mono.jpg'] ?? portraits['../assets/vinicius-magno.jpg'])?.default;
+const showPortrait = founder.portrait.confirmed && Boolean(portrait);
+
+/* ---- typesetting helpers (the words are unchanged) --------------------- */
+const WJ = String.fromCharCode(0x2060);
+const NBSP = String.fromCharCode(160);
+/** ranges like "Mon–Fri" or "9:00–18:00" never break at the en dash */
+const keepRange = (s: string) => s.replace(/(\w)–(\w)/g, `$1${WJ}–${WJ}$2`);
+/** no line ends on a stranded one-letter word; dates and measures stay whole
+    ("29 March 1807", "3.63 years") */
+const tie = (t: string) =>
+  t
+    .replace(/(^|\s)([AaI])\s+/g, (_m, pre: string, w: string) => pre + w + NBSP)
+    .replace(/\b(\d{1,2}) ([A-Z][a-z]+) (\d{4})\b/g, `$1${NBSP}$2${NBSP}$3`)
+    .replace(/\b(\d+(?:\.\d+)?) (years?|km|AU)\b/g, `$1${NBSP}$2`);
+
+/* H1: one sentence per line block, each balanced on its own */
+const h1Lines = about.h1.split(/(?<=\.)\s+/);
+const [bioLead, ...bioBody] = about.bio;
+const linkedinText = contact.linkedin.name;
+const role = `${founder.role}, ${brand.name}`;
+
+/* Hours as a numeral: "Mon–Fri, 9:00–18:00" → days + range */
+const [hoursDays, hoursRange] = contact.hours.short.split(/,\s*/);
+const hoursMeta = [hoursDays, `${brand.city} time`, contact.hours.utcOffset];
+
+/* The name: the first sentence carries the story, the rest follows */
+const [nameFirst, ...nameRest] = about.theName.text.split(/(?<=\.)\s+(?=[A-Z])/);
+const source = about.theName.source;
+
+/* ======================================================================
+   The orbit diagram — face-on (from above the ecliptic), to scale.
+   Semi-major axes and eccentricities from site.ts (footer.orbit.bodies);
+   longitudes of perihelion from JPL mean elements. Each orbit is a Kepler
+   ellipse with the Sun at one focus. Planets move counter-clockwise, as
+   seen from the north. viewBox units; the Sun sits where Jupiter's orbit
+   is centred in the frame.
+   ====================================================================== */
+const VB = { w: 600, h: 560 };
+const PAD = 16;
+const ELEMENTS: Record<string, { peri: number; at: number }> = {
+  /* peri: longitude of perihelion ϖ (deg). at: where the planet rests in
+     the drawing, as a heliocentric longitude (deg) — composition only. */
+  Mars: { peri: 336.0, at: 146 },
+  '4 Vesta': { peri: 255.0, at: 18 },
+  Jupiter: { peri: 14.7, at: 232 },
+};
+const rad = (d: number) => (d * Math.PI) / 180;
+const deg = (r: number) => (r * 180) / Math.PI;
+
+/** orbital-plane position (AU, x toward the vernal equinox, y 90° ahead) */
+const planePos = (a: number, e: number, peri: number, E: number): [number, number] => {
+  const b = a * Math.sqrt(1 - e * e);
+  const X = a * (Math.cos(E) - e);
+  const Y = b * Math.sin(E);
+  const c = Math.cos(rad(peri));
+  const s = Math.sin(rad(peri));
+  return [X * c - Y * s, X * s + Y * c];
+};
+
+const jup = footer.orbit.bodies.find((b) => b.name === 'Jupiter') ?? { a: 5.2, e: 0.049 };
+let jMin = [Infinity, Infinity];
+let jMax = [-Infinity, -Infinity];
+for (let i = 0; i < 360; i++) {
+  const [x, y] = planePos(jup.a, jup.e, ELEMENTS.Jupiter.peri, rad(i));
+  jMin = [Math.min(jMin[0], x), Math.min(jMin[1], y)];
+  jMax = [Math.max(jMax[0], x), Math.max(jMax[1], y)];
+}
+const S = Math.min((VB.w - 2 * PAD) / (jMax[0] - jMin[0]), (VB.h - 2 * PAD) / (jMax[1] - jMin[1]));
+/* the Sun, placed so Jupiter's orbit is centred in the frame (y flips: screen y is down) */
+const SUN = {
+  x: VB.w / 2 - ((jMin[0] + jMax[0]) / 2) * S,
+  y: VB.h / 2 + ((jMin[1] + jMax[1]) / 2) * S,
+};
+const toScreen = ([x, y]: [number, number]): [number, number] => [SUN.x + x * S, SUN.y - y * S];
+const f2 = (n: number) => Number(n.toFixed(2));
+
+/** eccentric anomaly whose heliocentric longitude is closest to `lon` */
+const anomalyAt = (a: number, e: number, peri: number, lon: number) => {
+  let best = 0;
+  let bestD = Infinity;
+  for (let i = 0; i < 3600; i++) {
+    const E = rad(i / 10);
+    const [x, y] = planePos(a, e, peri, E);
+    const d = Math.abs(((deg(Math.atan2(y, x)) - lon + 540) % 360) - 180);
+    if (d < bestD) {
+      bestD = d;
+      best = E;
+    }
+  }
+  return best;
+};
+
+const orbits = footer.orbit.bodies.map((body, k) => {
+  const el = ELEMENTS[body.name] ?? { peri: 0, at: 0 };
+  const { a, e } = body;
+  const b = a * Math.sqrt(1 - e * e);
+  const E0 = anomalyAt(a, e, el.peri, el.at);
+  /* three 120° arcs from the resting planet, counter-clockwise on screen
+     (SVG sweep-flag 0), so the stroke draws the way the planet travels */
+  const pts = [0, 1, 2, 3].map((q) => toScreen(planePos(a, e, el.peri, E0 + (q * 2 * Math.PI) / 3)));
+  const rot = f2(-el.peri);
+  const rx = f2(a * S);
+  const ry = f2(b * S);
+  const d =
+    `M${f2(pts[0][0])} ${f2(pts[0][1])}` +
+    pts
+      .slice(1)
+      .map(([x, y]) => `A${rx} ${ry} ${rot} 0 0 ${f2(x)} ${f2(y)}`)
+      .join('');
+  const [px, py] = pts[0];
+  return { name: body.name, a, e, k, d, px: f2(px), py: f2(py), vesta: body.name === '4 Vesta', peri: el.peri, E0, b };
+});
+
+const vesta = orbits.find((o) => o.vesta)!;
+
+/* Vesta's lap: the planet sampled at equal ARC LENGTH along the same path,
+   so with the same easing it sits exactly on the head of the stroke being
+   drawn (the dash is measured in arc length too). */
+const DENSE = 1440;
+const dense: [number, number][] = [];
+for (let i = 0; i <= DENSE; i++) dense.push(toScreen(planePos(vesta.a, vesta.e, vesta.peri, vesta.E0 + (i / DENSE) * Math.PI * 2)));
+const cum = [0];
+for (let i = 1; i <= DENSE; i++) cum.push(cum[i - 1] + Math.hypot(dense[i][0] - dense[i - 1][0], dense[i][1] - dense[i - 1][1]));
+const total = cum[DENSE];
+const STEPS = 90;
+const trace: string[] = [];
+for (let k = 0, j = 1; k <= STEPS; k++) {
+  const target = (total * k) / STEPS;
+  while (j < DENSE && cum[j] < target) j++;
+  const f = (target - cum[j - 1]) / (cum[j] - cum[j - 1] || 1);
+  const x = dense[j - 1][0] + (dense[j][0] - dense[j - 1][0]) * f;
+  const y = dense[j - 1][1] + (dense[j][1] - dense[j - 1][1]) * f;
+  trace.push(`${x.toFixed(2)},${y.toFixed(2)}`);
+}
+
+/* Dimension line: the semi-major axis, from the centre of Vesta's ellipse
+   to aphelion (the centre sits a·e from the Sun, toward aphelion). */
+const u: [number, number] = [Math.cos(rad(vesta.peri)), Math.sin(rad(vesta.peri))];
+const C = toScreen([-vesta.a * vesta.e * u[0], -vesta.a * vesta.e * u[1]]);
+const A = toScreen([-vesta.a * (1 + vesta.e) * u[0], -vesta.a * (1 + vesta.e) * u[1]]);
+const dimLen = Math.hypot(A[0] - C[0], A[1] - C[1]);
+const n: [number, number] = [-(A[1] - C[1]) / dimLen, (A[0] - C[0]) / dimLen];
+const TICK = 5;
+const dim = {
+  d:
+    `M${f2(C[0])} ${f2(C[1])}L${f2(A[0])} ${f2(A[1])}` +
+    `M${f2(C[0] - n[0] * TICK)} ${f2(C[1] - n[1] * TICK)}L${f2(C[0] + n[0] * TICK)} ${f2(C[1] + n[1] * TICK)}` +
+    `M${f2(A[0] - n[0] * TICK)} ${f2(A[1] - n[1] * TICK)}L${f2(A[0] + n[0] * TICK)} ${f2(A[1] + n[1] * TICK)}`,
+  /* label anchor: two thirds of the way out, on the side facing away from the Sun's column */
+  lx: f2(C[0] + (A[0] - C[0]) * 0.62),
+  ly: f2(C[1] + (A[1] - C[1]) * 0.62),
+  text: `a ${vesta.a} AU`,
+};
+
+const pct = (v: number, of: number) => `${((v / of) * 100).toFixed(3)}%`;
+/* HTML labels (fixed type size at every width): anchor + which side */
+const labels = [
+  { text: TODO_SITE.sun, x: SUN.x, y: SUN.y, side: 'below', cls: 'is-sun' },
+  ...orbits.map((o) => ({
+    text: o.name,
+    x: o.px,
+    y: o.py,
+    /* Vesta's name always sits outside its orbit, to the right of the planet */
+    side: o.vesta || o.px < VB.w * 0.62 ? 'right' : 'left',
+    cls: o.vesta ? 'is-vesta' : '',
+  })),
+  { text: dim.text, x: dim.lx, y: dim.ly, side: 'right', cls: 'is-dim' },
+];
+
+/* the closing: "Send your current website." / "Get a fixed price." */
+const closeLines = finale.h2.split(/(?<=\.)\s+/);
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'AboutPage',
+  name: about.seo.title,
+  url: absolute('/about/', Astro.site),
+  description: about.seo.description,
+  about: { '@id': `${absolute('/', Astro.site).replace(/\/$/, '')}/#organization` },
+};
 ---
 
-<Base title={title} description={description} canonical="/about/">
-  <section class="page-head on-void">
-    <div class="wrap wrap-wide">
-      <p class="kicker" data-reveal="up">About</p>
-      <h1 data-split>Engineered for conversion. <em>Direct with the architect.</em></h1>
-      <p class="lead" data-reveal="up" style="--i:2">
-        Vesta Consultoria builds high-converting landing pages and technical Google SEO architecture for businesses worldwide
-        running Google and Meta Ads. Every project is designed, coded and launched directly by founder Vinícius Magno (Mackenzie CS).
-      </p>
+<Base title={about.seo.title} description={about.seo.description} canonical="/about/" jsonLd={jsonLd}>
+  {/* ---------------------------------------------------------------- intro */}
+  <section class="intro s-void" data-nav-theme="dark" aria-labelledby="about-title">
+    <div class="sky" aria-hidden="true"><Cosmos variant="stars" /></div>
+
+    <div class:list={['wrap', 'g', 'intro-grid', { solo: !showPortrait }]}>
+      <header class="intro-head">
+        <div data-load>
+          <SectionLabel name={about.label.name} reveal={false} />
+        </div>
+        <SplitText as="h1" id="about-title" class="h1" lines={h1Lines} load delay={80} />
+        <p class="lead intro-lead" data-load style="--d:400ms">{about.lead}</p>
+      </header>
+
+      {
+        showPortrait && portrait && (
+          <figure class="portrait">
+            <div class="plate">
+              <div class="frame" data-reveal="wipe" style="--d:160ms">
+                <Picture
+                  src={portrait}
+                  alt={founder.portrait.alt}
+                  formats={['avif', 'webp']}
+                  widths={[560, 1120]}
+                  sizes="(min-width: 1440px) 546px, (min-width: 1100px) calc((100vw - 96px - 264px) * 5 / 12 + 96px), (min-width: 768px) calc((100vw - 64px - 140px) / 2 + 60px), calc(100vw - 40px)"
+                  width={560}
+                  height={700}
+                  quality={70}
+                  loading="eager"
+                  decoding="async"
+                  class="photo"
+                />
+              </div>
+              <span class="bar" aria-hidden="true" />
+            </div>
+            <figcaption class="cap" data-reveal style="--d:520ms">
+              <span class="cap-name">{founder.name}</span>
+              <span class="cap-role label">{role}</span>
+              <span class="cap-loc small">{founder.location}</span>
+            </figcaption>
+          </figure>
+        )
+      }
+
+      <div class="bio">
+        <SectionLabel name={founder.name} />
+        <SplitText as="h2" class="bio-title" text={tie(bioLead)} />
+        {
+          bioBody.map((p, i) => (
+            <p class="body bio-p" data-reveal style={`--i:${i + 1}`}>
+              {tie(p)}
+            </p>
+          ))
+        }
+        {
+          contact.linkedin.confirmed && (
+            <p class="bio-link" data-reveal style="--i:3">
+              <a class="tlink" href={contact.linkedin.url} target="_blank" rel="noopener">
+                <span>{linkedinText}</span>
+                <Arrow dir="up-right" />
+              </a>
+            </p>
+          )
+        }
+      </div>
     </div>
   </section>
 
-  <Founder level={2} />
-
-  <section class="terms section on-paper" id="terms">
-    <div class="wrap wrap-wide">
-      <div class="section-head">
-        <p class="kicker" data-reveal="up">Working together</p>
-        <h2 data-split>The operational questions, <em>answered before you ask.</em></h2>
-      </div>
-      <ul class="terms-grid">
+  {/* ------------------------------------------------------ how vesta works */}
+  <section class="how s-paper section" data-nav-theme="light" aria-labelledby="how-title">
+    <div class="wrap g">
+      <header class="how-head">
+        <SplitText as="h2" id="how-title" class="d2 how-title" text={about.howVestaWorks.title} />
+      </header>
+      <ol class="how-list">
         {
-          termCards.map((t, i) => (
-            <li data-reveal="up" style={`--i:${i + 1}`}>
-              <article class="card terms-card" data-glow>
-                <span class="terms-icon">
-                  <Icon name={t.icon} size={18} />
-                </span>
-                <h3>{t.title}</h3>
-                <p>{t.body}</p>
-              </article>
+          about.howVestaWorks.items.map((item, r) => (
+            <li class="how-row" data-inview style={`--r:${r}`}>
+              <span class="how-line" aria-hidden="true" />
+              <span class="how-idx" aria-hidden="true">
+                <span class="node how-node" />
+                <span class="label how-n">{String(r + 1).padStart(2, '0')}</span>
+              </span>
+              <p class="how-text">{tie(item)}</p>
+              {r === about.howVestaWorks.items.length - 1 && <span class="how-line how-line-end" aria-hidden="true" />}
             </li>
           ))
         }
-      </ul>
+      </ol>
     </div>
   </section>
 
-  <Process />
-  <FinalCta />
+  {/* ------------------------------------------------ company facts + hours */}
+  <section class="facts s-paper-2 section" data-nav-theme="light" aria-labelledby="facts-title">
+    <div class="wrap g">
+      <div class="facts-main">
+        <SplitText as="h2" id="facts-title" class="d2 facts-title" text={about.companyFacts.title} />
+        <dl class="table">
+          {
+            about.companyFacts.rows.map((row, r) => (
+              <div class="t-row" data-inview style={`--r:${r}`}>
+                <dt class="label">{row.label}</dt>
+                <dd>{keepRange(row.value)}</dd>
+              </div>
+            ))
+          }
+        </dl>
+      </div>
+
+      <aside class="hours" aria-labelledby="hours-title">
+        <h3 class="d3 hours-title" id="hours-title" data-reveal>{about.hours.title}</h3>
+        <p class="n1 hours-n" data-reveal style="--i:1">{keepRange(hoursRange)}</p>
+        <p class="label hours-meta" data-reveal style="--i:2">
+          {
+            hoursMeta.map((m, k) => (
+              <Fragment>
+                {k > 0 && <span class="sep" aria-hidden="true"> · </span>}
+                <span class="nw">{keepRange(m)}</span>
+              </Fragment>
+            ))
+          }
+        </p>
+        <span class="rule hours-rule" data-reveal="draw" style="--d:200ms" aria-hidden="true" />
+        <p class="body hours-body" data-reveal style="--i:3">{about.hours.body}</p>
+      </aside>
+    </div>
+  </section>
+
+  {/* ------------------------------------------------------------ the name */}
+  <section class="name s-night section" data-nav-theme="dark" aria-labelledby="name-title">
+    <Cosmos variant="stars" />
+    <div class="wrap g name-grid">
+      <div class="name-copy">
+        <h2 class="sec-label label name-label" id="name-title" data-reveal>
+          <span class="stripe" aria-hidden="true"></span>
+          <span>{about.theName.title}</span>
+        </h2>
+        <SplitText as="p" class="name-first" text={tie(nameFirst)} />
+        {
+          nameRest.length > 0 && (
+            <p class="lead name-rest" data-reveal style="--i:1">
+              {tie(nameRest.join(' '))}
+            </p>
+          )
+        }
+        {
+          about.theName.closing.confirmed && (
+            <p class="body name-closing" data-reveal style="--i:2">
+              {tie(about.theName.closing.text)}
+            </p>
+          )
+        }
+        <p class="small name-source" data-reveal style="--i:3">
+          <a class="src" href={source.url} target="_blank" rel="noopener">{source.citation}<Arrow dir="up-right" size={12} /></a>
+        </p>
+      </div>
+
+      <figure class="orbit-fig">
+        <div class="orbit-stage" data-inview data-name-orbit data-trace={trace.join(' ')}>
+          <svg class="orbit-svg" viewBox={`0 0 ${VB.w} ${VB.h}`} aria-hidden="true" focusable="false">
+            <path class="o-dim" d={dim.d} />
+            {
+              orbits.map((o) => (
+                <path class:list={['o-path', { 'is-vesta': o.vesta }]} d={o.d} pathLength="100" style={`--k:${o.k}`} />
+              ))
+            }
+            <circle class="o-sun-ring" cx={f2(SUN.x)} cy={f2(SUN.y)} r="9" />
+            <circle class="o-sun" cx={f2(SUN.x)} cy={f2(SUN.y)} r="3.6" />
+            {
+              orbits
+                .filter((o) => !o.vesta)
+                .map((o) => <circle class="o-planet" cx={o.px} cy={o.py} r="3.2" style={`--k:${o.k}`} />)
+            }
+            <circle class="o-vesta" cx="0" cy="0" r="4.6" style={`transform: translate(${vesta.px}px, ${vesta.py}px)`} data-vesta-planet />
+          </svg>
+          {
+            labels.map((l, k) => (
+              <span
+                class:list={['o-label', 'label', `to-${l.side}`, l.cls]}
+                style={`left:${pct(l.x, VB.w)};top:${pct(l.y, VB.h)};--k:${k}`}
+                aria-hidden="true"
+              >
+                {l.text}
+              </span>
+            ))
+          }
+        </div>
+        <figcaption class="orbit-cap small" data-reveal style="--d:300ms">
+          <span class="stripe" aria-hidden="true"></span>
+          <span>{footer.orbit.caption}</span>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  {/* ------------------------------------------------------------- closing */}
+  <section class="close s-violet section" data-nav-theme="dark" data-sticky-hide aria-labelledby="close-title">
+    <div class="wrap g close-grid">
+      <SplitText as="h2" id="close-title" class="d2 close-title" lines={closeLines} />
+      <p class="lead close-body" data-reveal style="--i:1">{tie(finale.body)}</p>
+      <div class="close-act">
+        <div data-reveal style="--i:2">
+          <a class="btn btn-star btn-lg close-btn" href={wa(finale.button.text)} target="_blank" rel="noopener" data-wa-intent="about-close">
+            <WaGlyph size={18} />
+            <span class="b-lbl">{finale.button.label}</span>
+            <Arrow />
+          </a>
+        </div>
+        <p class="close-num" data-reveal style="--i:3">
+          <a class="close-num-v" href={contact.whatsapp.url} target="_blank" rel="noopener">{contact.whatsapp.display}</a>
+          <span class="small close-reassure">{finale.reassurance}</span>
+        </p>
+        {
+          contact.linkedin.confirmed && (
+            <p class="close-links" data-reveal style="--i:4">
+              <a class="tlink" href={contact.linkedin.url} target="_blank" rel="noopener">
+                <span>{contact.linkedin.label.replace(/\s*↗\s*$/, '')}</span>
+                <Arrow dir="up-right" />
+              </a>
+            </p>
+          )
+        }
+      </div>
+    </div>
+  </section>
 </Base>
 
 <style>
-  .page-head {
-    padding-block: calc(var(--nav-h) + clamp(3rem, 2rem + 5vw, 6rem)) clamp(2rem, 1.5rem + 3vw, 4rem);
+  /* =====================================================================
+     1. intro
+     ===================================================================== */
+  .intro {
+    position: relative;
+    overflow: clip;
+    padding-block: calc(var(--nav-h) + clamp(3rem, 1.6rem + 5.4vw, 7.5rem)) clamp(5rem, 3.2rem + 6vw, 9.5rem);
   }
 
-  .page-head > .wrap > * + * {
-    margin-top: var(--space-m);
+  /* the star field covers the first screen only; the bio sits on plain void */
+  .sky {
+    position: absolute;
+    inset: 0 0 auto;
+    height: min(100%, max(100svh, 760px));
+    /* the field thins out into the plain void under the bio: no seam */
+    -webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent);
+    mask-image: linear-gradient(to bottom, #000 62%, transparent);
   }
 
-  .page-head h1 {
+  .intro-grid {
+    position: relative;
+    z-index: 1;
+    align-items: start;
+  }
+
+  .h1 {
+    max-width: 11.5ch;
+    margin-top: 28px;
+    font-size: clamp(2.5rem, 1.1rem + 5vw, 5.5rem);
+    line-height: 0.98;
+  }
+
+  .intro-lead {
+    max-width: 30ch;
+    margin-top: 32px;
+    color: var(--haze);
+  }
+
+  /* ---- portrait ---- */
+  .portrait {
+    margin: 56px 0 0;
+  }
+
+  .plate {
+    position: relative;
+  }
+
+  .frame {
+    position: relative;
+    aspect-ratio: 4 / 5;
+    overflow: clip;
+    background-color: var(--plate);
+  }
+
+  .frame :global(picture),
+  .frame :global(img) {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .frame :global(img) {
+    object-fit: cover;
+    object-position: 50% 30%;
+  }
+
+  /* 2px violet bar: bottom edge on phones (draws left → right), right edge
+     from 768px (grows bottom → top), 300ms after the wipe starts */
+  .bar {
+    position: absolute;
+    z-index: 2;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2px;
+    background-color: var(--violet);
+    transform-origin: left center;
+    pointer-events: none;
+    transition:
+      transform var(--t-line) var(--ease-quint) 460ms,
+      opacity 200ms linear 460ms;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .frame:not(.is-in) + .bar {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+
+  @media (min-width: 768px) {
+    .bar {
+      top: 0;
+      left: auto;
+      width: 2px;
+      height: auto;
+      transform-origin: center bottom;
+    }
+
+    :global(html.js:not(.motion-reduced):not(.motion-failed)) .frame:not(.is-in) + .bar {
+      transform: scaleY(0);
+    }
+  }
+
+  .cap {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 6px 16px;
+    padding-top: 16px;
+  }
+
+  .cap-name {
+    font-stretch: var(--wd-display);
+    font-size: 1rem;
+    font-weight: 620;
+    letter-spacing: -0.005em;
+    color: var(--starlight);
+  }
+
+  .cap-role {
+    color: var(--dim);
+  }
+
+  .cap-loc {
+    grid-column: 1 / -1;
+    color: var(--dim);
+  }
+
+  /* ---- bio ---- */
+  .bio {
+    margin-top: 72px;
+  }
+
+  .bio-title {
+    max-width: 24ch;
+    margin-top: 28px;
+    font-size: var(--t-d3);
+    font-weight: 600;
+    line-height: 1.16;
+    letter-spacing: -0.012em;
+    text-wrap: balance;
+  }
+
+  .bio-p {
+    max-width: 48ch;
+    margin-top: 24px;
+    color: var(--haze);
+  }
+
+  .bio-title + .bio-p {
+    margin-top: 32px;
+  }
+
+  .bio-link {
+    margin-top: 32px;
+  }
+
+  @media (min-width: 768px) {
+    .intro-head {
+      grid-column: 1 / 5;
+    }
+
+    .portrait {
+      grid-column: 5 / 9;
+      grid-row: 1 / span 2;
+      margin-top: 8px;
+    }
+
+    .bio {
+      grid-column: 1 / 5;
+      grid-row: 2;
+      margin-top: 88px;
+    }
+
+    .solo .intro-head,
+    .solo .bio {
+      grid-column: 1 / -1;
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .intro-head {
+      grid-column: 1 / 8;
+    }
+
+    .portrait {
+      grid-column: 8 / 13;
+      margin-top: 44px;
+    }
+
+    .bio {
+      grid-column: 1 / 7;
+      margin-top: 120px;
+    }
+
+    .solo .bio {
+      grid-column: 1 / 8;
+    }
+  }
+
+  /* The portrait holds while the bio scrolls past it, wherever the whole
+     figure (≈ 1.25 × its width + caption) fits under the nav. */
+  @media (min-width: 1100px) and (min-height: 860px), (min-width: 1100px) and (max-aspect-ratio: 16/10) {
+    .portrait {
+      position: sticky;
+      top: calc(var(--nav-h) + 40px);
+    }
+  }
+
+  /* =====================================================================
+     2. how vesta works
+     ===================================================================== */
+  .how-title {
+    max-width: 9ch;
+  }
+
+  .how-list {
+    margin-top: 48px;
+  }
+
+  .how-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr);
+    align-items: baseline;
+    padding-block: 26px 28px;
+  }
+
+  .how-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 1px;
+    background-color: var(--line-strong);
+    transform-origin: left center;
+    transition:
+      transform 1000ms var(--ease-quint),
+      opacity 200ms linear;
+    transition-delay: calc(var(--r, 0) * 60ms);
+  }
+
+  .how-line-end {
+    top: auto;
+    bottom: 0;
+    background-color: var(--line);
+  }
+
+  .how-idx {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--violet-ink);
+    transition:
+      transform var(--t-reveal) var(--ease-expo),
+      opacity var(--t-reveal) var(--ease-expo);
+    transition-delay: calc(var(--r, 0) * 60ms + 100ms);
+  }
+
+  .how-node {
+    color: var(--violet);
+    transition: background-color 360ms var(--ease-expo);
+    transition-delay: calc(var(--r, 0) * 60ms + 520ms);
+  }
+
+  .how-row.is-in .how-node,
+  :global(html:not(.js)) .how-node,
+  :global(html.motion-reduced) .how-node,
+  :global(html.motion-failed) .how-node {
+    background-color: var(--violet);
+  }
+
+  .how-n {
+    color: var(--violet-ink);
+  }
+
+  .how-text {
+    font-stretch: var(--wd-display);
+    font-size: clamp(1.25rem, 1.02rem + 0.95vw, 1.875rem);
+    font-weight: 560;
+    line-height: 1.2;
+    letter-spacing: -0.012em;
+    color: var(--ink);
+    max-width: 30ch;
+    text-wrap: balance;
+    transition:
+      transform var(--t-reveal) var(--ease-expo),
+      opacity var(--t-reveal) var(--ease-expo);
+    transition-delay: calc(var(--r, 0) * 60ms + 160ms);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .how-row:not(.is-in) .how-line {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .how-row:not(.is-in) .how-idx,
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .how-row:not(.is-in) .how-text {
+    opacity: 0;
+    transform: translate3d(0, 16px, 0);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .how-idx {
+      transition-property: transform, opacity;
+    }
+
+    .how-row:hover .how-idx {
+      transform: translateX(4px);
+      transition-delay: 0ms;
+      transition-duration: var(--t-ui);
+    }
+  }
+
+  @media (min-width: 768px) {
+    .how-row {
+      grid-template-columns: 88px minmax(0, 1fr);
+      padding-block: 32px 34px;
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .how-head {
+      grid-column: 1 / 5;
+      position: sticky;
+      top: calc(var(--nav-h) + 48px);
+      align-self: start;
+    }
+
+    .how-list {
+      grid-column: 6 / 13;
+      margin-top: 0;
+    }
+
+    .how-row {
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      column-gap: var(--gap);
+      padding-block: 36px 38px;
+    }
+
+    .how-idx {
+      grid-column: 1 / 2;
+    }
+
+    .how-text {
+      grid-column: 2 / 8;
+    }
+  }
+
+  /* =====================================================================
+     3. company facts + hours
+     ===================================================================== */
+  .facts-title {
+    max-width: 12ch;
+  }
+
+  .table {
+    margin-top: 40px;
+  }
+
+  .t-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 6px;
+    padding-block: 16px 17px;
+  }
+
+  .t-row::before,
+  .t-row:last-child::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background-color: var(--line-strong);
+    transform-origin: left center;
+    transition:
+      transform var(--t-line) var(--ease-quint),
+      opacity 200ms linear;
+    transition-delay: calc(var(--r, 0) * 60ms);
+  }
+
+  .t-row::before {
+    top: 0;
+  }
+
+  .t-row:last-child::after {
+    bottom: 0;
+    transition-delay: calc(var(--r, 0) * 60ms + 60ms);
+  }
+
+  .t-row dt,
+  .t-row dd {
+    transition:
+      opacity var(--t-reveal) var(--ease-expo),
+      transform var(--t-reveal) var(--ease-expo);
+    transition-delay: calc(var(--r, 0) * 60ms + 160ms);
+  }
+
+  .t-row dt {
+    color: var(--ink-2);
+  }
+
+  .t-row dd {
+    margin: 0;
+    font-stretch: var(--wd-display);
+    font-size: 1.0625rem;
+    font-weight: 520;
+    line-height: 1.4;
+    color: var(--ink);
+    text-wrap: pretty;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .t-row:not(.is-in)::before,
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .t-row:not(.is-in):last-child::after {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .t-row:not(.is-in) dt,
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .t-row:not(.is-in) dd {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+
+  @media (min-width: 768px) {
+    .t-row {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      column-gap: var(--gap);
+      align-items: baseline;
+      padding-block: 20px 21px;
+    }
+
+    .t-row dt {
+      grid-column: 1 / 3;
+    }
+
+    .t-row dd {
+      grid-column: 3 / 7;
+    }
+  }
+
+  .hours {
+    margin-top: 80px;
+  }
+
+  .hours-title {
     max-width: 16ch;
   }
 
-  .terms-grid {
-    display: grid;
-    gap: var(--space-m);
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  /* proportional figures: tabular zeros read as monospace at this size */
+  .hours-n {
+    margin-top: 32px;
+    color: var(--ink);
+    white-space: nowrap;
+    font-variant-numeric: normal;
+    letter-spacing: -0.02em;
   }
 
-  .terms-card {
+  .hours-meta {
+    margin-top: 16px;
+    color: var(--ink-2);
+    line-height: 1.6;
+  }
+
+  .nw {
+    white-space: nowrap;
+  }
+
+  .sep {
+    color: var(--ink-3);
+  }
+
+  .hours-rule {
+    margin-top: 28px;
+    background-color: var(--line-strong);
+  }
+
+  .hours-body {
+    max-width: 44ch;
+    margin-top: 24px;
+    color: var(--ink-2);
+  }
+
+  @media (min-width: 768px) {
+    .facts-main {
+      grid-column: 1 / 9;
+    }
+
+    .hours {
+      grid-column: 1 / 7;
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .facts-main {
+      grid-column: 1 / 8;
+    }
+
+    .hours {
+      grid-column: 9 / 13;
+      grid-row: 1;
+      margin-top: 0;
+      padding-top: 12px;
+    }
+
+    .table {
+      margin-top: 64px;
+    }
+
+    .t-row {
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+    }
+
+    .t-row dd {
+      grid-column: 3 / 8;
+    }
+  }
+
+  /* =====================================================================
+     4. the name
+     ===================================================================== */
+  .name {
+    position: relative;
+    overflow: clip;
+  }
+
+  .name-grid {
+    position: relative;
+    z-index: 1;
+    align-items: start;
+  }
+
+  .name-first {
+    max-width: 22ch;
+    margin-top: 32px;
+    font-stretch: var(--wd-display);
+    font-size: var(--t-d3);
+    font-weight: 600;
+    line-height: 1.16;
+    letter-spacing: -0.012em;
+    color: var(--starlight);
+    text-wrap: balance;
+  }
+
+  .name-rest {
+    max-width: 36ch;
+    margin-top: 28px;
+    color: var(--haze);
+  }
+
+  .name-closing {
+    max-width: 44ch;
+    margin-top: 20px;
+    color: var(--haze);
+  }
+
+  .name-source {
+    margin-top: 32px;
+  }
+
+  .src {
+    display: inline;
+    padding-block: 4px;
+    color: var(--dim);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 4px;
+    text-decoration-color: var(--line-dark-strong);
+    transition:
+      color var(--t-micro) linear,
+      text-decoration-color var(--t-micro) linear;
+  }
+
+  /* the arrow travels with the last word when the citation wraps */
+  .src :global(.arrow) {
+    display: inline-block;
+    margin-left: 6px;
+    vertical-align: -1px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .src:hover {
+      color: var(--starlight);
+      text-decoration-color: currentColor;
+    }
+  }
+
+  /* ---- the diagram ---- */
+  .orbit-fig {
+    margin: 64px 0 0;
+  }
+
+  .orbit-stage {
+    position: relative;
+    aspect-ratio: 600 / 560;
+  }
+
+  .orbit-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
     height: 100%;
-    gap: var(--space-xs);
+    overflow: visible;
   }
 
-  .terms-icon {
-    display: grid;
-    place-items: center;
-    width: 2.4rem;
-    height: 2.4rem;
-    border-radius: var(--radius-s);
-    background: var(--violet-soft);
-    color: var(--violet-ink);
-    margin-bottom: var(--space-2xs);
+  .o-path {
+    fill: none;
+    stroke: rgb(243 240 250 / 0.26);
+    stroke-width: 1.6;
+    stroke-dasharray: 100 100;
+    stroke-dashoffset: 0;
+    transition:
+      stroke-dashoffset 1800ms var(--ease-quint),
+      opacity 300ms linear;
+    transition-delay: calc(200ms + var(--k, 0) * 140ms);
   }
 
-  .terms-card h3 {
-    font-size: var(--step-1);
+  .o-path.is-vesta {
+    stroke: var(--lilac);
+    stroke-width: 1.9;
+    transition:
+      stroke-dashoffset 2600ms var(--ease-mech) 700ms,
+      opacity 300ms linear 700ms;
   }
 
-  .terms-card p {
-    color: var(--ink-muted);
-    font-size: var(--step--1);
+  .o-dim {
+    fill: none;
+    stroke: var(--dim);
+    stroke-width: 1.6;
+    transition: opacity 600ms linear 900ms;
+  }
+
+  .o-sun {
+    fill: var(--starlight);
+  }
+
+  .o-sun-ring {
+    fill: none;
+    stroke: rgb(243 240 250 / 0.3);
+    stroke-width: 1.6;
+  }
+
+  .o-sun,
+  .o-sun-ring {
+    transform-box: fill-box;
+    transform-origin: center;
+    transition:
+      transform 900ms var(--ease-expo),
+      opacity 400ms linear;
+  }
+
+  .o-planet {
+    fill: var(--haze);
+    transition: opacity 500ms linear;
+    transition-delay: calc(900ms + var(--k, 0) * 140ms);
+  }
+
+  .o-vesta {
+    fill: var(--lilac);
+    transition: opacity 300ms linear 700ms;
+  }
+
+  .o-label {
+    position: absolute;
+    white-space: nowrap;
+    font-size: 0.6875rem;
+    letter-spacing: 0.16em;
+    color: var(--haze);
+    background-color: var(--night);
+    padding: 2px 4px;
+    transition:
+      opacity 600ms var(--ease-expo),
+      transform 600ms var(--ease-expo);
+    /* text lands within ~1s of the reveal, whatever the drawing is doing */
+    transition-delay: calc(480ms + var(--k, 0) * 90ms);
+  }
+
+  .o-label.to-right {
+    transform: translate(12px, -50%);
+  }
+
+  .o-label.to-left {
+    transform: translate(calc(-100% - 12px), -50%);
+  }
+
+  .o-label.to-below {
+    transform: translate(-50%, 14px);
+  }
+
+  .o-label.is-vesta {
+    color: var(--lilac);
+    transition-delay: 860ms;
+  }
+
+  /* "a 2.36 AU": the orbital-element symbol stays lower case */
+  .o-label.is-dim {
+    color: var(--haze);
+    font-size: 0.75rem;
+    letter-spacing: 0.02em;
+    text-transform: none;
+    transform: translate(10px, -50%);
+    transition-delay: 940ms;
+  }
+
+  /* armed state: nothing drawn yet */
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .orbit-stage:not(.is-in) .o-path {
+    opacity: 0;
+    stroke-dashoffset: 100;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .orbit-stage:not(.is-in) .o-dim,
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .orbit-stage:not(.is-in) .o-planet,
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .orbit-stage:not(.is-in) .o-vesta {
+    opacity: 0;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .orbit-stage:not(.is-in) .o-sun,
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .orbit-stage:not(.is-in) .o-sun-ring {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .orbit-stage:not(.is-in) .o-label {
+    opacity: 0;
+  }
+
+  .orbit-cap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 20px;
+    color: var(--haze);
+  }
+
+  /* phones: the diagram runs 12% past each edge (the section clips it), so
+     the inner orbits read at a useful size; Jupiter's widest points leave
+     the frame */
+  @media (max-width: 767.98px) {
+    .orbit-stage {
+      width: 124%;
+      margin-inline: -12%;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .o-path,
+    .o-dim,
+    .o-sun-ring {
+      stroke-width: 1.1;
+    }
+
+    .o-path.is-vesta {
+      stroke-width: 1.4;
+    }
+
+    .o-label {
+      font-size: 0.75rem;
+    }
+
+    .name-copy {
+      grid-column: 1 / 7;
+    }
+
+    /* tablet: the diagram steps right and stops at a readable size */
+    .orbit-fig {
+      grid-column: 3 / 9;
+      justify-self: end;
+      width: 100%;
+      max-width: 600px;
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .o-path,
+    .o-dim,
+    .o-sun-ring {
+      stroke-width: 1;
+    }
+
+    .o-path.is-vesta {
+      stroke-width: 1.25;
+    }
+
+    .name-copy {
+      grid-column: 1 / 6;
+      padding-top: 24px;
+    }
+
+    .orbit-fig {
+      grid-column: 7 / 13;
+      grid-row: 1;
+      justify-self: stretch;
+      max-width: none;
+      margin-top: 0;
+    }
+  }
+
+  /* =====================================================================
+     5. closing (the finale, compact)
+     ===================================================================== */
+  .close {
+    padding-block: clamp(4.5rem, 3rem + 5vw, 8rem);
+  }
+
+  .close-title {
+    max-width: 13ch;
+  }
+
+  .close-title :global(.ln) {
+    text-wrap: balance;
+  }
+
+  .close-body {
+    max-width: 36ch;
+    margin-top: 28px;
+    color: var(--starlight);
+  }
+
+  .close-act {
+    margin-top: 40px;
+  }
+
+  .close-btn {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .close-btn .b-lbl {
+    flex: 1 1 auto;
+    background-color: var(--starlight);
+    transition: background-color var(--t-micro) linear;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .close-btn:hover .b-lbl {
+      background-color: var(--white);
+    }
+  }
+
+  .close-btn:focus-visible .b-lbl {
+    background-color: var(--white);
+  }
+
+  .close-num {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 16px;
+    margin-top: 20px;
+  }
+
+  .close-num-v {
+    font-stretch: var(--wd-display);
+    font-size: 1.125rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--starlight);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .close-reassure {
+    color: var(--starlight);
+  }
+
+  .close-links {
+    margin-top: 24px;
+  }
+
+  @media (min-width: 768px) {
+    .close-title {
+      grid-column: 1 / -1;
+    }
+
+    .close-body {
+      grid-column: 1 / 6;
+    }
+
+    .close-act {
+      grid-column: 1 / 7;
+    }
+
+    .close-btn {
+      width: auto;
+      min-width: 320px;
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .close-grid {
+      align-items: end;
+    }
+
+    .close-title {
+      grid-column: 1 / 8;
+    }
+
+    .close-body {
+      grid-column: 1 / 6;
+      grid-row: 2;
+    }
+
+    .close-act {
+      grid-column: 8 / 13;
+      grid-row: 1 / span 2;
+      margin-top: 0;
+    }
+
+    .close-btn {
+      width: 100%;
+      min-width: 0;
+    }
   }
 </style>
+
+<script>
+  /* Vesta's one lap in the orbit diagram. CSS draws the stroke (a transition
+     on stroke-dashoffset in arc-length units); this moves the planet along
+     arc-length samples of the same path with the same easing, duration and
+     delay, so it rides the head of the line. Transform only, one shot,
+     nothing to pause. Default state (no JS, motion off) = the planet at rest. */
+  import { isReduced } from '../scripts/motion';
+
+  const stage = document.querySelector<HTMLElement>('[data-name-orbit]');
+  const planet = stage?.querySelector<SVGCircleElement>('[data-vesta-planet]');
+
+  if (stage && planet && typeof planet.animate === 'function' && !stage.classList.contains('is-in')) {
+    const frames = (stage.dataset.trace || '')
+      .split(' ')
+      .filter(Boolean)
+      .map((p) => {
+        const [x, y] = p.split(',');
+        return { transform: `translate(${x}px, ${y}px)` };
+      });
+
+    if (frames.length > 2) {
+      const run = () => {
+        if (isReduced() || document.visibilityState === 'hidden') return;
+        planet.animate(frames, {
+          duration: 2600,
+          delay: 700,
+          easing: 'cubic-bezier(0.65, 0, 0.35, 1)',
+          fill: 'backwards',
+        });
+      };
+      stage.addEventListener('vesta:reveal', run, { once: true });
+    }
+  }
+</script>

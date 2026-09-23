@@ -1,0 +1,366 @@
+---
+/**
+ * The case-study template (SPEC §7 /work/, "when a collection case has
+ * confirmed: true"). Used by src/pages/work/[slug].astro, which only builds
+ * confirmed entries. Rendered as its own component so it can be checked on a
+ * lab page with sample data before the first real case exists.
+ *
+ *   head (void)      WORK · vertical · title · summary · client facts, live ↗
+ *   cover (void)     the page Vesta built (wipe reveal), when there is one
+ *   measured (paper) metrics table — before / after / tool and date, always
+ *   story (paper-2)  Problem / What was built, then the long-form body (slot)
+ *
+ * Every number carries its tool and date (schema-enforced).
+ */
+import { Picture } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+import PageHead from './PageHead.astro';
+import Arrow from '../ui/Arrow.astro';
+import SplitText from '../ui/SplitText.astro';
+import { verticalLabel, TODO_SITE_CASES as T } from './verticals';
+import { work } from '../../data/site';
+import { url, formatDate, isoDate } from '../../lib/url';
+
+export interface Props {
+  data: {
+    title: string;
+    client: string;
+    vertical: string;
+    location: string;
+    summary: string;
+    cover?: ImageMetadata;
+    url?: string;
+    launched: Date;
+    problem: string;
+    solution: string;
+    metrics: { label: string; before: string; after: string; tool: string; measured: Date }[];
+  };
+}
+
+const { data: d } = Astro.props;
+const label = `${work.label.name} · ${verticalLabel(d.vertical)}`;
+const bare = (s: string) => s.replace(/\s*↗\s*$/, '');
+---
+
+<article>
+  <PageHead label={label} h1={d.title} lead={d.summary}>
+    <dl class="cs-facts">
+      <div class="cs-fact">
+        <dt class="small">{d.client}</dt>
+        <dd class="small">{d.location}</dd>
+      </div>
+      <div class="cs-fact">
+        <dt class="small">{T.launched}</dt>
+        <dd class="small"><time datetime={isoDate(d.launched)}>{formatDate(d.launched)}</time></dd>
+      </div>
+    </dl>
+    {
+      d.url && (
+        <p class="cs-live">
+          <a class="tlink" href={d.url} target="_blank" rel="noopener">
+            <span>{bare(T.liveSite)}</span>
+            <Arrow dir="up-right" size={12} />
+          </a>
+        </p>
+      )
+    }
+  </PageHead>
+
+  {
+    d.cover && (
+      <section class="s-void cs-cover" data-nav-theme="dark">
+        <div class="wrap">
+          <div class="cs-cover-in" data-reveal="wipe">
+            <Picture
+              src={d.cover}
+              alt={`${d.client}: the page Vesta built`}
+              widths={[640, 960, 1400]}
+              sizes="(min-width: 1440px) 1344px, 92vw"
+              formats={['avif', 'webp']}
+              fallbackFormat="jpg"
+            />
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  {
+    d.metrics.length > 0 && (
+      <section class="s-paper section cs-m" data-nav-theme="light" aria-labelledby="cs-m-title">
+        <div class="wrap">
+          <SplitText as="h2" id="cs-m-title" class="d2 cs-m-title" text={T.measured} />
+          <table class="cs-table">
+            <thead>
+              <tr data-reveal="fade">
+                <th scope="col" class="label">
+                  <span class="visually-hidden">{T.measured}</span>
+                </th>
+                <th scope="col" class="label">{T.before}</th>
+                <th scope="col" class="label">{T.after}</th>
+                <th scope="col" class="label">{T.tool}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {d.metrics.map((m, i) => (
+                <tr class="cs-row" data-inview style={`--r:${i}`}>
+                  <th scope="row" class="cs-m-label">{m.label}</th>
+                  <td class="cs-m-before">{m.before}</td>
+                  <td class="cs-m-after">
+                    <span class="cs-m-arrow" aria-hidden="true">
+                      <Arrow size={16} />
+                    </span>
+                    {m.after}
+                  </td>
+                  <td class="small cs-m-src">
+                    {m.tool} · <time datetime={isoDate(m.measured)}>{formatDate(m.measured)}</time>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    )
+  }
+
+  <section class="s-paper-2 section cs-story" data-nav-theme="light">
+    <div class="wrap g">
+      <div class="cs-part" data-reveal>
+        <p class="label cs-k">{T.problem}</p>
+        <p class="lead cs-p">{d.problem}</p>
+      </div>
+      <div class="cs-part cs-part--b" data-reveal style="--i:1">
+        <p class="label cs-k">{T.built}</p>
+        <p class="lead cs-p">{d.solution}</p>
+      </div>
+      <div class="cs-body" data-reveal style="--i:2">
+        <slot />
+      </div>
+      <p class="cs-back" data-reveal style="--i:3">
+        <a class="tlink" href={url('/work/')}>
+          <span>{T.back}</span>
+          <Arrow />
+        </a>
+      </p>
+    </div>
+  </section>
+</article>
+
+<style>
+  /* ------------------------------------------------------------- head */
+
+  .cs-facts {
+    border-top: 1px solid var(--line-dark-strong);
+  }
+
+  .cs-fact {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    padding-block: 10px;
+    border-bottom: 1px solid var(--line-dark);
+  }
+
+  .cs-fact dt {
+    color: var(--starlight);
+  }
+
+  .cs-fact dd {
+    margin: 0;
+    color: var(--haze);
+  }
+
+  .cs-live {
+    margin-top: 20px;
+  }
+
+  /* ------------------------------------------------------------ cover */
+
+  .cs-cover {
+    padding-bottom: clamp(3rem, 2rem + 4vw, 6rem);
+  }
+
+  .cs-cover-in {
+    overflow: clip;
+    outline: 1px solid rgb(185 162 255 / 0.34);
+    background-color: var(--plate);
+  }
+
+  .cs-cover-in :global(img) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  /* ---------------------------------------------------------- measured */
+
+  .cs-table {
+    width: 100%;
+    margin-top: clamp(2.5rem, 1.5rem + 3vw, 4rem);
+    border-collapse: collapse;
+    border-bottom: 1px solid var(--line-strong);
+  }
+
+  .cs-table thead th {
+    padding-bottom: 14px;
+    color: var(--ink-3);
+    text-align: left;
+    font-weight: 600;
+  }
+
+  .cs-row {
+    position: relative;
+  }
+
+  .cs-row > * {
+    padding-block: 24px;
+    border-top: 1px solid var(--line-strong);
+    text-align: left;
+    vertical-align: baseline;
+    transition:
+      opacity var(--t-reveal) var(--ease-expo),
+      transform var(--t-reveal) var(--ease-expo);
+    transition-delay: calc(var(--r, 0) * 90ms + 120ms);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .cs-row:not(.is-in) > * {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+
+  .cs-m-label {
+    padding-right: 24px;
+    color: var(--ink);
+    font-weight: 560;
+  }
+
+  .cs-m-before,
+  .cs-m-after {
+    padding-right: 24px;
+    font-stretch: var(--wd-display);
+    font-size: var(--t-d3);
+    font-weight: 560;
+    font-variant-numeric: lining-nums proportional-nums;
+    white-space: nowrap;
+  }
+
+  .cs-m-before {
+    color: var(--ink-3);
+  }
+
+  .cs-m-after {
+    color: var(--violet-ink);
+  }
+
+  .cs-m-src {
+    color: var(--ink-3);
+  }
+
+  /* the arrow only where the column heads are hidden (phones) */
+  .cs-m-arrow {
+    display: none;
+    color: var(--violet-ink);
+  }
+
+  @media (max-width: 767px) {
+    .cs-table thead {
+      display: none;
+    }
+
+    .cs-table,
+    .cs-table tbody,
+    .cs-row {
+      display: block;
+    }
+
+    .cs-row {
+      display: grid;
+      grid-template-columns: auto auto 1fr;
+      gap: 6px 20px;
+      padding-block: 20px;
+      border-top: 1px solid var(--line-strong);
+    }
+
+    .cs-row > * {
+      padding: 0;
+      border: 0;
+    }
+
+    .cs-m-label,
+    .cs-m-src {
+      grid-column: 1 / -1;
+    }
+
+    .cs-m-after {
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .cs-m-arrow {
+      display: inline-flex;
+    }
+  }
+
+  /* ------------------------------------------------------------- story */
+
+  .cs-part + .cs-part {
+    margin-top: 48px;
+  }
+
+  .cs-k {
+    color: var(--violet-ink);
+  }
+
+  .cs-p {
+    margin-top: 16px;
+    color: var(--ink);
+    max-width: 36ch;
+  }
+
+  .cs-body {
+    margin-top: 64px;
+    color: var(--ink-2);
+  }
+
+  .cs-body :global(p) {
+    max-width: 62ch;
+    text-wrap: pretty;
+  }
+
+  .cs-body :global(p + p) {
+    margin-top: 1em;
+  }
+
+  .cs-back {
+    margin-top: 56px;
+  }
+
+  .cs-back :global(.tlink) {
+    --fg: var(--ink);
+  }
+
+  @media (min-width: 1100px) {
+    .cs-part {
+      grid-column: 1 / span 5;
+    }
+
+    .cs-part--b {
+      grid-column: 7 / span 5;
+    }
+
+    .cs-part + .cs-part {
+      margin-top: 0;
+    }
+
+    .cs-body {
+      grid-column: 3 / span 7;
+      margin-top: 96px;
+    }
+
+    .cs-back {
+      grid-column: 3 / span 7;
+    }
+  }
+</style>

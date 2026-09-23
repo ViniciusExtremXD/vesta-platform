@@ -1,0 +1,331 @@
+---
+/**
+ * /work/concept-01/ — a Concept 01 plate with numbered annotation markers
+ * (A1–A4 on the 2016 original, B1–B4 on the rebuild) and the matching list.
+ *
+ * Markers are placed in the plate's own reference drawing (760 × 475 units,
+ * the same --u system as ConceptPlate), so they stay on their feature at
+ * every width. Markers that point at the page's metadata (A4 no title or
+ * description, B4 structured data) sit on the URL bar: that is where a page's
+ * title lives, and where nothing on the page itself shows it.
+ *
+ * Pointer hover on a list row lights its marker and vice versa (class only,
+ * transform-only animation). The list is the accessible content; the
+ * markers are aria-hidden.
+ *
+ * Layout ≥1100: side="right" → plate 1–8, list 9–12;
+ *               side="left"  → list 1–4, plate 5–12. Below: plate, then list.
+ */
+import ConceptPlate from '../ConceptPlate.astro';
+import SplitText from '../ui/SplitText.astro';
+
+interface Note {
+  id: string;
+  text: string;
+}
+
+export interface Props {
+  title: string;
+  state: 'before' | 'after';
+  notes: readonly Note[];
+  side?: 'left' | 'right';
+  titleId: string;
+}
+
+const { title, state, notes, side = 'right', titleId } = Astro.props;
+
+/* marker anchors in reference units. `a` = which edge of the marker sits on
+   the anchor: 's' starts there (marker to the right), 'e' ends there (marker
+   to the left), 'c' centred. `bar` = on the URL bar, after the URL text. */
+const POS: Record<string, { x: number; y: number; a: 's' | 'e' | 'c'; bar?: boolean }> = {
+  A1: { x: 492, y: 459, a: 's' }, // the phone number, in the footer only
+  A2: { x: 733, y: 150, a: 'c' }, // the slider arrows
+  A3: { x: 206, y: 150, a: 'e' }, // "Welcome to Halden Roofing"
+  A4: { x: 176, y: 0, a: 's', bar: true }, // no title or description written for search
+  B1: { x: 268, y: 118, a: 's' }, // the promise, first screen
+  B2: { x: 340, y: 284, a: 's' }, // call + inspection buttons
+  B3: { x: 266, y: 376, a: 'e' }, // a page per service
+  B4: { x: 176, y: 0, a: 's', bar: true }, // structured data
+};
+---
+
+<div class:list={['g ap', `ap--${side}`, `ap--${state}`]} data-ap>
+  <SplitText as="h2" id={titleId} class="d2 ap-title" text={title} />
+
+  <div class="ap-fig" data-inview>
+    <div class="ap-plate" data-reveal>
+      <ConceptPlate mode="static" state={state} />
+    </div>
+    {
+      notes.map((n, i) => {
+        const p = POS[n.id] ?? { x: 380, y: 237, a: 'c' as const };
+        return (
+          <span
+            class:list={['ap-mk label', `ap-mk--${p.a}`, p.bar && 'ap-mk--bar']}
+            data-mk={n.id}
+            style={`--x:${p.x};--y:${p.y};--k:${i}`}
+            aria-hidden="true"
+          >
+            {n.id}
+          </span>
+        );
+      })
+    }
+  </div>
+
+  <div class="ap-side">
+    <ol class="ap-list">
+      {
+        notes.map((n, i) => (
+          <li class="ap-row" data-note={n.id} data-inview style={`--r:${i}`}>
+            <span class="label ap-id">{n.id}</span>
+            <span class="ap-text">{n.text}</span>
+          </li>
+        ))
+      }
+    </ol>
+  </div>
+</div>
+
+<script>
+  /* hover pairing: list row ↔ marker (fine pointers only; class toggles) */
+  if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+    document.querySelectorAll<HTMLElement>('[data-ap]').forEach((root) => {
+      const pairs = new Map<string, HTMLElement[]>();
+      root.querySelectorAll<HTMLElement>('[data-note], [data-mk]').forEach((el) => {
+        const id = el.dataset.note ?? el.dataset.mk;
+        if (!id) return;
+        const list = pairs.get(id) ?? [];
+        list.push(el);
+        pairs.set(id, list);
+      });
+      pairs.forEach((els) => {
+        const set = (on: boolean) => els.forEach((e) => e.classList.toggle('is-hot', on));
+        els.forEach((el) => {
+          el.addEventListener('pointerenter', () => set(true));
+          el.addEventListener('pointerleave', () => set(false));
+        });
+      });
+    });
+  }
+</script>
+
+<style>
+  .ap {
+    row-gap: 40px;
+    align-items: start;
+  }
+
+  /* ------------------------------------------------------------ plate */
+
+  .ap-fig {
+    position: relative;
+    container-type: inline-size;
+    --ru: calc(100cqi / 760);
+    --bar-h: max(18px, calc(28 * var(--ru)));
+  }
+
+  .ap-mk {
+    --mk-h: 18px;
+    --mk-dx: -50%;
+    position: absolute;
+    left: calc(var(--x) * var(--ru));
+    top: calc(var(--bar-h) + var(--y) * var(--ru));
+    z-index: 8;
+    display: grid;
+    place-items: center;
+    min-width: 24px;
+    height: var(--mk-h);
+    margin-top: calc(var(--mk-h) / -2);
+    padding: 0 4px;
+    background-color: var(--violet);
+    color: var(--white);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    cursor: default;
+    translate: var(--mk-dx) 0;
+    transition:
+      transform 700ms var(--ease-expo),
+      opacity 300ms linear,
+      background-color var(--t-micro) linear;
+    transition-delay: calc(500ms + var(--k, 0) * 110ms), calc(500ms + var(--k, 0) * 110ms), 0ms;
+  }
+
+  .ap-mk--s {
+    --mk-dx: 0%;
+  }
+
+  .ap-mk--e {
+    --mk-dx: -100%;
+  }
+
+  @media (min-width: 768px) {
+    .ap-mk {
+      --mk-h: 22px;
+      min-width: 30px;
+      padding: 0 6px;
+      letter-spacing: 0.08em;
+    }
+  }
+
+  /* a hairline square around the anchor point: the marker's target */
+  .ap-mk::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border: 1px solid var(--violet);
+    opacity: 0;
+    transform: scale(0.9);
+    transition:
+      opacity var(--t-micro) linear,
+      transform var(--t-ui) var(--ease-expo);
+  }
+
+  /* on the URL bar, always clear of the URL text */
+  .ap-mk--bar {
+    --mk-h: min(22px, calc(var(--bar-h) - 4px));
+    top: calc(var(--bar-h) / 2);
+    left: max(calc(var(--x) * var(--ru)), 118px);
+  }
+
+  .ap-mk.is-hot {
+    background-color: var(--violet-deep);
+    transform: scale(1.12);
+    transition-delay: 0ms;
+  }
+
+  .ap-mk.is-hot::after {
+    opacity: 1;
+    transform: none;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .ap-fig:not(.is-in) .ap-mk {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+
+  /* ------------------------------------------------------------- list */
+
+  .ap-title {
+    max-width: 10ch;
+  }
+
+  .ap-list {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .ap-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr);
+    align-items: baseline;
+    column-gap: 12px;
+    padding-block: 18px 20px;
+  }
+
+  .ap-row::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 1px;
+    background-color: var(--line);
+    transform-origin: left center;
+    transition:
+      transform 1000ms var(--ease-quint),
+      opacity 200ms linear;
+    transition-delay: calc(var(--r, 0) * 90ms);
+  }
+
+  .ap-id,
+  .ap-text {
+    transition:
+      opacity var(--t-reveal) var(--ease-expo),
+      transform var(--t-reveal) var(--ease-expo),
+      color var(--t-micro) linear;
+    transition-delay: calc(var(--r, 0) * 90ms + 140ms), calc(var(--r, 0) * 90ms + 140ms), 0ms;
+  }
+
+  .ap-id {
+    color: var(--accent-text);
+    letter-spacing: 0.1em;
+  }
+
+  .ap-text {
+    color: var(--fg-2);
+    font-size: 1.0625rem;
+    line-height: 1.5;
+    text-wrap: pretty;
+  }
+
+  .ap-row.is-hot .ap-text {
+    color: var(--fg);
+  }
+
+  .ap-row.is-hot .ap-id {
+    transform: translateX(4px);
+    transition-delay: 0ms;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .ap-row:not(.is-in)::before {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .ap-row:not(.is-in) :is(.ap-id, .ap-text) {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+
+  @media (min-width: 768px) {
+    .ap-side {
+      grid-column: 1 / span 6;
+    }
+  }
+
+  @media (min-width: 1100px) {
+    /* the title heads the list column; the plate spans both rows */
+    .ap {
+      row-gap: 40px;
+      grid-template-rows: auto 1fr;
+    }
+
+    .ap-fig {
+      grid-row: 1 / span 2;
+    }
+
+    .ap-title {
+      margin-top: -0.1em;
+    }
+
+    .ap--right .ap-fig {
+      grid-column: 1 / span 8;
+    }
+
+    .ap--right :is(.ap-title, .ap-side) {
+      grid-column: 9 / -1;
+    }
+
+    .ap--left .ap-fig {
+      grid-column: 5 / -1;
+    }
+
+    .ap--left :is(.ap-title, .ap-side) {
+      grid-column: 1 / span 4;
+    }
+
+    .ap-title {
+      grid-row: 1;
+    }
+
+    .ap-side {
+      grid-row: 2;
+    }
+
+    .ap-text {
+      font-size: 1.125rem;
+    }
+  }
+</style>

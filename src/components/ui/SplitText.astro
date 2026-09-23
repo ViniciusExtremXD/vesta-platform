@@ -1,0 +1,68 @@
+---
+/**
+ * Build-time word split for the mask reveal. Emits
+ *   <Tag data-split data-split-done><span class="wm"><span class="w" style="--i:n">word</span></span> …</Tag>
+ * so the words exist in the HTML (no flash, no layout shift) and motion.ts
+ * skips its runtime split.
+ *
+ *   <SplitText as="h2" class="d2" text="Straight answers." />
+ *   <SplitText as="h1" load delay={120} lines={['Your business is', 'better than its website.']} />
+ *
+ * `load` plays on page load (CSS keyframes, independent of JS — use it above
+ * the fold); otherwise the words rise when the element enters the viewport.
+ * `lines` forces line breaks (each line is a block); `text` wraps naturally.
+ */
+export interface Props {
+  as?: 'h1' | 'h2' | 'h3' | 'p' | 'span' | 'div';
+  text?: string;
+  lines?: string[];
+  class?: string;
+  id?: string;
+  load?: boolean;
+  /** start delay in ms */
+  delay?: number;
+  [key: `data-${string}`]: unknown;
+}
+
+const { as: Tag = 'h2', text = '', lines, class: cls, id, load = false, delay = 0, ...rest } = Astro.props;
+
+const forced = Boolean(lines && lines.length);
+const groups: string[][] = (forced ? lines! : [text]).map((l) => l.trim().split(/\s+/).filter(Boolean));
+let n = 0;
+const words = groups.map((g) => g.map((w) => ({ w, i: n++ })));
+const attrs = load ? { 'data-load-split': '' } : { 'data-split': '', 'data-split-done': '' };
+const style = delay ? `--d:${delay}ms` : undefined;
+---
+
+<Tag class={cls} id={id} style={style} {...attrs} {...rest}>
+  {
+    words.map((line, li) => (
+      <Fragment>
+        {li > 0 && ' '}
+        {forced ? (
+          <span class="ln">
+            {line.map(({ w, i }, k) => (
+              <Fragment>
+                {k > 0 && ' '}
+                <span class="wm"><span class="w" style={`--i:${i}`}>{w}</span></span>
+              </Fragment>
+            ))}
+          </span>
+        ) : (
+          line.map(({ w, i }, k) => (
+            <Fragment>
+              {k > 0 && ' '}
+              <span class="wm"><span class="w" style={`--i:${i}`}>{w}</span></span>
+            </Fragment>
+          ))
+        )}
+      </Fragment>
+    ))
+  }
+</Tag>
+
+<style>
+  .ln {
+    display: block;
+  }
+</style>

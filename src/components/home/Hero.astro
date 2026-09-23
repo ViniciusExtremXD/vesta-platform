@@ -1,325 +1,465 @@
 ---
-import { hero, brand } from '../../data/site';
-import measurementsJson from '../../data/measurements.json';
-import { url, formatDate } from '../../lib/url';
-import Icon from '../Icon.astro';
+/**
+ * #hero (§5.1, §3.4, §6.1, SPEC_COSMOS). Deep space: the galaxy behind
+ * everything, the H1 on near-black at the left, Concept 01 floating in
+ * perspective in front of the galaxy at the right, rebuilt on load.
+ * The spec band closes the section.
+ *
+ * Layers: section.s-void (opaque, position:relative, overflow:clip)
+ *   0  <Cosmos variant="galaxy" />      first child, absolutely positioned
+ *   1  .hero__main, .sb                  transparent content above it
+ *
+ * Motion (CSS on load, no JS gate — the H1 is the LCP):
+ *   0     meta hairline draws            520   lead rises
+ *   80    meta labels rise               620   primary CTA rises, 700 secondary
+ *   120+  H1 words (55ms steps)          900   primary CTA fills violet
+ *   300   plate enters (48px, −24°→−14°) 1000  micro-line, 1080 status
+ *   700   rebuild blade 0 → 1 (1300ms)   2000+ compare.ts eases to .56, arms
+ * Scroll: motion.ts writes --hx (0→1) on [data-hero-exit]; the H1 drifts
+ * −56px and the plate −90px while turning −14° → −4° (transform only).
+ */
+import SplitText from '../ui/SplitText.astro';
+import WaGlyph from '../ui/WaGlyph.astro';
+import Arrow from '../ui/Arrow.astro';
+import Cosmos from '../Cosmos.astro';
+import ConceptPlate from '../ConceptPlate.astro';
+import SpecBand from './SpecBand.astro';
+import { hero, wa } from '../../data/site';
+import { url } from '../../lib/url';
 
-interface Measurements {
-  performance: number | null;
-  lcpMs: number | null;
-  requests: number | null;
-  transferKb: number | null;
-  tool: string | null;
-  date: string | null;
-}
-const measurements = measurementsJson as unknown as Measurements;
-const measured = typeof measurements.performance === 'number' && typeof measurements.date === 'string';
-const score = measurements.performance ?? 0;
-const date = measurements.date ?? '';
+/* TODO_SITE: hero.meta.audience + hero.meta.coords (SPEC_COSMOS §4 allows
+   the coordinates). Desktop shows both; tablet shows the coordinates only
+   (hero.meta.right wraps to two lines at 768–1099 next to the left label). */
+const TODO_SITE = {
+  audience: 'For businesses in the US and worldwide',
+  coords: 'São Paulo · 23.55° S 46.63° W',
+};
 ---
 
-<section class="hero on-void" id="top">
-  <div class="field" data-particles aria-hidden="true"></div>
-  <div class="hero-glow" aria-hidden="true"></div>
-  <div class="hero-grid-lines" aria-hidden="true"></div>
+<section id={hero.id} class="s-void hero" data-nav-theme="dark" data-hero-exit>
+  <Cosmos variant="galaxy" />
 
-  <div class="wrap wrap-wide hero-inner" data-hero-exit>
-    <div class="hero-copy">
-      <p class="kicker" data-reveal="up">{hero.kicker}</p>
-      <h1 data-split set:html={hero.headline} />
-      <p class="lead" data-reveal="up" style="--i:2">{hero.lead}</p>
-
-      <div class="btn-row hero-actions" data-reveal="up" style="--i:3">
-        <a class="btn btn-primary btn-lg" href={url(hero.primary.href)} data-magnetic>
-          {hero.primary.label}
-          <Icon name="arrow" class="arrow" />
-        </a>
-        <a class="btn btn-ghost btn-lg" href={url(hero.secondary.href)} data-magnetic="0.18">
-          {hero.secondary.label}
-        </a>
+  <div class="hero__main">
+    <div class="wrap">
+      <div class="hero__meta">
+        <p class="label hero__meta-l" data-load style="--d:80ms">
+          <span class="hm-d">{hero.meta.left}</span><span class="hm-m">{hero.meta.mobile}</span>
+        </p>
+        <p class="label hero__meta-r hm-w" data-load style="--d:140ms">
+          <span class="hm-aud">{TODO_SITE.audience}</span>
+          <span class="hm-geo">{TODO_SITE.coords}</span>
+        </p>
+        <span class="hero__meta-rule" data-load="draw" aria-hidden="true"></span>
       </div>
 
-      <ul class="hero-facts" data-reveal="fade" style="--i:5">
-        {
-          hero.facts.map((f) => (
-            <li>
-              <span class="hero-fact-value mono">{f.value}</span>
-              <span class="hero-fact-label">
-                {f.label} <span class="muted">· {f.note}</span>
-              </span>
-            </li>
-          ))
-        }
-      </ul>
-    </div>
+      <div class="g hero__grid">
+        <SplitText as="h1" load delay={120} class="hero__h1" text={hero.h1} />
 
-    <div class="hero-side">
-      <div data-reveal="right" style="--i:2">
-        <div class="card hero-widget hero-funnel-card" data-tilt="5" data-glow>
-          <p class="hud hero-widget-head">
-            <span class="pulse" aria-hidden="true"></span>
-            <b>Growth Architecture</b> · Paid Ads to Clients
-          </p>
-          <div class="hero-funnel">
-            <div class="funnel-step">
-              <span class="funnel-icon"><Icon name="bolt" size={16} /></span>
-              <div class="funnel-body">
-                <span class="funnel-title">Sub-Second Mobile Speed (&lt;1s)</span>
-                <span class="funnel-desc">Stops ad traffic bounce before the click is lost</span>
-              </div>
-            </div>
-            <div class="funnel-step">
-              <span class="funnel-icon"><Icon name="check" size={16} /></span>
-              <div class="funnel-body">
-                <span class="funnel-title">High-Converting Layout &amp; Copy</span>
-                <span class="funnel-desc">Single-offer focus, instant WhatsApp &amp; CRM lead delivery</span>
-              </div>
-            </div>
-            <div class="funnel-step">
-              <span class="funnel-icon"><Icon name="shield" size={16} /></span>
-              <div class="funnel-body">
-                <span class="funnel-title">Google SEO &amp; Fast Indexing</span>
-                <span class="funnel-desc">Search Console setup, sitemaps &amp; Schema JSON-LD</span>
-              </div>
-            </div>
+        <div class="hero__copy">
+          <p class="lead hero__lead" data-load style="--d:520ms">{hero.lead}</p>
+          <div class="hero__ctas">
+            <a class="btn hero__cta" href={wa(hero.primary.text)} data-sticky-anchor data-wa-intent="hero" data-load style="--d:620ms">
+              <span class="hero__cta-edge" aria-hidden="true"></span>
+              <WaGlyph size={16} />
+              <span>{hero.primary.label}</span>
+              <Arrow />
+            </a>
+            <a class="tlink hero__sec" href={url(hero.secondary.href)} data-load style="--d:700ms">
+              <span>{hero.secondary.label}</span>
+              <Arrow />
+            </a>
           </div>
+          <p class="small hero__micro" data-load style="--d:1000ms">{hero.micro}</p>
+          <p class="small hero__status" data-load style="--d:1080ms">{hero.status}</p>
         </div>
-      </div>
 
-      <div data-reveal="right" style="--i:3">
-        <div class="card hero-widget hero-trust" data-tilt="5" data-glow>
-          <p class="hud"><b>{brand.legalName}</b> · Official Entity</p>
-          <div class="trust-content">
-            <div class="trust-tags">
-              <span class="badge badge-violet">CNPJ {brand.cnpj}</span>
-              <span class="badge badge-paper">Mackenzie CS Graduate</span>
-            </div>
-            <p class="hero-note-text">
-              Direct execution by <b>Vinícius Magno</b>. Formal contracts, Stripe USD invoicing or Brazilian Nota Fiscal, and 100% code ownership.
-            </p>
-            <div class="trust-pricing-pill">
-              <span>Landing pages from <b>$500 – $700</b></span>
-              <span class="muted">· Ready in 5–7 days</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div data-reveal="right" style="--i:4">
-        <div class="card hero-widget hero-celestial" data-tilt="5" data-glow>
-          <p class="hud hero-widget-head">
-            <span class="pulse" aria-hidden="true"></span>
-            <b>✦ Celestial Alignment</b> · Live Project Slots
-          </p>
-          <div class="celestial-status-body">
-            <p class="hero-note-text">
-              Direct founder execution. Booking dedicated landing page builds for ambitious brands running Google &amp; Meta Ads worldwide.
-            </p>
-            <div class="trust-pricing-pill">
-              <span>⚶ Vesta Focus: <b>Zero Agency Fluff</b></span>
-              <span class="muted">· Direct WhatsApp &amp; Stripe</span>
-            </div>
-          </div>
+        <div class="hero__stage">
+          <ConceptPlate mode="hero" class="hero__plate cp--cap-split" />
         </div>
       </div>
     </div>
   </div>
+
+  <SpecBand />
 </section>
 
+<script>
+  import '../../scripts/compare';
+</script>
+
 <style>
+  /* ---------- section ----------------------------------------------------- */
+  /* A one-column grid so the galaxy can take the first row only: an
+     absolutely positioned grid child uses its grid area as containing
+     block. The sky fills the first screen and stops at the spec band's
+     hairline, which reads as the edge of the viewport onto space. */
   .hero {
     position: relative;
-    isolation: isolate;
-    overflow: hidden;
-    padding-block: calc(var(--nav-h) + clamp(3rem, 2rem + 5vw, 6.5rem)) clamp(3.5rem, 2.5rem + 5vw, 7rem);
-    min-height: 92svh;
-    display: flex;
-    align-items: center;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    overflow: clip;
+    background-color: var(--void);
+    /* galaxy composition (read by cosmos.ts; fractions of the sky box,
+       y from the top; mask = dark point A → bright point B).
+       Phones: the galaxy opens in the sky under the plate, the text
+       column above it stays masked near-black. */
+    --cosmos-x: 0.7;
+    --cosmos-y: 0.86;
+    --cosmos-r: 0.65;
+    --cosmos-mask: 0.3 0.55 0.6 0.82;
   }
 
-  .hero-glow {
-    position: absolute;
-    inset: -20% -10% auto;
-    height: 90%;
-    z-index: 0;
-    background:
-      radial-gradient(60rem 36rem at 22% 12%, rgb(124 58 237 / 0.28), transparent 60%),
-      radial-gradient(40rem 30rem at 92% 80%, rgb(168 85 247 / 0.14), transparent 60%);
-    pointer-events: none;
-    animation: breathe 9s var(--ease-in-out) infinite alternate;
+  /* explicit end line: for an abspos grid child, "auto" means the
+     container's edge, not the end of the row */
+  .hero > :global(.cosmos) {
+    grid-row: 1 / 2;
+    grid-column: 1 / 2;
   }
 
-  @keyframes breathe {
-    from {
-      transform: translate3d(0, 0, 0) scale(1);
-      opacity: 0.85;
-    }
-    to {
-      transform: translate3d(0, 1.5%, 0) scale(1.04);
-      opacity: 1;
-    }
-  }
-
-  .hero-grid-lines {
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    background-image:
-      linear-gradient(rgb(255 255 255 / 0.035) 1px, transparent 1px),
-      linear-gradient(90deg, rgb(255 255 255 / 0.035) 1px, transparent 1px);
-    background-size: 96px 96px;
-    -webkit-mask-image: radial-gradient(70% 60% at 50% 40%, #000 30%, transparent 100%);
-    mask-image: radial-gradient(70% 60% at 50% 40%, #000 30%, transparent 100%);
-    pointer-events: none;
-  }
-
-  .hero-inner {
+  /* everything readable sits above the galaxy */
+  .hero__main {
     position: relative;
     z-index: 1;
-    display: grid;
-    gap: var(--space-2xl) var(--space-xl);
-    align-items: center;
+    grid-row: 1;
+    grid-column: 1;
+    padding-top: calc(var(--nav-h) + 20px);
+    /* phones: open sky under the plate, where the galaxy core sits */
+    padding-bottom: 240px;
   }
 
-  .hero-copy > * + * {
-    margin-top: var(--space-m);
-  }
-
-  .hero h1 {
-    max-width: 15ch;
-  }
-
-  .hero .lead {
-    max-width: 52ch;
-  }
-
-  .hero-actions {
-    margin-top: var(--space-l);
-  }
-
-  .hero-facts {
-    display: grid;
-    gap: 0.6rem;
-    margin-top: var(--space-xl);
-    padding-top: var(--space-m);
-    border-top: 1px solid var(--line-dark);
-  }
-
-  .hero-facts li {
-    display: grid;
-    grid-template-columns: 4em 1fr;
-    align-items: baseline;
-    gap: 0.4em 0.9em;
-    font-size: var(--step--1);
-  }
-
-  .hero-fact-value {
-    font-weight: 700;
-    color: var(--violet-ink-dark);
-  }
-
-  .hero-fact-label {
-    color: var(--text-dark-muted);
-  }
-
-  /* ---- widgets ---- */
-
-  .hero-side {
-    display: grid;
-    gap: var(--space-s);
-    align-content: center;
-  }
-
-  .hero-widget {
-    background: rgb(14 12 21 / 0.82);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
-    box-shadow: var(--shadow-l);
-  }
-
-  .hero-widget-head {
-    margin-bottom: var(--space-s);
-  }
-
-  .hero-funnel {
-    display: grid;
-    gap: 0.85rem;
-    margin-top: var(--space-xs);
-  }
-
-  .funnel-step {
+  /* ---------- meta row ---------------------------------------------------- */
+  .hero__meta {
+    position: relative;
     display: flex;
-    align-items: flex-start;
-    gap: 0.75rem;
+    justify-content: space-between;
+    gap: 24px;
+    padding-bottom: 14px;
   }
 
-  .funnel-icon {
-    display: grid;
-    place-items: center;
-    width: 1.8rem;
-    height: 1.8rem;
-    border-radius: var(--radius-s);
-    background: var(--violet-soft);
-    color: var(--violet-ink-dark);
-    flex-shrink: 0;
-    margin-top: 0.1rem;
+  .hero__meta-l {
+    color: var(--haze);
   }
 
-  .funnel-body {
-    display: grid;
-    gap: 0.2rem;
+  .hero__meta-r {
+    display: none;
+    color: var(--dim);
   }
 
-  .funnel-title {
-    font-size: var(--step--1);
-    font-weight: 600;
-    color: var(--text-dark);
+  .hm-d {
+    display: none;
   }
 
-  .funnel-desc {
-    font-size: var(--step--2);
-    color: var(--text-dark-muted);
-    line-height: 1.4;
+  .hm-geo {
+    color: var(--haze);
+    font-variant-numeric: tabular-nums;
   }
 
-  .trust-tags {
+  .hero__meta-rule {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background-color: var(--line-dark);
+  }
+
+  .hero__meta :global([data-load]:not([data-load='draw'])) {
+    --rise: 8px;
+  }
+
+  :global(html:not(.motion-reduced)) .hero__meta p[data-load] {
+    animation-duration: 600ms;
+  }
+
+  /* ---------- H1 + copy --------------------------------------------------- */
+  .hero__grid {
+    align-items: start;
+  }
+
+  .hero__grid :global(.hero__h1) {
+    margin-top: 36px;
+    max-width: 14ch;
+    /* phones: the three lines fill the column instead of stopping at 40px */
+    font-size: max(var(--t-d1), min(13.2vw, 3.5rem));
+    color: var(--starlight);
+    transform: translate3d(0, calc(var(--hx, 0) * -56px), 0);
+  }
+
+  .hero__copy {
+    margin-top: 24px;
+  }
+
+  .hero__lead {
+    color: var(--starlight);
+  }
+
+  .hero__ctas {
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-bottom: var(--space-xs);
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 28px;
   }
 
-  .hero-note-text {
-    margin-top: 0.6rem;
-    font-size: var(--step--1);
-    color: var(--text-dark-muted);
-    max-width: 40ch;
+  .hero__micro {
+    margin-top: 24px;
+    max-width: 46ch;
+    color: var(--haze);
   }
 
-  .trust-pricing-pill {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    margin-top: var(--space-s);
-    padding: 0.45rem 0.8rem;
-    border-radius: var(--radius-pill);
-    background: rgba(124, 58, 237, 0.12);
-    border: 1px solid rgba(124, 58, 237, 0.25);
-    font-size: var(--step--2);
-    color: var(--text-dark);
+  .hero__status {
+    margin-top: 8px;
+    color: var(--dim);
   }
 
-  @media (min-width: 64rem) {
-    .hero-inner {
-      grid-template-columns: minmax(0, 1.25fr) minmax(20rem, 0.9fr);
+  /* primary CTA: arrives as a void button with a violet edge, then fills */
+  .hero__cta {
+    width: 100%;
+  }
+
+  .hero__cta-edge {
+    position: absolute;
+    inset: 0;
+    z-index: -3;
+    background-color: var(--violet);
+    clip-path: var(--chamfer);
+  }
+
+  .hero__cta-edge::after {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    background-color: var(--void);
+    clip-path: var(--chamfer);
+  }
+
+  .hero__cta::before {
+    transform-origin: left center;
+  }
+
+  :global(html:not(.motion-reduced)) .hero__cta::before {
+    animation: hero-cta-fill 700ms var(--ease-quint) 900ms both;
+  }
+
+  @keyframes hero-cta-fill {
+    from {
+      transform: scaleX(0);
     }
-
-    .hero h1 {
-      max-width: 15ch;
+    to {
+      transform: scaleX(1);
     }
   }
 
-  html.motion-reduced .hero-glow {
-    animation: none;
+  /* secondary: 48px outline on phones, a text link from tablet up */
+  .hero__sec {
+    justify-content: center;
+    min-height: 48px;
+    border: 1px solid var(--line-dark-strong);
+    color: var(--starlight);
+  }
+
+  .hero__sec::after {
+    display: none;
+  }
+
+  /* ---------- the plate --------------------------------------------------- */
+  .hero__stage {
+    position: relative;
+    margin-top: 56px;
+    translate: 0 calc(var(--hx, 0) * -60px);
+  }
+
+  .hero__stage :global(.cp--hero) {
+    perspective: 1600px;
+  }
+
+  .hero__stage :global(.cp--hero .cp-frame) {
+    transform: rotateX(8deg) rotateY(-4deg);
+    transform-origin: 50% 50%;
+  }
+
+  :global(html:not(.motion-reduced)) .hero__stage :global(.cp--hero .cp-frame) {
+    animation: hero-plate-in 1600ms var(--ease-mech) 300ms both;
+  }
+
+  @keyframes hero-plate-in {
+    from {
+      opacity: 0;
+      translate: 0 48px;
+      rotate: y -10deg;
+    }
+    30% {
+      opacity: 1;
+    }
+    to {
+      opacity: 1;
+      translate: 0 0;
+      rotate: y 0deg;
+    }
+  }
+
+  /* a void chip: the caption stays legible over any part of the sky */
+  .hero__stage :global(.cp-cap) {
+    width: fit-content;
+    margin-top: 16px;
+    max-width: 100%;
+    padding: 5px 10px 4px 0;
+    background-color: var(--void);
+  }
+
+  :global(html:not(.motion-reduced)) .hero__stage :global(.cp-cap) {
+    animation: rise-in 900ms var(--ease-expo) 1300ms both;
+  }
+
+  /* ---------- tablet ------------------------------------------------------ */
+  @media (min-width: 768px) {
+    /* tablet: the sky is portrait; the galaxy fills the empty right of
+       the H1 and fades out toward the copy and the plate */
+    .hero {
+      --cosmos-x: 0.82;
+      --cosmos-y: 0.24;
+      --cosmos-r: 0.36;
+      --cosmos-mask: 0.45 0.7 0.8 0.3;
+    }
+
+    .hero__main {
+      padding-bottom: 96px;
+    }
+
+    .hm-d {
+      display: inline;
+    }
+
+    .hero__meta-r.hm-w {
+      display: flex;
+      gap: 40px;
+    }
+
+    .hm-aud {
+      display: none;
+    }
+
+    .hm-m {
+      display: none;
+    }
+
+    .hero__grid :global(.hero__h1) {
+      grid-column: 1 / -1;
+      margin-top: 48px;
+    }
+
+    .hero__copy {
+      grid-column: 1 / 7;
+      margin-top: 32px;
+    }
+
+    .hero__ctas {
+      flex-direction: row;
+      align-items: center;
+      gap: 16px 32px;
+    }
+
+    .hero__cta {
+      width: auto;
+    }
+
+    .hero__sec {
+      min-height: 0;
+      border: 0;
+    }
+
+    .hero__sec::after {
+      display: block;
+    }
+
+    .hero__stage {
+      grid-column: 2 / -1;
+      margin-right: calc(-1 * var(--gut));
+      margin-top: 64px;
+    }
+
+    .hero__stage :global(.cp--hero) {
+      perspective: 2000px;
+    }
+
+    .hero__stage :global(.cp--hero .cp-frame) {
+      transform: rotateY(calc(-10deg + var(--hx, 0) * 6deg)) rotateX(5deg);
+    }
+  }
+
+  /* ---------- desktop ----------------------------------------------------- */
+  @media (min-width: 1100px) {
+    .hero {
+      --cosmos-x: 0.87;
+      --cosmos-y: 0.31;
+      --cosmos-r: 0.28;
+      --cosmos-mask: initial;
+    }
+
+    .hero__main {
+      min-height: max(100svh, 760px);
+      padding-bottom: 64px;
+    }
+
+    .hm-aud {
+      display: inline;
+    }
+
+    .hero__grid :global(.hero__h1) {
+      grid-column: 1 / 9;
+      grid-row: 1;
+      margin-top: 40px;
+    }
+
+    .hero__copy {
+      grid-column: 1 / 6;
+      grid-row: 2;
+      margin-top: 40px;
+    }
+
+    /* the plate rises beside the H1's last (short) line, so the whole
+       object floats inside the first screen */
+    .hero__stage {
+      grid-column: 7 / -1;
+      grid-row: 2;
+      margin-top: calc(var(--t-d1) * -0.98 + 6px);
+      margin-right: -100px;
+      translate: 0 calc(var(--hx, 0) * -90px);
+    }
+
+    .hero__stage :global(.cp--hero .cp-frame) {
+      transform: rotateY(calc(-14deg + var(--hx, 0) * 10deg)) rotateX(5deg);
+    }
+
+    /* caption on a leader line, hung off the plate's top-left corner */
+    /* a void chip: the caption stays legible over any part of the sky */
+    .hero__stage :global(.cp-cap) {
+      position: absolute;
+      left: calc(4.8cqi + 34px);
+      bottom: calc(100% - 1.9cqi + 22px);
+      margin: 0;
+      padding: 5px 10px 4px;
+    }
+
+    .hero__stage :global(.cp-cap)::before,
+    .hero__stage :global(.cp-cap)::after {
+      content: '';
+      position: absolute;
+      background-color: var(--line-dark-strong);
+    }
+
+    /* elbow: from the caption's first line, left, then down to the corner */
+    .hero__stage :global(.cp-cap)::before {
+      left: -34px;
+      top: calc(5px + 0.75em);
+      width: 26px;
+      height: 1px;
+    }
+
+    .hero__stage :global(.cp-cap)::after {
+      left: -34px;
+      top: calc(5px + 0.75em);
+      width: 1px;
+      height: calc(100% - 5px - 0.75em + 22px);
+    }
   }
 </style>

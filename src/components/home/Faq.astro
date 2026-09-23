@@ -1,122 +1,509 @@
 ---
-import { faq } from '../../data/site';
+/**
+ * #faq · 10 QUESTIONS (spec §5.11, §4 "FAQ row").
+ *
+ * Native <details>/<summary> rows: index, question, a hairline plus. With JS
+ * the open and close are animated (grid-template-rows 0fr→1fr, 420ms mech)
+ * and the plus turns into a minus; without JS, or with motion off, the rows
+ * toggle natively and instantly. An open row sits on paper-2 with a 2px
+ * violet edge (the site's violet bar) and a violet-ink index; on fine
+ * pointers the edge also draws down the hovered row. Only confirmed
+ * questions render; index.astro builds the FAQPage JSON-LD from the same
+ * `confirmedOnly(faq)` list.
+ *
+ * Desktop: label, H2 and the WhatsApp side link sticky in columns 1–4, the
+ * list in columns 6–12. Below 1100px everything stacks.
+ */
+import SectionLabel from '../ui/SectionLabel.astro';
+import SplitText from '../ui/SplitText.astro';
+import Arrow from '../ui/Arrow.astro';
+import { faqSection, faq, confirmedOnly, contact, wa } from '../../data/site';
+
+const items = confirmedOnly(faq);
+const pad = (n: number) => String(n).padStart(2, '0');
+/* The stored label ends in "→"; the arrow is drawn as a hairline SVG so it can
+   nudge on hover, and screen readers get the plain label. */
+const sideLabel = faqSection.side.label.replace(/\s*→\s*$/, '');
 ---
 
-<section class="faq section on-void" id="faq">
-  <div class="wrap wrap-wide faq-grid">
-    <div class="section-head faq-head">
-      <p class="kicker" data-reveal="up">Questions</p>
-      <h2 data-split>The things people ask <em>before they book.</em></h2>
+<section id={faqSection.id} class="s-paper section faq" data-nav-theme="light" data-faq aria-labelledby="faq-title">
+  <div class="wrap g">
+    <div class="faq-aside">
+      <div class="faq-sticky">
+        <SectionLabel n={faqSection.label.index} name={faqSection.label.name} />
+        <SplitText as="h2" id="faq-title" class="d2 faq-h2" text={faqSection.h2} />
+        <div class="faq-side" data-reveal style="--d:260ms">
+          <a class="tlink" href={wa(faqSection.side.text)} target="_blank" rel="noopener" data-wa-intent="question">
+            {sideLabel}
+            <Arrow />
+          </a>
+          <p class="small faq-hours">{contact.hours.label}</p>
+        </div>
+      </div>
     </div>
 
-    <div class="faq-list">
-      {
-        faq.map((f, i) => (
-          <details class="faq-item" data-reveal="up" style={`--i:${Math.min(i, 6)}`}>
-            <summary>
-              <span>{f.q}</span>
-              <span class="faq-plus mono" aria-hidden="true">
-                +
-              </span>
-            </summary>
-            <div class="faq-a">
-              <p>{f.a}</p>
-            </div>
-          </details>
-        ))
-      }
+    <div class="faq-main">
+      <ol class="faq-list" role="list">
+        {
+          items.map((item, i) => (
+            <li class="faq-item" data-inview>
+              <span class="faq-rule" aria-hidden="true"></span>
+              <details class="faq-row">
+                <summary class="faq-sum">
+                  <span class="faq-i label" aria-hidden="true">
+                    {pad(i + 1)}
+                  </span>
+                  <span class="faq-q">{item.q}</span>
+                  <span class="faq-plus" aria-hidden="true">
+                    <span></span>
+                    <span></span>
+                  </span>
+                </summary>
+                <div class="faq-a">
+                  <div class="faq-a-in">
+                    <p>{item.a}</p>
+                  </div>
+                </div>
+              </details>
+            </li>
+          ))
+        }
+      </ol>
+      <span class="faq-rule faq-rule-end" data-reveal="draw" aria-hidden="true"></span>
     </div>
   </div>
 </section>
 
 <style>
-  .faq-grid {
-    display: grid;
-    gap: var(--space-xl) var(--space-3xl);
-    align-items: start;
+  .faq {
+    /* the open-row band bleeds into the gutter; never past the page edge */
+    overflow-x: clip;
   }
 
-  .faq-head {
-    margin-bottom: 0;
+  /* ---------------------------------------------------------------- aside */
+
+  .faq-aside {
+    margin-bottom: var(--s-48);
   }
+
+  .faq-h2 {
+    margin-top: var(--s-24);
+    max-width: 10ch;
+  }
+
+  .faq-side {
+    display: grid;
+    justify-items: start;
+    gap: var(--s-8);
+    margin-top: var(--s-32);
+  }
+
+  .faq-hours {
+    color: var(--ink-3);
+  }
+
+  /* ----------------------------------------------------------------- list */
 
   .faq-list {
-    border-top: 1px solid var(--line-dark-strong);
+    margin: 0;
+    /* index column: 40px on phones, 56px on tablets, one grid column on desktop */
+    --idx: 40px;
+    --q: clamp(1.0625rem, 1rem + 0.3vw, 1.1875rem);
+    --plus: 14px;
+    /* the summary reaches this far into the row padding, so the focus ring
+       frames the whole row instead of touching the index and the plus */
+    --ring: 12px;
   }
 
   .faq-item {
-    border-bottom: 1px solid var(--line-dark);
+    position: relative;
   }
 
-  .faq-item summary {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-m);
-    padding: 1.1rem 0;
-    cursor: pointer;
+  .faq-rule {
+    display: block;
+    height: 1px;
+    background-color: var(--line);
+    transform-origin: left center;
+  }
+
+  .faq-item:first-child .faq-rule,
+  .faq-rule-end {
+    background-color: var(--line-strong);
+  }
+
+  /* Phones: the open band bleeds to the screen edges and the text stays on
+     the gutter line. From 768px the band is exactly as wide as the hairlines
+     and the row content sits inset inside it (see the layout block). */
+  .faq-row {
+    position: relative;
+    margin-inline: calc(var(--gut) * -1);
+    padding-inline: var(--gut);
+    background-color: var(--paper);
+    transition: background-color var(--t-ui) linear;
+  }
+
+  /* the open row's edge: a 2px violet bar that draws down with the answer */
+  .faq-row::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: var(--violet);
+    transform: scaleY(0);
+    transform-origin: center top;
+    transition: transform 420ms var(--ease-mech);
+    pointer-events: none;
+  }
+
+  .faq-sum {
+    /* above the violet edge, so the focus ring is never painted over */
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: var(--idx) minmax(0, 1fr) var(--plus);
+    align-items: baseline;
+    min-height: 64px;
+    margin-inline: calc(var(--ring) * -1);
+    padding: 20px var(--ring);
     list-style: none;
-    font-family: var(--font-display);
-    font-size: var(--step-1);
-    font-weight: 700;
-    color: var(--text-dark);
-    transition: color var(--dur-fast) var(--ease-out);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
   }
 
-  .faq-item summary::-webkit-details-marker {
+  .faq-sum::-webkit-details-marker {
     display: none;
   }
 
-  .faq-item summary:hover {
-    color: var(--violet-ink-dark);
+  .faq-sum::marker {
+    content: '';
   }
 
+  .faq-sum:focus-visible {
+    outline-offset: -2px;
+  }
+
+  /* proportional figures on purpose: Mona Sans' tabular set draws a slashed,
+     monospaced-looking zero */
+  .faq-i {
+    color: var(--ink-3);
+    transition:
+      color var(--t-ui) linear,
+      transform var(--t-ui) var(--ease-expo);
+  }
+
+  .faq-q {
+    padding-right: var(--s-16);
+    color: var(--ink);
+    font-size: var(--q);
+    font-weight: 540;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+
+  /* hairline plus: two 1px lines; the vertical one turns a quarter to lie flat */
   .faq-plus {
-    flex: 0 0 auto;
-    width: 2rem;
-    height: 2rem;
-    display: grid;
-    place-items: center;
-    border: 1px solid var(--line-dark-strong);
-    border-radius: 50%;
-    font-size: var(--step-0);
-    color: var(--violet-ink-dark);
-    transition: transform var(--dur-base) var(--ease-out);
+    position: relative;
+    align-self: start;
+    width: var(--plus);
+    height: calc(var(--q) * 1.3);
+    color: var(--ink-2);
+    transition: color var(--t-ui) linear;
   }
 
-  .faq-item[open] .faq-plus {
-    transform: rotate(45deg);
+  .faq-plus > span {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 100%;
+    height: 1px;
+    background-color: currentColor;
   }
 
+  .faq-plus > span:last-child {
+    transform: rotate(90deg);
+    transition: transform 420ms var(--ease-mech);
+  }
+
+  /* answer: grid rows 0fr→1fr. The default is the open, final state. */
   .faq-a {
-    padding: 0 0 1.4rem;
-    max-width: 62ch;
-    color: var(--text-dark-muted);
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows 420ms var(--ease-mech);
   }
 
-  .faq-item[open] .faq-a {
-    animation: faq-in 320ms var(--ease-out);
+  .faq-a-in {
+    min-height: 0;
+    overflow: hidden;
   }
 
-  @keyframes faq-in {
-    from {
-      opacity: 0;
-      transform: translate3d(0, -6px, 0);
+  .faq-a p {
+    max-width: 60ch;
+    margin-left: var(--idx);
+    /* phones keep the full measure; wider screens stop short of the plus */
+    padding-bottom: var(--s-24);
+    color: var(--ink-2);
+    font-size: clamp(1rem, 0.96rem + 0.12vw, 1.0625rem);
+    line-height: 1.6;
+    text-wrap: pretty;
+    transition:
+      opacity 160ms linear,
+      transform 160ms linear;
+  }
+
+  /* ---- open state (native [open] without JS; .is-open once enhanced) ---- */
+
+  .faq:not(.is-enhanced) .faq-row[open],
+  .faq-row.is-open {
+    background-color: var(--paper-2);
+  }
+
+  .faq:not(.is-enhanced) .faq-row[open] .faq-i,
+  .faq .faq-row.is-open .faq-i {
+    /* violet as text on paper-2: violet-ink, 6.4:1 */
+    color: var(--violet-ink);
+  }
+
+  .faq:not(.is-enhanced) .faq-row[open]::before,
+  .faq-row.is-open::before {
+    transform: none;
+  }
+
+  .faq:not(.is-enhanced) .faq-row[open] .faq-plus,
+  .faq-row.is-open .faq-plus {
+    color: var(--ink);
+  }
+
+  .faq:not(.is-enhanced) .faq-row[open] .faq-plus > span:last-child,
+  .faq-row.is-open .faq-plus > span:last-child {
+    transform: rotate(180deg);
+  }
+
+  .faq-row.is-open .faq-a p {
+    transition:
+      opacity 360ms linear 90ms,
+      transform 700ms var(--ease-expo) 60ms;
+  }
+
+  /* enhanced: a row that is closing (or about to open) sits at 0fr */
+  .faq.is-enhanced .faq-row:not(.is-open) .faq-a {
+    grid-template-rows: 0fr;
+  }
+
+  .faq.is-enhanced .faq-row:not(.is-open) .faq-a p {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+
+  /* ---- hover / focus: the index steps 4px right and goes to full ink ---- */
+
+  @media (hover: hover) and (pointer: fine) {
+    .faq-sum:hover .faq-i {
+      transform: translate3d(4px, 0, 0);
+      color: var(--ink);
+    }
+
+    .faq-sum:hover .faq-plus {
+      color: var(--ink);
+    }
+
+    /* the violet edge draws down the row you are about to open */
+    .faq-row:has(> .faq-sum:hover)::before {
+      transform: none;
     }
   }
 
-  @media (min-width: 60rem) {
-    .faq-grid {
-      grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  .faq-sum:focus-visible .faq-i {
+    transform: translate3d(4px, 0, 0);
+    color: var(--ink);
+  }
+
+  .faq .faq-row.is-open > .faq-sum .faq-i,
+  .faq:not(.is-enhanced) .faq-row[open] > .faq-sum .faq-i {
+    color: var(--violet-ink);
+  }
+
+  /* ---- entry: the hairline draws, then the row rises (rows cascade) ---- */
+
+  .faq-item .faq-rule {
+    transition:
+      opacity 200ms linear,
+      transform var(--t-line) var(--ease-quint);
+    transition-delay: var(--d, 0ms);
+  }
+
+  .faq-item .faq-row {
+    transition:
+      opacity var(--t-reveal) var(--ease-expo),
+      transform var(--t-reveal) var(--ease-expo),
+      background-color var(--t-ui) linear;
+    transition-delay: calc(var(--d, 0ms) + 140ms), calc(var(--d, 0ms) + 140ms), 0ms;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .faq-item:not(.is-in) .faq-rule {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .faq-item:not(.is-in) .faq-row {
+    opacity: 0;
+    transform: translate3d(0, var(--rise), 0);
+  }
+
+  :global(html.motion-reduced) .faq-a,
+  :global(html.motion-reduced) .faq-a p,
+  :global(html.motion-reduced) .faq-row::before,
+  :global(html.motion-reduced) .faq-plus > span:last-child {
+    transition: none;
+  }
+
+  /* --------------------------------------------------------------- layout */
+
+  @media (min-width: 768px) {
+    .faq-list {
+      --inset: 20px;
+      --ring: var(--inset);
+      --idx: calc(56px - var(--inset));
     }
 
-    .faq-head {
+    .faq-row {
+      margin-inline: 0;
+      padding-inline: var(--inset);
+    }
+
+    .faq-sum {
+      min-height: 72px;
+      padding-block: 22px;
+    }
+
+    .faq-q {
+      padding-right: var(--s-24);
+    }
+
+    .faq-a p {
+      padding-right: calc(var(--plus) + var(--s-24));
+      padding-bottom: var(--s-32);
+    }
+
+    .faq-side {
+      margin-top: var(--s-32);
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .faq-aside {
+      grid-column: 1 / span 4;
+      margin-bottom: 0;
+    }
+
+    .faq-sticky {
       position: sticky;
-      top: calc(var(--nav-h) + 1.5rem);
+      top: 120px;
     }
-  }
 
-  html.motion-reduced .faq-item[open] .faq-a {
-    animation: none;
+    .faq-side {
+      margin-top: var(--s-48);
+    }
+
+    .faq-main {
+      grid-column: 6 / span 7;
+    }
+
+    /* The question starts exactly on column 7. 100% is the row's content
+       box (list width minus both insets), so one column of the 7-column list
+       is (100% + 2 * inset - 6 * gap) / 7. */
+    .faq-list {
+      --inset: 24px;
+      --idx: calc((100% + 2 * var(--inset) - 6 * var(--gap)) / 7 + var(--gap) - var(--inset));
+    }
   }
 </style>
+
+<script>
+  import { isReduced } from '../../scripts/motion';
+
+  /* Matches the 420ms grid-template-rows transition in the styles. */
+  const CLOSE_MS = 420;
+
+  function initFaq(root: HTMLElement): void {
+    const rows = Array.from(root.querySelectorAll<HTMLDetailsElement>('details.faq-row'));
+    if (!rows.length) return;
+
+    const timers = new WeakMap<HTMLDetailsElement, number>();
+
+    const clearTimer = (row: HTMLDetailsElement) => {
+      const t = timers.get(row);
+      if (t !== undefined) window.clearTimeout(t);
+      timers.delete(row);
+    };
+
+    const open = (row: HTMLDetailsElement, animate: boolean) => {
+      clearTimer(row);
+      if (!row.open) {
+        row.open = true;
+        // commit the collapsed (0fr) frame so the rows transition to 1fr
+        if (animate) void row.offsetHeight;
+      }
+      row.classList.add('is-open');
+    };
+
+    const close = (row: HTMLDetailsElement, animate: boolean) => {
+      row.classList.remove('is-open');
+      clearTimer(row);
+      if (!animate) {
+        row.open = false;
+        return;
+      }
+      timers.set(
+        row,
+        window.setTimeout(() => {
+          timers.delete(row);
+          if (!row.classList.contains('is-open')) row.open = false;
+        }, CLOSE_MS)
+      );
+    };
+
+    rows.forEach((row) => {
+      const summary = row.querySelector('summary');
+      if (!summary) return;
+      if (row.open) row.classList.add('is-open');
+
+      summary.addEventListener('click', (e) => {
+        e.preventDefault();
+        const animate = !isReduced();
+        if (row.classList.contains('is-open')) close(row, animate);
+        else open(row, animate);
+      });
+
+      // Native toggles (find-in-page opening a match) keep the class in step.
+      row.addEventListener('toggle', () => {
+        if (row.open && !row.classList.contains('is-open') && !timers.has(row)) open(row, !isReduced());
+        else if (!row.open && row.classList.contains('is-open')) row.classList.remove('is-open');
+      });
+    });
+
+    /* Rows entering the viewport together cascade 60ms apart; a row that
+       scrolls in on its own starts at once. The engine adds .is-in and then
+       dispatches vesta:reveal in the same task, so the delay set here is in
+       place before the style change is computed. */
+    const list = root.querySelector<HTMLElement>('.faq-list');
+    if (list) {
+      let last = -Infinity;
+      let n = 0;
+      list.addEventListener('vesta:reveal', (e) => {
+        const item = e.target as HTMLElement;
+        if (!item.classList || !item.classList.contains('faq-item')) return;
+        const now = performance.now();
+        n = now - last < 32 ? n + 1 : 0;
+        last = now;
+        item.style.setProperty('--d', `${Math.min(n, 8) * 60}ms`);
+      });
+    }
+
+    root.classList.add('is-enhanced');
+  }
+
+  document.querySelectorAll<HTMLElement>('[data-faq]').forEach(initFaq);
+</script>

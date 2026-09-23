@@ -18,7 +18,11 @@
  *   6. curva de entrada medida quadro a quadro, provando transição gradual
  *      e não salto de 0 para 1;
  *   7. com JavaScript desligado, nada fica invisível;
- *   8. screenshot de viewport cheio para conferência visual.
+ *   8. screenshot de viewport cheio para conferência visual;
+ *   9. CTA de WhatsApp inteiro na primeira dobra da home (1440×900, 390×844);
+ *  10. zero vocabulário proibido no texto renderizado (cara de texto de IA);
+ *  11. nenhuma cortina [data-cover] sobrando sobre o conteúdo;
+ *  12. zero overflow também em 320px e 360px.
  *
  * Nota de Windows: o Chrome recusa perfis em caminho longo (MAX_PATH), e o
  * diretório deste projeto já é longo por si só. Por isso o user-data-dir vai
@@ -144,12 +148,12 @@ const IN_PAGE = {
     const step = Math.round(window.innerHeight * 0.65);
     const total = document.documentElement.scrollHeight;
     for (let y = 0; y < total + window.innerHeight; y += step) {
-      window.scrollTo(0, y);
+      window.scrollTo({ top: y, behavior: 'instant' });
       await new Promise((r) => setTimeout(r, 140));
     }
-    window.scrollTo(0, document.documentElement.scrollHeight);
+    window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' });
     await new Promise((r) => setTimeout(r, 700));
-    window.scrollTo(0, 0);
+    window.scrollTo({ top: 0, behavior: 'instant' });
     await new Promise((r) => setTimeout(r, 400));
   },
 
@@ -160,7 +164,7 @@ const IN_PAGE = {
    * que ninguém vê não esconde conteúdo de ninguém.
    */
   stuckReveals() {
-    const sel = '[data-reveal], [data-split], [data-draw], [data-draw-path], [data-count]';
+    const sel = '[data-reveal], [data-split], [data-draw], [data-draw-path], [data-count], [data-inview]';
     const rendered = (el) => {
       if (el.closest('details:not([open])')) return false;
       let node = el;
@@ -246,13 +250,22 @@ const IN_PAGE = {
       'data-nav',
       'data-progress',
       'data-motion-toggle',
-      'data-tilt',
-      'data-clock',
-      'data-clock-offset',
-      'data-office-status',
-      'data-particles',
-      'data-calc',
-      'data-booking',
+      'data-inview',
+      'data-load',
+      'data-load-split',
+      'data-compare',
+      'data-scrub',
+      'data-stance',
+      'data-shutter',
+      'data-serp',
+      'data-gauge',
+      'data-odometer',
+      'data-config',
+      'data-timeline',
+      'data-plan',
+      'data-cover',
+      'data-sticky-cta',
+      'data-wa-intent',
     ];
 
     const covered = (el) => {
@@ -400,7 +413,8 @@ const IN_PAGE = {
     let checked = 0;
     for (const el of document.body.querySelectorAll('*')) {
       if (el.ownerSVGElement) continue;
-      if (el.closest('noscript') || el.closest('details:not([open])')) continue;
+      if (el.closest('noscript')) continue;
+      if (el.closest('details:not([open])') && !el.closest('summary')) continue;
       if (el.classList.contains('visually-hidden') || el.closest('.visually-hidden')) continue;
 
       const cs = getComputedStyle(el);
@@ -417,7 +431,11 @@ const IN_PAGE = {
       if (r.width < 2 || r.height < 2) continue;
 
       const fg = parseColor(cs.color);
-      if (!fg) continue;
+      if (!fg) {
+        // color-mix()/oklch() escapariam do cálculo em silêncio: vira falha.
+        fails.push({ tag: el.tagName.toLowerCase(), cls: String(el.className || '').slice(0, 60), text: text.slice(0, 50), ratio: 0, required: 4.5, color: cs.color, bg: 'cor nao parseavel (use hex/rgb)' });
+        continue;
+      }
       const bg = effectiveBg(el);
       const composed = fg.a < 1 ? over(fg, bg) : fg;
       const cr = ratio(composed, bg);
@@ -455,6 +473,71 @@ const IN_PAGE = {
    * pela viewBox e nunca empurra o layout) apareceria como falso positivo em
    * todo elemento de todo diagrama.
    */
+  /**
+   * O CTA de WhatsApp tem de existir inteiro dentro da primeira dobra
+   * (1440×900 e 390×844). Roda antes da rolagem.
+   */
+  waAboveFold() {
+    const vh = window.innerHeight;
+    return [...document.querySelectorAll('a[href*="wa.me"]')].some((a) => {
+      const r = a.getBoundingClientRect();
+      const cs = getComputedStyle(a);
+      return r.width > 0 && r.height > 0 && r.top >= 0 && r.bottom <= vh && cs.visibility !== 'hidden' && cs.display !== 'none';
+    });
+  },
+
+  /**
+   * Vocabulário proibido no TEXTO RENDERIZADO (não no CSS, onde "transform"
+   * é legítimo). É a cara de texto gerado por IA — vira erro de build.
+   */
+  bannedWords() {
+    const text = document.body.innerText || '';
+    const rules = [
+      /\belevat(e|es|ing)\b/i, /\bunlock/i, /\bseamless/i, /\bsupercharg/i, /\bengineered\b/i, /\balchemy\b/i,
+      /\bcelestial\b/i, /\bcosmic\b/i, /\bmystical\b/i, /\bsacred\b/i, /astrolog/i, /revolutioni[sz]e/i,
+      /cutting-edge/i, /game-changer/i, /\bempower/i, /\bdelve/i, /\bunleash/i, /\btransformative\b/i,
+      /next-level/i, /\bstunning\b/i, /world-class/i, /\binnovative\b/i, /\bsynergy\b/i, /\bleverag/i,
+      /\brobust\b/i, /\bholistic\b/i, /\bjourney\b/i, /\bmagical?\b/i, /\bbespoke\b/i, /\bcrafted\b/i,
+      /handcrafted/i, /hand-coded/i, /hand-written/i, /\btailored\b/i, /\bharness/i, /high-converting/i,
+      /digital landscape/i, /[⚶✦]/,
+    ];
+    const hits = [];
+    for (const re of rules) {
+      const m = text.match(re);
+      if (m) hits.push(m[0]);
+    }
+    // "we / our / us" (voz da marca é "Vesta" ou "Vinícius"); "US" maiúsculo = país.
+    const pron = text.match(/\b(we|our|ours|us)\b/gi) || [];
+    for (const w of pron) if (w !== 'US') hits.push(w);
+    return [...new Set(hits)];
+  },
+
+  /**
+   * Cortinas em pseudo-elemento ([data-cover]) não podem sobrar cobrindo
+   * conteúdo depois da rolagem: ::after precisa estar ausente, transparente
+   * ou deslocado ao menos a própria largura.
+   */
+  coverResidue() {
+    const out = [];
+    for (const el of document.querySelectorAll('[data-cover]')) {
+      for (const pseudo of ['::before', '::after']) {
+        const cs = getComputedStyle(el, pseudo);
+        if (!cs || cs.content === 'none' || cs.display === 'none' || Number(cs.opacity) < 0.05) continue;
+        const w = parseFloat(cs.width) || el.getBoundingClientRect().width;
+        const m = cs.transform && cs.transform !== 'none' ? cs.transform.match(/matrix\(([^)]+)\)/) : null;
+        const tx = m ? Math.abs(Number(m[1].split(',')[4])) : 0;
+        const pos = cs.position;
+        const box = el.getBoundingClientRect();
+        const h = parseFloat(cs.height) || 0;
+        const covering = w >= box.width * 0.9 && h >= box.height * 0.9;
+        if ((pos === 'absolute' || pos === 'fixed') && covering && tx < w * 0.98) {
+          out.push({ cls: String(el.className || '').slice(0, 60), pseudo, tx: Math.round(tx), width: Math.round(w) });
+        }
+      }
+    }
+    return out;
+  },
+
   horizontalOverflow() {
     const doc = document.documentElement;
     const vw = doc.clientWidth;
@@ -544,6 +627,10 @@ async function measureEntryCurve(page, selector) {
     requestAnimationFrame(tick);
 
     host.scrollIntoView({ block: 'center', behavior: 'instant' });
+    // o motor para de observar depois da primeira revelação; a curva mede a
+    // transição CSS, então a classe volta pela mão do teste
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    host.classList.add('is-in');
     await new Promise((r) => setTimeout(r, 1200));
     running = false;
 
@@ -597,7 +684,7 @@ const routes = ROUTES_ARG
       };
       await walk(DIST);
       // amostra do blog: índice + um post, não os 316
-      return found.filter((r) => !/^\/blog\/\d{4}/.test(r)).slice(0, 24);
+      return found.filter((r) => !/^\/blog\/\d{4}/.test(r) && !r.startsWith('/lab/')).slice(0, 24);
     })();
 
 /**
@@ -668,7 +755,9 @@ O navegador carregou "${served}" em ${route} — nao e este site. Abortando.`);
       process.exit(1);
     }
 
-    await page.evaluate(() => new Promise((r) => setTimeout(r, 500)));
+    // espera a coreografia de entrada do topo terminar antes de medir a dobra
+    await page.evaluate(() => new Promise((r) => setTimeout(r, 2200)));
+    const waFold = route === '/' ? await page.evaluate(IN_PAGE.waAboveFold) : true;
 
     await page.evaluate(IN_PAGE.scrollThrough);
 
@@ -677,6 +766,8 @@ O navegador carregou "${served}" em ${route} — nao e este site. Abortando.`);
     const coverage = await page.evaluate(IN_PAGE.animationCoverage);
     const overflow = await page.evaluate(IN_PAGE.horizontalOverflow);
     const contrast = await page.evaluate(IN_PAGE.contrast);
+    const banned = await page.evaluate(IN_PAGE.bannedWords);
+    const covers = await page.evaluate(IN_PAGE.coverResidue);
 
     const entry = {
       route,
@@ -687,9 +778,15 @@ O navegador carregou "${served}" em ${route} — nao e este site. Abortando.`);
       coverage,
       overflow,
       contrast,
+      banned,
+      covers,
+      waFold,
     };
 
     const bad =
+      !waFold ||
+      banned.length > 0 ||
+      covers.length > 0 ||
       consoleErrors.length > 0 ||
       stuck.length > 0 ||
       invisible.length > 0 ||
@@ -716,12 +813,32 @@ O navegador carregou "${served}" em ${route} — nao e este site. Abortando.`);
       // do documento pegava o grafismo de fundo do hero, que não é
       // representativo do que o visitante lê.
       entry.curves = [];
-      for (const sel of ['#services [data-reveal]', 'h1[data-split]', '.foot-brand[data-reveal]']) {
+      for (const sel of ['#services [data-reveal]', '#problem h2[data-split]', '.foot-brand[data-reveal]']) {
         entry.curves.push(await measureEntryCurve(page, sel));
       }
     }
 
     report.push(entry);
+    await page.close();
+  }
+}
+
+/* ------------------------------------------------- overflow em 320 e 360 */
+
+console.log('\n--- overflow em telefones estreitos ---');
+for (const w of [320, 360]) {
+  for (const route of routes) {
+    const page = await browser.newPage();
+    await page.setViewport({ width: w, height: 740, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
+    await page.goto(`${ORIGIN}${route}`, { waitUntil: 'networkidle2', timeout: 45000 });
+    await page.evaluate(IN_PAGE.scrollThrough);
+    const overflow = await page.evaluate(IN_PAGE.horizontalOverflow);
+    const ok = overflow.docOverflowPx <= 1;
+    if (!ok) {
+      failures++;
+      report.push({ route, viewport: `${w}px`, overflow, consoleErrors: [], stuck: [], invisible: [], coverage: null });
+    }
+    console.log(`${ok ? 'OK' : 'X'}  ${String(w).padEnd(7)} ${route.padEnd(28)} overflow:${overflow.docOverflowPx}px`);
     await page.close();
   }
 }
@@ -755,6 +872,9 @@ let printed = 0;
 for (const r of report) {
   const issues = [];
   if (r.consoleErrors?.length) issues.push(['console', r.consoleErrors]);
+  if (r.waFold === false) issues.push(['CTA de WhatsApp fora da primeira dobra', ['a[href*=wa.me] nao cabe inteiro na viewport inicial']]);
+  if (r.banned?.length) issues.push(['vocabulario proibido', r.banned]);
+  if (r.covers?.length) issues.push(['cortina sobrando', r.covers]);
   if (r.stuck?.length) issues.push(['revelacoes presas', r.stuck]);
   if (r.invisible?.length) issues.push(['conteudo invisivel', r.invisible]);
   if (r.coverage?.uncovered?.length) issues.push(['sem animacao', r.coverage.uncovered]);

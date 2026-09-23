@@ -1,0 +1,233 @@
+---
+/**
+ * /work/concept-01/ "The six layers" — a STATIC exploded view (SPEC §7).
+ * The home page scrubs this with scroll (Build unit, scrub.ts); here the
+ * assembly simply opens once as it enters the viewport: the six layers of
+ * ConceptPlate mode="build" part along Z (transform-only, 1200ms expo,
+ * staggered), then hold. No scroll handler, no loop.
+ *
+ * Default CSS = exploded (no JS, motion off, engine failed all render the
+ * final state). The armed state stacks the layers flat until .is-in.
+ *
+ * Pointer hover on a legend row lifts its layer a little further and rims it
+ * in lilac (class toggle; transform + outline only).
+ *
+ * Reaching the plate's internals needs :global() under this component's own
+ * root (.xp): ConceptPlate owns the layer DOM (see its DOM contract).
+ */
+import ConceptPlate from '../ConceptPlate.astro';
+import { build } from '../../data/site';
+---
+
+<div class="g xp" data-xp>
+  <div class="xp-stage" data-inview>
+    <div class="xp-asm">
+      <ConceptPlate mode="build" />
+    </div>
+  </div>
+
+  <ol class="xp-list">
+    {
+      build.layers.map((l, i) => (
+        <li class="xp-row" data-layer={i} data-inview style={`--r:${i}`}>
+          <span class="label xp-idx">{l.index}</span>
+          <span class="xp-body">
+            <span class="label xp-name">{l.name}</span>
+            <span class="small xp-text">{l.text}</span>
+          </span>
+        </li>
+      ))
+    }
+  </ol>
+</div>
+
+<script>
+  /* legend row → its layer (fine pointers only) */
+  if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+    document.querySelectorAll<HTMLElement>('[data-xp]').forEach((root) => {
+      const layers = Array.from(root.querySelectorAll<HTMLElement>('.cp-layer'));
+      root.querySelectorAll<HTMLElement>('[data-layer]').forEach((row) => {
+        const i = Number(row.dataset.layer);
+        const layer = layers.find((l) => l.classList.contains(`cp-l${i + 1}`));
+        if (!layer) return;
+        const set = (on: boolean) => {
+          row.classList.toggle('is-hot', on);
+          layer.classList.toggle('is-hot', on);
+          root.classList.toggle('has-hot', on);
+        };
+        row.addEventListener('pointerenter', () => set(true));
+        row.addEventListener('pointerleave', () => set(false));
+      });
+    });
+  }
+</script>
+
+<style>
+  .xp {
+    --zs: 40px;
+    row-gap: 40px;
+    align-items: center;
+  }
+
+  /* ------------------------------------------------------------ stage */
+
+  .xp-stage {
+    position: relative;
+    padding-block: calc(var(--zs) * 4.2) calc(var(--zs) * 0.6);
+    perspective: 2000px;
+    perspective-origin: 50% 30%;
+  }
+
+  .xp-asm {
+    position: relative;
+    width: 100%;
+    transform-style: preserve-3d;
+    transform: rotateX(55deg) rotateZ(-32deg) scale(0.86);
+    transform-origin: 50% 50%;
+  }
+
+  .xp-asm :global(.cp) {
+    transform-style: preserve-3d;
+  }
+
+  .xp-asm :global(.cp-layer) {
+    transform: translate3d(0, 0, calc(var(--i) * var(--zs)));
+    outline: 1px solid transparent;
+    transition:
+      transform 1200ms var(--ease-expo),
+      outline-color var(--t-micro) linear;
+    transition-delay: calc(120ms + var(--i) * 70ms), 0ms;
+  }
+
+  /* every layer gets a faint lilac edge so the stack reads as sheets */
+  .xp-asm :global(.cp-layer:not(.cp-l2)) {
+    outline-color: rgb(185 162 255 / 0.22);
+  }
+
+  .xp-asm :global(.cp-layer.is-hot) {
+    transform: translate3d(0, 0, calc(var(--i) * var(--zs) + var(--zs) * 0.7));
+    outline-color: var(--lilac);
+    transition-delay: 0ms;
+    transition-duration: 520ms, 180ms;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .xp-stage:not(.is-in) :global(.cp-layer) {
+    transform: translate3d(0, 0, 0);
+  }
+
+  /* ------------------------------------------------------------ legend */
+
+  .xp-list {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .xp-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr);
+    column-gap: 12px;
+    padding-block: 16px 18px;
+    cursor: default;
+  }
+
+  .xp-row::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 1px;
+    background-color: var(--line);
+    transform-origin: left center;
+    transition:
+      transform 1000ms var(--ease-quint),
+      opacity 200ms linear;
+    transition-delay: calc(var(--r, 0) * 60ms);
+  }
+
+  .xp-idx,
+  .xp-body {
+    transition:
+      opacity var(--t-reveal) var(--ease-expo),
+      transform var(--t-reveal) var(--ease-expo);
+    transition-delay: calc(var(--r, 0) * 60ms + 120ms);
+  }
+
+  .xp-idx {
+    color: var(--lilac);
+    padding-top: 1px;
+  }
+
+  .xp-body {
+    display: grid;
+    gap: 6px;
+  }
+
+  .xp-name {
+    color: var(--starlight);
+    transition: color var(--t-micro) linear;
+  }
+
+  .xp-text {
+    color: var(--haze);
+    max-width: 46ch;
+    font-size: 0.875rem;
+    transition: color var(--t-micro) linear;
+  }
+
+  /* hovering one row: the others step back to dim (colour, never opacity) */
+  .xp.has-hot .xp-row:not(.is-hot) .xp-text,
+  .xp.has-hot .xp-row:not(.is-hot) .xp-name {
+    color: var(--dim);
+  }
+
+  .xp-row.is-hot .xp-idx {
+    transform: translateX(4px);
+    transition-delay: 0ms;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .xp-row:not(.is-in)::before {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .xp-row:not(.is-in) :is(.xp-idx, .xp-body) {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+
+  @media (min-width: 768px) {
+    .xp {
+      --zs: 64px;
+    }
+
+    .xp-stage {
+      grid-column: 1 / span 7;
+    }
+
+    .xp-list {
+      grid-column: 1 / span 6;
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .xp {
+      --zs: 58px;
+      row-gap: 0;
+    }
+
+    .xp-stage {
+      grid-column: 1 / span 8;
+      perspective: 2600px;
+      padding-block: calc(var(--zs) * 3.6) 0;
+    }
+
+    .xp-asm {
+      transform: translate3d(4%, 0, 0) rotateX(56deg) rotateZ(-34deg) scale(0.7);
+    }
+
+    .xp-list {
+      grid-column: 9 / -1;
+    }
+  }
+</style>

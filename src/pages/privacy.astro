@@ -1,126 +1,345 @@
 ---
+/**
+ * /privacy/ — SPEC §7. The void page head every inner page shares (so the
+ * nav reads correctly with or without JS), then the text on white paper:
+ * ink at 17px, a sticky clause index in columns 1–3 and the clauses in
+ * columns 5–11. The index tracks the clause under the reading line from the
+ * shared rAF loop (reads, then writes; no scroll listener of its own).
+ *
+ * Every word comes from site.ts `privacy`. Keep clause 02 true: it must be
+ * edited the day any cookie, analytics or third-party font is added.
+ */
 import Base from '../layouts/Base.astro';
-import { brand, contact } from '../data/site';
+import PageHead from '../components/work/PageHead.astro';
+import Arrow from '../components/ui/Arrow.astro';
+import { privacy } from '../data/site';
+import { formatDate, isExternal, url } from '../lib/url';
 
-const updated = '2026-09-22';
-const title = `Privacy policy — ${brand.name}`;
-const description = 'What this website collects (almost nothing), what happens when you open the scheduler or WhatsApp, and your rights under GDPR and CCPA.';
+const clauses = privacy.clauses.map((c, i) => ({ ...c, n: String(i + 1).padStart(2, '0') }));
+/* external link labels carry "↗" in site.ts; the hairline arrow replaces it */
+const bare = (s: string) => s.replace(/\s*↗\s*$/, '');
 ---
 
-<Base title={title} description={description} canonical="/privacy/">
-  <section class="page-head on-void">
-    <div class="wrap wrap-wide">
-      <p class="kicker" data-reveal="up">Privacy</p>
-      <h1 data-split>Short, because <em>there is little to tell.</em></h1>
-      <p class="lead" data-reveal="up" style="--i:2">
-        This is a static website. It has no accounts, no forms that post to a server, no analytics and no advertising
-        pixels. Last updated <time datetime={updated}>September 22, 2026</time>.
-      </p>
-    </div>
-  </section>
+<Base title={privacy.seo.title} description={privacy.seo.description} canonical="/privacy/">
+  <PageHead label={`${privacy.updatedLabel} ${formatDate(privacy.updated)}`} h1={privacy.h1} lead={privacy.seo.description} layout="split" />
 
-  <section class="section on-paper">
-    <div class="wrap prose">
-      <h2 data-reveal="up">Who is responsible</h2>
-      <p data-reveal="up">
-        {brand.legalName} (CNPJ {brand.cnpj}), {brand.city}, {brand.country} — “{brand.name}”, “we”. For anything in this
-        policy, contact us through the channels on the <a href="/contact/">contact page</a>.
-      </p>
+  <section class="s-paper pv" data-nav-theme="light" aria-label={privacy.h1}>
+    <div class="wrap">
+      <div class="g pv-body">
+        <nav class="pv-index" aria-labelledby="pv-index-title" data-load style="--d:520ms">
+          <p id="pv-index-title" class="label pv-index-k">{privacy.indexTitle}</p>
+          <ol class="pv-toc">
+            {
+              clauses.map((c) => (
+                <li>
+                  <a class="pv-toc-a" href={`#${c.id}`} data-toc={c.id}>
+                    <span class="pv-toc-mark" aria-hidden="true" />
+                    <span class="pv-toc-n">{c.n}</span>
+                    <span class="pv-toc-t">{c.title}</span>
+                  </a>
+                </li>
+              ))
+            }
+          </ol>
+        </nav>
 
-      <h2 data-reveal="up">What this site collects</h2>
-      <ul data-reveal="up">
-        <li>
-          <strong>Nothing, by default.</strong> The pages are static files. We do not run analytics, tag managers, session
-          recording, heat maps or advertising scripts.
-        </li>
-        <li>
-          <strong>One preference in your browser.</strong> If you use the “Motion” toggle in the footer, the choice is saved
-          in your browser’s local storage under the key <code>vesta-motion</code>. It never leaves your device and you can
-          clear it from your browser settings. It is not a cookie.
-        </li>
-        <li>
-          <strong>Hosting logs.</strong> The site is served by a hosting provider (GitHub Pages or a CDN), which may keep
-          standard server logs — IP address, user agent, requested page, time — for security and operations, under its
-          own policy.
-        </li>
-      </ul>
-
-      <h2 data-reveal="up">When you take an action</h2>
-      <ul data-reveal="up">
-        <li>
-          <strong>Scheduler.</strong> The booking widget (Calendly) loads only after you press “Load the scheduler”. From
-          that point Calendly processes the details you enter to book the call, under
-          <a href="https://calendly.com/privacy" target="_blank" rel="noopener">Calendly’s privacy policy</a>. We receive
-          your name, e-mail, time-zone and any notes you add, and use them only to hold the call and follow up on it.
-        </li>
-        <li>
-          <strong>WhatsApp and LinkedIn.</strong> Those links open the respective apps or websites, which have their own
-          policies. Messages you send us there are used only to answer you.
-        </li>
-        <li>
-          <strong>Projects.</strong> If we work together, the data needed to deliver the project (contacts, access to your
-          tools, invoicing details) is processed under the service agreement, kept for as long as the law requires for
-          invoices, and deleted or returned after that.
-        </li>
-      </ul>
-
-      <h2 data-reveal="up">Legal basis and your rights</h2>
-      <p data-reveal="up">
-        For visitors in the European Economic Area and the United Kingdom (GDPR / UK GDPR), we process contact data on the
-        basis of taking steps at your request before entering a contract, and project data on the basis of the contract
-        itself. You may request access, correction, deletion, restriction or portability of your data, or object to
-        processing, at any time. You also have the right to complain to your local supervisory authority.
-      </p>
-      <p data-reveal="up">
-        For California residents (CCPA / CPRA): we do not sell or share personal information, and we do not use it for
-        targeted advertising. You may request to know what we hold about you and ask for it to be deleted. We will not
-        treat you differently for exercising those rights.
-      </p>
-      <p data-reveal="up">
-        For visitors in Brazil (LGPD), the same rights apply, and {brand.legalName} is the controller.
-      </p>
-
-      <h2 data-reveal="up">Transfers and retention</h2>
-      <p data-reveal="up">
-        We are based in Brazil. Contact data you send us is stored in the tools we use to answer you (e-mail, WhatsApp,
-        Calendly), which may store it in the United States or the EU under their own safeguards. We keep contact data for
-        as long as the conversation is active plus twelve months, and invoicing records for the period Brazilian tax law
-        requires.
-      </p>
-
-      <h2 data-reveal="up">Changes</h2>
-      <p data-reveal="up">
-        If this policy changes, the date at the top changes with it. Material changes are noted on this page.
-      </p>
-      {
-        contact.email.confirmed && (
-          <p data-reveal="up">
-            Questions: <a href={`mailto:${contact.email.address}`}>{contact.email.address}</a>.
-          </p>
-        )
-      }
+        <div class="pv-clauses">
+          {
+            clauses.map((c, i) => (
+              <article id={c.id} class="pv-clause" data-clause aria-labelledby={`${c.id}-t`} data-inview style={`--r:${i}`}>
+                <span class="pv-line" aria-hidden="true" />
+                <p class="label pv-n" aria-hidden="true">
+                  {c.n}
+                </p>
+                <h2 id={`${c.id}-t`} class="d3 pv-t">
+                  {c.title}
+                </h2>
+                <div class="pv-copy">
+                  {c.paragraphs.map((p) => (
+                    <p>{p}</p>
+                  ))}
+                  {c.links.length > 0 && (
+                    <ul class="pv-links">
+                      {c.links.map((l) => (
+                        <li>
+                          {isExternal(l.href) ? (
+                            <a class="tlink" href={l.href} target="_blank" rel="noopener">
+                              <span>{bare(l.label)}</span>
+                              <Arrow dir="up-right" size={12} />
+                            </a>
+                          ) : (
+                            <a class="tlink" href={url(l.href)}>
+                              <span>{l.label}</span>
+                              <Arrow size={12} />
+                            </a>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </article>
+            ))
+          }
+        </div>
+      </div>
     </div>
   </section>
 </Base>
 
+<script>
+  import { addFrame, requestFrame } from '../scripts/motion';
+
+  /* Active clause = the last one whose top has passed the reading line
+     (35% of the viewport). One read pass, one write pass, only on change. */
+  const links = Array.from(document.querySelectorAll<HTMLAnchorElement>('[data-toc]'));
+  const clauses = Array.from(document.querySelectorAll<HTMLElement>('[data-clause]'));
+
+  if (links.length && clauses.length === links.length) {
+    let active = -1;
+    let next = 0;
+    addFrame({
+      read(_y, vh) {
+        const line = vh * 0.35;
+        let idx = 0;
+        for (let i = 0; i < clauses.length; i++) {
+          if (clauses[i].getBoundingClientRect().top <= line) idx = i;
+        }
+        /* at the very bottom the last clause may never reach the line */
+        const doc = document.documentElement;
+        if (window.scrollY + vh >= doc.scrollHeight - 2) idx = clauses.length - 1;
+        next = idx;
+      },
+      write() {
+        if (next === active) return;
+        active = next;
+        links.forEach((a, i) => {
+          const on = i === active;
+          a.classList.toggle('is-active', on);
+          if (on) a.setAttribute('aria-current', 'location');
+          else a.removeAttribute('aria-current');
+        });
+      },
+    });
+    requestFrame();
+  }
+</script>
+
 <style>
-  .page-head {
-    padding-block: calc(var(--nav-h) + clamp(3rem, 2rem + 5vw, 6rem)) clamp(2rem, 1.5rem + 3vw, 3rem);
+  .pv {
+    position: relative;
+    padding-block: clamp(3.5rem, 2rem + 5vw, 7rem) var(--section-y);
   }
 
-  .page-head > .wrap > * + * {
-    margin-top: var(--space-m);
+  /* ---------------------------------------------------------------- body */
+
+  .pv-body {
+    align-items: start;
   }
 
-  .page-head h1 {
-    max-width: 14ch;
+  /* index: a plain list on phones, a sticky rail from desktop up */
+  .pv-index {
+    padding-block: 20px 8px;
+    border-top: 1px solid var(--line-light-strong);
   }
 
-  .prose code {
-    font-family: var(--font-mono);
-    font-size: 0.9em;
-    padding: 0.1em 0.4em;
-    background: var(--paper-3);
-    border-radius: var(--radius-xs);
+  .pv-index-k {
+    color: var(--ink-3);
+  }
+
+  .pv-toc {
+    margin-top: 12px;
+  }
+
+  .pv-toc-a {
+    display: grid;
+    grid-template-columns: 9px 24px minmax(0, 1fr);
+    align-items: baseline;
+    column-gap: 12px;
+    padding-block: 8px;
+    color: var(--ink-2);
+    font-size: 0.9375rem;
+    line-height: 1.35;
+    text-decoration: none;
+    transition: color var(--t-micro) linear;
+  }
+
+  .pv-toc-mark {
+    width: 9px;
+    height: 9px;
+    border: 1px solid var(--ink-3);
+    align-self: center;
+    transition:
+      background-color 240ms var(--ease-expo),
+      border-color 240ms var(--ease-expo);
+  }
+
+  .pv-toc-n {
+    color: var(--ink-3);
+    font-stretch: var(--wd-display);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+  }
+
+  .pv-toc-t {
+    transition: transform var(--t-ui) var(--ease-expo);
+  }
+
+  .pv-toc-a.is-active {
+    color: var(--ink);
+  }
+
+  .pv-toc-a.is-active .pv-toc-mark {
+    background-color: var(--violet);
+    border-color: var(--violet);
+  }
+
+  .pv-toc-a.is-active .pv-toc-n {
+    color: var(--violet-ink);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .pv-toc-a:hover {
+      color: var(--ink);
+    }
+
+    .pv-toc-a:hover .pv-toc-t {
+      transform: translateX(4px);
+    }
+  }
+
+  /* ------------------------------------------------------------- clauses */
+
+  .pv-clauses {
+    margin-top: 56px;
+    border-bottom: 1px solid var(--line-light-strong);
+  }
+
+  .pv-clause {
+    position: relative;
+    display: grid;
+    row-gap: 14px;
+    padding-block: 32px 44px;
+  }
+
+  .pv-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 1px;
+    background-color: var(--line-light-strong);
+    transform-origin: left center;
+    transition:
+      transform 1000ms var(--ease-quint),
+      opacity 200ms linear;
+  }
+
+  .pv-n,
+  .pv-t,
+  .pv-copy {
+    transition:
+      opacity var(--t-reveal) var(--ease-expo),
+      transform var(--t-reveal) var(--ease-expo);
+    transition-delay: 120ms;
+  }
+
+  .pv-t {
+    transition-delay: 180ms;
+  }
+
+  .pv-copy {
+    transition-delay: 260ms;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .pv-clause:not(.is-in) .pv-line {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .pv-clause:not(.is-in) :is(.pv-n, .pv-t, .pv-copy) {
+    opacity: 0;
+    transform: translate3d(0, var(--rise), 0);
+  }
+
+  .pv-n {
+    color: var(--violet-ink);
+  }
+
+  .pv-t {
+    color: var(--ink);
+    max-width: 24ch;
+  }
+
+  .pv-copy {
+    display: grid;
+    gap: 14px;
+    margin-top: 6px;
+    color: var(--ink-2);
+    font-size: 1.0625rem;
+    line-height: 1.65;
+  }
+
+  .pv-copy > p {
+    max-width: 62ch;
+    text-wrap: pretty;
+  }
+
+  .pv-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 28px;
+    margin-top: 4px;
+  }
+
+  .pv-links .tlink {
+    --fg: var(--ink);
+    font-size: 0.875rem;
+  }
+
+  @media (min-width: 768px) {
+    .pv-index {
+      grid-column: 1 / span 5;
+    }
+
+    .pv-clauses {
+      grid-column: 1 / -1;
+    }
+
+    .pv-clause {
+      grid-template-columns: 64px minmax(0, 1fr);
+      column-gap: var(--gap);
+    }
+
+    .pv-n {
+      grid-row: 1;
+      padding-top: 0.55em;
+    }
+
+    .pv-t,
+    .pv-copy {
+      grid-column: 2;
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .pv-index {
+      grid-column: 1 / span 3;
+      position: sticky;
+      top: calc(var(--nav-h) + 32px);
+      border-top-color: var(--ink);
+    }
+
+    .pv-clauses {
+      grid-column: 5 / span 7;
+      margin-top: 0;
+    }
+
+    .pv-clause {
+      grid-template-columns: 90px minmax(0, 1fr);
+      column-gap: var(--gap);
+      padding-block: 36px 52px;
+    }
   }
 </style>

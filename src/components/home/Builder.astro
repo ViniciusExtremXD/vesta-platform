@@ -1,0 +1,642 @@
+---
+/**
+ * §5.10 #builder (void) — the founder profile.
+ *
+ * Desktop: portrait in columns 1–5 (4:5, grayscale master from
+ * scripts/gen-portrait.mjs, 2px violet bar on its left edge), text in 7–12,
+ * facts as hairline rows. The portrait holds (sticky) while the text column
+ * scrolls, wherever the whole figure fits the viewport.
+ * From 1100px one hairline orbit (the section label's orbit mark at portrait
+ * scale: an ellipse tilted −24° with a single planet) passes behind the
+ * portrait. It draws once after the wipe and tilts a few degrees with the
+ * scroll (transform only, static when motion is off).
+ * 390px: label, full-width portrait with the bar on its bottom edge, text.
+ *
+ * Gate: the portrait renders only when `founder.portrait.confirmed`; the
+ * fallback is typographic: the facts table takes columns 1–5 (on phones it
+ * follows the copy, as it does beside the portrait).
+ * No clocks (owner decision): the hours row is the static
+ * `contact.hours.label` carried by `builder.facts`.
+ */
+import { Picture } from 'astro:assets';
+import SectionLabel from '../ui/SectionLabel.astro';
+import SplitText from '../ui/SplitText.astro';
+import Arrow from '../ui/Arrow.astro';
+import WaGlyph from '../ui/WaGlyph.astro';
+import { builder, founder, brand, contact, wa } from '../../data/site';
+import portrait from '../../assets/vinicius-magno-mono.jpg';
+
+const showPortrait = founder.portrait.confirmed;
+/* contact channels render only while the owner has them confirmed */
+const showWa = contact.whatsapp.confirmed;
+const showLinkedin = contact.linkedin.confirmed;
+/* Ranges like "Mon–Fri" or "9:00–18:00" never break at the en dash: word
+   joiners (U+2060) around it, in the paragraphs and the fact values. */
+const WJ = String.fromCharCode(0x2060);
+const keepRange = (s: string) => s.replace(/(\w)–(\w)/g, `$1${WJ}–${WJ}$2`);
+const [lead, ...body] = builder.paragraphs.map(keepRange);
+/* the ↗ in the label is drawn by <Arrow dir="up-right"> as a hairline glyph */
+const linkedinText = builder.linkedin.label.replace(/\s*↗\s*$/, '');
+const role = `${founder.role}, ${brand.name}`;
+/* Fact values break only between their " · " segments, never in a range. */
+const facts = builder.facts.map((f) => ({
+  label: f.label,
+  parts: f.value.split(' · ').map(keepRange),
+}));
+
+/* Orbit geometry, in the portrait's own 400×500 box (the plate is 4:5).
+   Same proportions as the .stripe orbit mark: rx : ry ≈ 2.45, tilt −24°,
+   the planet on the right-hand vertex. Centred a little right of the
+   portrait: the far vertex clears the frame by ≈ 30 units, so it stays
+   inside the 48px page gutter, and the near one (with the planet) by ≈ 60,
+   half-way across the column gap to the text. */
+const O = { cx: 215, cy: 250, rx: 264, ry: 108 };
+const orbitPath = `M${O.cx + O.rx} ${O.cy}A${O.rx} ${O.ry} 0 1 0 ${O.cx - O.rx} ${O.cy}A${O.rx} ${O.ry} 0 1 0 ${O.cx + O.rx} ${O.cy}`;
+/* The SVG box holds the whole orbit (tilted −20°…−28° it spans x −40…470),
+   so nothing is painted as SVG overflow of a sticky figure.
+   The CSS box (left −11%, width 129.5%) matches this viewBox exactly. */
+const VB = { x: -44, w: 518 };
+---
+
+<section id={builder.id} class="builder s-void section" data-nav-theme="dark" aria-labelledby="builder-title">
+  <div class:list={['wrap', 'g', 'grid', { solo: !showPortrait }]}>
+    <header class="head">
+      <SectionLabel n={builder.label.index ?? undefined} name={builder.label.name} />
+    </header>
+
+    {
+      showPortrait ? (
+        <figure class="portrait">
+          <div class="plate">
+            <svg class="orbit-ring" data-inview data-builder-orbit viewBox={`${VB.x} 0 ${VB.w} 500`} aria-hidden="true" focusable="false">
+              <g class="orbit-tilt" transform={`rotate(-24 ${O.cx} ${O.cy})`} style={`transform-origin:${O.cx}px ${O.cy}px`}>
+                <path class="orbit-path" d={orbitPath} pathLength="100" />
+                <circle class="orbit-planet" cx={O.cx + O.rx} cy={O.cy} r="3" />
+              </g>
+            </svg>
+            <div class="frame" data-reveal="wipe">
+              <Picture
+                src={portrait}
+                alt={founder.portrait.alt}
+                formats={['avif', 'webp']}
+                widths={[560, 1120]}
+                sizes="(min-width: 1440px) 546px, (min-width: 1100px) calc((100vw - 96px - 264px) * 5 / 12 + 96px), (min-width: 768px) calc((100vw - 64px - 140px) / 2 + 60px), calc(100vw - 40px)"
+                width={560}
+                height={700}
+                quality={70}
+                loading="lazy"
+                decoding="async"
+                class="photo"
+              />
+            </div>
+            <span class="bar" aria-hidden="true" />
+          </div>
+          <figcaption class="cap" data-reveal style="--d:420ms">
+            <span class="cap-name">{founder.name}</span>
+            <span class="cap-role label">{role}</span>
+          </figcaption>
+        </figure>
+      ) : (
+        <dl class="facts facts-solo">
+          {facts.map((f, r) => (
+            <div class="fact" data-inview style={`--r:${r}`}>
+              <dt class="label">{f.label}</dt>
+              <dd>
+                {f.parts.map((p, k) => (
+                  <Fragment>
+                    {k > 0 && ' · '}
+                    <span class:list={['seg', { nw: f.parts.length > 1 }]}>{p}</span>
+                  </Fragment>
+                ))}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      )
+    }
+
+    <div class="copy">
+      <SplitText as="h2" id="builder-title" class="d2 title" text={builder.h2} />
+      <p class="lead" data-reveal>{lead}</p>
+      {
+        body.map((p, i) => (
+          <p class="body para" data-reveal style={`--i:${i + 1}`}>
+            {p}
+          </p>
+        ))
+      }
+
+      {/* In the fallback this copy serves phones only (display: none from
+          768px, where the left-column copy above takes over). */}
+      <dl class="facts facts-copy">
+        {facts.map((f, r) => (
+          <div class="fact" data-inview style={`--r:${r}`}>
+            <dt class="label">{f.label}</dt>
+            <dd>
+              {f.parts.map((p, k) => (
+                <Fragment>
+                  {k > 0 && ' · '}
+                  <span class:list={['seg', { nw: f.parts.length > 1 }]}>{p}</span>
+                </Fragment>
+              ))}
+            </dd>
+          </div>
+        ))}
+      </dl>
+
+      {
+        (showWa || showLinkedin) && (
+          <div class="btn-row cta" data-reveal>
+            {showWa && (
+              <a class="btn wa" href={wa(builder.cta.text)} target="_blank" rel="noopener" data-wa-intent="builder">
+                <WaGlyph size={16} />
+                <span class="btn-text">{builder.cta.label}</span>
+                <Arrow />
+              </a>
+            )}
+            {showLinkedin && (
+              <a class="tlink li" href={builder.linkedin.href} target="_blank" rel="noopener">
+                <span>{linkedinText}</span>
+                <Arrow dir="up-right" />
+              </a>
+            )}
+          </div>
+        )
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  /* ---- section --------------------------------------------------------- */
+  /* One soft nebula light behind the portrait (≤10% violet, SPEC_COSMOS §2).
+     overflow: clip trims the orbit where it runs past the page edge; clip,
+     not hidden, so the sticky portrait still pins. */
+  .builder {
+    overflow: clip;
+    background-image: radial-gradient(60% 34% at 50% 24%, rgb(98 54 232 / 0.09), transparent 72%);
+  }
+
+  @media (min-width: 768px) {
+    .builder {
+      background-image: radial-gradient(34% 46% at 24% 44%, rgb(98 54 232 / 0.09), transparent 72%);
+    }
+  }
+
+  /* ---- grid ------------------------------------------------------------ */
+  .grid {
+    grid-template-rows: auto 1fr;
+    align-items: start;
+  }
+
+  .portrait {
+    margin: 32px 0 0;
+  }
+
+  .copy {
+    margin-top: 56px;
+  }
+
+  @media (min-width: 768px) {
+    .head {
+      grid-column: 5 / -1;
+      grid-row: 1;
+      margin-bottom: 40px;
+    }
+
+    .portrait {
+      grid-column: 1 / 5;
+      grid-row: 1 / span 2;
+      margin: 0;
+    }
+
+    .copy {
+      grid-column: 5 / -1;
+      grid-row: 2;
+      margin: 0;
+    }
+
+    .solo .facts-solo {
+      grid-column: 1 / 5;
+      grid-row: 1 / span 2;
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .head {
+      grid-column: 7 / 13;
+      margin-bottom: 48px;
+    }
+
+    .portrait,
+    .solo .facts-solo {
+      grid-column: 1 / 6;
+    }
+
+    .copy {
+      grid-column: 7 / 13;
+    }
+  }
+
+  /* The portrait holds while the text column scrolls, but only where the
+     whole figure (image + caption) fits under the nav; otherwise it sits at
+     the top of its column. Figure height ≈ 1.25 × its width + 56px caption,
+     plus the nav and a 32px offset:
+     - 8 columns: ≈ 735px up to 1024px wide (iPad landscape fits), ≈ 782px
+       at 1099px;
+     - 12 columns: ≤ 870px, which the height test or a ≤ 16:10 shape covers. */
+  @media (min-width: 768px) and (max-width: 1024px) and (min-height: 740px),
+    (min-width: 768px) and (max-width: 1099.98px) and (min-height: 800px),
+    (min-width: 1100px) and (min-height: 880px),
+    (min-width: 1100px) and (max-aspect-ratio: 16/10) {
+    .portrait {
+      position: sticky;
+      top: calc(var(--nav-h) + 32px);
+    }
+  }
+
+  /* ---- portrait -------------------------------------------------------- */
+  .plate {
+    position: relative;
+  }
+
+  .frame {
+    position: relative;
+    z-index: 1;
+    aspect-ratio: 4 / 5;
+    overflow: clip;
+    background-color: var(--plate);
+  }
+
+  .frame :global(picture),
+  .frame :global(img) {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .frame :global(img) {
+    object-fit: cover;
+    object-position: 50% 30%;
+  }
+
+  /* 2px violet bar: bottom edge on mobile (draws left to right), left edge
+     from 768px (grows bottom to top). Keyed to the frame's .is-in, not to
+     its own observer: collapsed to one edge it has no area to observe.
+     Draws 300ms after the wipe starts (spec 5.10). */
+  .bar {
+    position: absolute;
+    z-index: 2;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2px;
+    background-color: var(--violet);
+    transform-origin: left center;
+    pointer-events: none;
+    transition:
+      transform var(--t-line) var(--ease-quint) 300ms,
+      opacity 200ms linear 300ms;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .frame:not(.is-in) + .bar {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+
+  @media (min-width: 768px) {
+    .bar {
+      top: 0;
+      right: auto;
+      width: 2px;
+      height: auto;
+      transform-origin: center bottom;
+    }
+
+    :global(html.js:not(.motion-reduced):not(.motion-failed)) .frame:not(.is-in) + .bar {
+      transform: scaleY(0);
+    }
+  }
+
+  /* ---- the orbit ------------------------------------------------------- */
+  /* Sits under the frame (z 0 vs 1), so it reads as passing behind the
+     portrait; only the arcs either side of it show. 1100px and up, where the
+     gap between portrait and text is a full column. */
+  .orbit-ring {
+    display: none;
+  }
+
+  @media (min-width: 1100px) {
+    /* the box spans viewBox x −44…474 over the portrait's 0…400 */
+    .orbit-ring {
+      position: absolute;
+      top: 0;
+      left: -11%;
+      z-index: 0;
+      display: block;
+      width: 129.5%;
+      height: 100%;
+      max-width: none;
+      overflow: hidden;
+      pointer-events: none;
+    }
+  }
+
+  .orbit-tilt {
+    transform: rotate(calc(-24deg + var(--tilt, 0deg)));
+    transition: transform 700ms var(--ease-expo);
+  }
+
+  .orbit-path {
+    fill: none;
+    stroke: var(--lilac);
+    stroke-opacity: 0.42;
+    stroke-width: 0.8;
+    stroke-dasharray: 100 100;
+    stroke-dashoffset: 0;
+    transition:
+      stroke-dashoffset 2400ms var(--ease-quint) 500ms,
+      opacity 300ms linear 500ms;
+  }
+
+  .orbit-planet {
+    fill: var(--lilac);
+    transform-box: fill-box;
+    transform-origin: center;
+    transition:
+      opacity 500ms linear 2500ms,
+      transform 900ms var(--ease-expo) 2500ms;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .orbit-ring:not(.is-in) .orbit-path {
+    opacity: 0;
+    stroke-dashoffset: 100;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .orbit-ring:not(.is-in) .orbit-planet {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+
+  :global(html.motion-reduced) .orbit-tilt,
+  :global(html.motion-failed) .orbit-tilt {
+    transform: rotate(-24deg);
+  }
+
+  /* ---- caption --------------------------------------------------------- */
+  .cap {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 4px 16px;
+    padding-top: 16px;
+  }
+
+  .cap-name {
+    font-stretch: var(--wd-display);
+    font-size: 1rem;
+    font-weight: 620;
+    letter-spacing: -0.005em;
+    color: var(--fg);
+  }
+
+  .cap-role {
+    color: var(--fg-3);
+  }
+
+  /* ---- copy ------------------------------------------------------------ */
+  .title {
+    max-width: 16ch;
+    margin-bottom: 32px;
+  }
+
+  @media (min-width: 1100px) {
+    .title {
+      margin-bottom: 48px;
+    }
+  }
+
+  .lead {
+    max-width: 34ch;
+    color: var(--fg);
+  }
+
+  .para {
+    max-width: 50ch;
+    margin-top: 20px;
+    color: var(--fg-2);
+  }
+
+  .lead + .para {
+    margin-top: 28px;
+  }
+
+  /* ---- facts: hairline rows ------------------------------------------- */
+  .facts {
+    margin-top: 56px;
+  }
+
+  .fact {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 6px;
+    padding-block: 16px 17px;
+  }
+
+  .fact::before,
+  .fact:last-child::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background-color: var(--line);
+    transform-origin: left center;
+    transition:
+      transform var(--t-line) var(--ease-quint),
+      opacity 200ms linear;
+    transition-delay: calc(var(--r, 0) * 60ms);
+  }
+
+  .fact::before {
+    top: 0;
+  }
+
+  .fact:last-child::after {
+    bottom: 0;
+    transition-delay: calc(var(--r, 0) * 60ms + 60ms);
+  }
+
+  .fact dt,
+  .fact dd {
+    transition:
+      opacity var(--t-reveal) var(--ease-expo),
+      transform var(--t-reveal) var(--ease-expo);
+    transition-delay: calc(var(--r, 0) * 60ms + 160ms);
+  }
+
+  .fact dt {
+    color: var(--fg-3);
+  }
+
+  /* proportional lining figures on purpose: the tabular zero reads as
+     monospace inside running text like a CNPJ or an hours range */
+  .fact dd {
+    margin: 0;
+    font-stretch: var(--wd-display);
+    font-size: 0.9375rem;
+    font-weight: 480;
+    line-height: 1.45;
+    letter-spacing: 0.005em;
+    color: var(--fg);
+    text-wrap: pretty;
+  }
+
+  .nw {
+    white-space: nowrap;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .fact:not(.is-in)::before,
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .fact:not(.is-in):last-child::after {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .fact:not(.is-in) dt,
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .fact:not(.is-in) dd {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+
+  @media (min-width: 1100px) {
+    /* label | value on the page grid: 2 of the column's 6 tracks | 4 */
+    .fact {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      column-gap: var(--gap);
+      align-items: baseline;
+      padding-block: 18px 19px;
+    }
+
+    .fact dt {
+      grid-column: 1 / 3;
+    }
+
+    .fact dd {
+      grid-column: 3 / 7;
+    }
+
+    .facts-solo .fact {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+
+    .facts-solo .fact dd {
+      grid-column: 3 / 6;
+    }
+  }
+
+  /* Fallback (no portrait): on phones the facts follow the copy, as they do
+     beside the portrait; from 768px they take the portrait's columns. */
+  .facts-solo {
+    display: none;
+  }
+
+  @media (min-width: 768px) {
+    .solo .facts-solo {
+      display: block;
+      margin-top: 0;
+    }
+
+    .solo .facts-copy {
+      display: none;
+    }
+  }
+
+  /* ---- CTAs ------------------------------------------------------------ */
+  .cta {
+    margin-top: 48px;
+  }
+
+  @media (max-width: 767.98px) {
+    .cta {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 12px;
+    }
+
+    .wa {
+      justify-content: flex-start;
+      padding-inline: 20px;
+      white-space: normal;
+      line-height: 1.25;
+    }
+
+    .wa .btn-text {
+      flex: 1 1 auto;
+    }
+
+    /* secondary becomes a 48px outline on touch widths (§4) */
+    .li {
+      justify-content: space-between;
+      min-height: 48px;
+      padding: 0 20px;
+      border: 1px solid var(--line-strong);
+    }
+
+    .li::after {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  /* The orbit tilts ±4° around its −24° rest as the section crosses the
+     viewport (level with the brand diagonal when the section is centred).
+     Transform only, inside the shared scroll loop; skipped while the orbit
+     is hidden (below 1100px) or offscreen, static when motion is off. */
+  import { addFrame, requestFrame, vestibular } from '../../scripts/motion';
+
+  const ring = document.querySelector<SVGSVGElement>('[data-builder-orbit]');
+  const section = ring?.closest<HTMLElement>('section');
+
+  if (ring && section) {
+    const RANGE = 4;
+    let near = false;
+    let tilt = 0;
+    let written = NaN;
+
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(
+        (entries) => {
+          near = entries.some((e) => e.isIntersecting);
+          if (near) requestFrame();
+        },
+        { rootMargin: '20% 0px' }
+      ).observe(section);
+    } else {
+      near = true;
+    }
+
+    addFrame({
+      read(_y, vh) {
+        if (!near || vestibular() || ring.getBoundingClientRect().width === 0) {
+          tilt = 0;
+          return;
+        }
+        const r = section.getBoundingClientRect();
+        /* p: 0 when the section's top meets the viewport bottom, 1 when its
+           bottom meets the viewport top */
+        const p = Math.min(1, Math.max(0, (vh - r.top) / (vh + r.height)));
+        tilt = (0.5 - p) * 2 * RANGE;
+      },
+      write() {
+        if (tilt === written) return;
+        written = tilt;
+        ring.style.setProperty('--tilt', `${tilt.toFixed(2)}deg`);
+      },
+    });
+  }
+</script>
