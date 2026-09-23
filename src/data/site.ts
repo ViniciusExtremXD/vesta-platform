@@ -172,7 +172,7 @@ export const contact = {
   },
   /** Not rendered anywhere until confirmed. */
   email: {
-    address: 'vinicius@vesta.systems',
+    address: 'vima8251273@gmail.com',
     /** Subject line for mailto: links. */
     subject: 'Website price analysis',
     label: 'Email',
