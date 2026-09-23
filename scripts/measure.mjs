@@ -113,7 +113,10 @@ if (!chromePath) {
 }
 
 const { server, port } = await serve();
-const url = `http://127.0.0.1:${port}${ROUTE}`;
+// MEASURE_URL=https://… measures the deployed site instead of the local build
+// (real CDN compression; the local antivirus proxy strips gzip from 127.0.0.1).
+const LIVE = process.env.MEASURE_URL || '';
+const url = LIVE || `http://127.0.0.1:${port}${ROUTE}`;
 
 await mkdir(PROFILE, { recursive: true }).catch(() => {});
 await mkdir(REPORT_DIR, { recursive: true }).catch(() => {});
@@ -154,7 +157,9 @@ try {
   const transfer = items.reduce((s, it) => s + (it.transferSize || 0), 0);
 
   const out = {
-    note: 'Written by `npm run measure` (scripts/measure.mjs). Lighthouse run locally against the production build served with gzip, mobile emulation and simulated throttling (slow 4G, 4x CPU). Median of three runs. Antivirus-injected scripts (Kaspersky) blocked.',
+    note: LIVE
+      ? `Written by npm run measure (scripts/measure.mjs) against the deployed site ${LIVE}. Lighthouse, mobile emulation and simulated throttling (slow 4G, 4x CPU). Median of three runs. Antivirus-injected scripts (Kaspersky) blocked.`
+      : 'Written by `npm run measure` (scripts/measure.mjs). Lighthouse run locally against the production build served with gzip, mobile emulation and simulated throttling (slow 4G, 4x CPU). Median of three runs. Antivirus-injected scripts (Kaspersky) blocked.',
     performance: Math.round(lhr.categories.performance.score * 100),
     accessibility: Math.round(lhr.categories.accessibility.score * 100),
     bestPractices: Math.round(lhr.categories['best-practices'].score * 100),
