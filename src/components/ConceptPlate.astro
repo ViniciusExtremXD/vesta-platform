@@ -1,9 +1,18 @@
 ---
 /**
- * ConceptPlate — Concept 01 (Halden Roofing, a FICTIONAL business) drawn in
- * DOM + inline SVG. Zero image bytes. Everything inside scales with the plate
+ * ConceptPlate — one of the five concept studies (FICTIONAL businesses),
+ * picked by `concept` (default 'halden' = Concept 01, Halden Roofing), drawn
+ * in DOM + inline SVG. Zero image bytes. Everything inside scales with the plate
  * width through container query units (cqi), so the plate renders the same
  * drawing at 880px (build), 760px (hero), 420px (configurator) or 350px.
+ *
+ * ── Concepts ───────────────────────────────────────────────────────────────
+ *   concept="halden|dental|restaurant|law|fitness". Data: src/data/concepts/
+ *   (getConcept). Drawings: src/components/concepts/<id>/Before.astro +
+ *   Layers.astro, picked through concepts/registry.ts. The contract every
+ *   drawing follows is src/components/concepts/README.md. The root figure
+ *   carries data-concept="<id>" and --cp-bg / --cp-fg (the concept's base
+ *   surface and text colour) for hosts that theme around the plate.
  *
  * ── Modes ──────────────────────────────────────────────────────────────────
  *   mode="hero"    BEFORE + AFTER + rebuild blade + draggable handle +
@@ -33,14 +42,14 @@
  *         others: .cp-layer.cp-l1 … .cp-l6 directly (role=img on .cp-screen)
  *     figcaption.cp-cap                  hero only
  *
- *   The six layers (ConceptLayers.astro; each position:absolute; inset:0;
- *   style="--i:0…5"):
+ *   The six layers (concepts/<id>/Layers.astro; each position:absolute;
+ *   inset:0; style="--i:0…5"):
  *     .cp-l1  wireframe hairlines + box tags NAV / H1 / CTA / SERVICES
- *     .cp-l2  surfaces, brand, headline, gable art — the only OPAQUE layer
+ *     .cp-l2  surfaces, brand, headline, art — the only OPAQUE layer
  *     .cp-l3  image frames + load-waterfall bars (no text)
  *     .cp-l4  JSON-LD card + sitemap tree
- *     .cp-l5  copper buttons: Book a free inspection / Call / WhatsApp
- *     .cp-l6  event pins: cta_click / call_click / form_submit
+ *     .cp-l5  buttons: primary / Call / WhatsApp
+ *     .cp-l6  event pins: one per button
  *   Flat z-order: l1, l4, l6 (z 0) sit UNDER the opaque l2 (z 1) — they are
  *   the parts of a real site nobody sees — then l3 (z 2), then l5 (z 3).
  *   Stacked flat, the plate reads as one finished website; lifted in 3D each
@@ -58,11 +67,13 @@
  *   figure. The rebuilt site covers [0, x] from the LEFT; the blade sits at
  *   x. No JS ⇒ --x stays 1 and a 140px BEFORE thumbnail appears.
  */
-import ConceptBefore from './ConceptBefore.astro';
-import ConceptLayers from './ConceptLayers.astro';
-import { concept, hero } from '../data/site';
+import { getDrawing } from './concepts/registry';
+import { getConcept, type ConceptId } from '../data/concepts';
+import { hero } from '../data/site';
 
 export interface Props {
+  /** Which study to draw. Default 'halden' (Concept 01). */
+  concept?: ConceptId;
   mode?: 'hero' | 'build' | 'mini' | 'static';
   /** static mode only: which site to draw. */
   state?: 'after' | 'before';
@@ -74,7 +85,10 @@ export interface Props {
   [key: string]: unknown;
 }
 
-const { mode = 'hero', state = 'after', bar, caption = true, class: cls = '', ...rest } = Astro.props;
+const { concept: id = 'halden', mode = 'hero', state = 'after', bar, caption = true, class: cls = '', style: hostStyle, ...rest } = Astro.props;
+
+const c = getConcept(id);
+const { Before, Layers } = getDrawing(c.id);
 
 const isHero = mode === 'hero';
 const showBar = bar ?? mode !== 'build';
@@ -82,19 +96,30 @@ const beforeOnly = mode === 'static' && state === 'before';
 /* the caption splits into its two halves (study · fictional) so the hero
    can set it as two balanced lines on the leader; the separator stays in
    the text for screen readers */
-const capCut = hero.plate.caption.lastIndexOf(' · ');
-const capA = capCut > 0 ? hero.plate.caption.slice(0, capCut) : hero.plate.caption;
-const capB = capCut > 0 ? hero.plate.caption.slice(capCut + 3) : '';
-const aria = mode === 'build' ? concept.aria.build : mode === 'mini' ? concept.aria.mini : concept.aria.hero;
+const capCut = c.caption.lastIndexOf(' · ');
+const capA = capCut > 0 ? c.caption.slice(0, capCut) : c.caption;
+const capB = capCut > 0 ? c.caption.slice(capCut + 3) : '';
+const aria = beforeOnly ? c.aria.before : c.aria[mode];
+/* the concept's own surface + text colour, for the screen fill and for
+   hosts; a host's inline style is kept after it */
+const style = [`--cp-bg:${c.palette.base};--cp-fg:${c.palette.text}`, typeof hostStyle === 'string' ? hostStyle : '']
+  .filter(Boolean)
+  .join(';');
 ---
 
-<figure class:list={['cp', `cp--${mode}`, cls]} data-compare={isHero ? '' : undefined} {...rest}>
+<figure
+  class:list={['cp', `cp--${mode}`, cls]}
+  data-compare={isHero ? '' : undefined}
+  data-concept={c.id}
+  style={style}
+  {...rest}
+>
   <div class="cp-frame">
     {
       showBar && (
         <div class="cp-bar">
           <span class="cp-url" data-cp-url>
-            {concept.domain}
+            {c.domain}
           </span>
         </div>
       )
@@ -104,11 +129,11 @@ const aria = mode === 'build' ? concept.aria.build : mode === 'mini' ? concept.a
         <div class="cp-screen">
           <div class="cp-view" role="img" aria-label={aria}>
             <div class="cp-before">
-              <ConceptBefore />
+              <Before />
             </div>
             <div class="cp-after-wrap">
               <div class="cp-after">
-                <ConceptLayers />
+                <Layers />
               </div>
             </div>
             <span class="cp-tag cp-tag--after label" aria-hidden="true">
@@ -118,7 +143,7 @@ const aria = mode === 'build' ? concept.aria.build : mode === 'mini' ? concept.a
               {hero.plate.tags.before}
             </span>
             <div class="cp-inset" aria-hidden="true">
-              <ConceptBefore />
+              <Before />
               <span class="cp-inset-cap label">{hero.plate.insetCaption}</span>
             </div>
           </div>
@@ -144,7 +169,7 @@ const aria = mode === 'build' ? concept.aria.build : mode === 'mini' ? concept.a
         </div>
       ) : (
         <div class="cp-screen" role="img" aria-label={aria}>
-          {beforeOnly ? <ConceptBefore /> : <ConceptLayers />}
+          {beforeOnly ? <Before /> : <Layers />}
         </div>
       )
     }
@@ -217,8 +242,8 @@ const aria = mode === 'build' ? concept.aria.build : mode === 'mini' ? concept.a
     position: relative;
     aspect-ratio: 16 / 10;
     overflow: hidden;
-    background-color: #1f2a30;
-    color: #f2ece1;
+    background-color: var(--cp-bg, #1f2a30);
+    color: var(--cp-fg, #f2ece1);
     user-select: none;
     -webkit-user-select: none;
   }
@@ -243,7 +268,7 @@ const aria = mode === 'build' ? concept.aria.build : mode === 'mini' ? concept.a
   }
 
   .cp-after {
-    background-color: #1f2a30;
+    background-color: var(--cp-bg, #1f2a30);
     transform: translate3d(calc((1 - var(--x)) * 100%), 0, 0);
   }
 

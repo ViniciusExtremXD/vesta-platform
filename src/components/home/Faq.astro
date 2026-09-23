@@ -1,62 +1,130 @@
 ---
 /**
- * #faq · 10 QUESTIONS (spec §5.11, §4 "FAQ row").
+ * #faq · QUESTIONS (spec §5.11, §4 "FAQ row"; round 2).
  *
- * Native <details>/<summary> rows: index, question, a hairline plus. With JS
- * the open and close are animated (grid-template-rows 0fr→1fr, 420ms mech)
- * and the plus turns into a minus; without JS, or with motion off, the rows
- * toggle natively and instantly. An open row sits on paper-2 with a 2px
- * violet edge (the site's violet bar) and a violet-ink index; on fine
- * pointers the edge also draws down the hovered row. Only confirmed
- * questions render; index.astro builds the FAQPage JSON-LD from the same
- * `confirmedOnly(faq)` list.
+ * Native <details>/<summary> rows: index, question, a circled plus. With JS
+ * the rows behave like the site's Expand box and one row is open at a time:
+ * the paper-2 band sweeps in from the left, a violet hairline draws across
+ * the top and down the edge, the plus turns into a minus inside a violet
+ * disc, the answer panel grows (grid rows 0fr → 1fr) and the answer rises.
+ * Closing plays in reverse before the element actually closes. Without JS,
+ * or with motion off, rows toggle natively and instantly.
+ * Only confirmed questions render; index.astro builds the FAQPage JSON-LD
+ * from the same `confirmedOnly(faq)` list.
  *
- * Desktop: label, H2 and the WhatsApp side link sticky in columns 1–4, the
- * list in columns 6–12. Below 1100px everything stacks.
+ * Entry: the list column (data-scene) and the aside's content (data-scene
+ * "soft", inside the sticky wrapper, never around it) rise out of a tilted,
+ * deeper plane as they scroll in; the H2 words flip up; the rows cascade in
+ * — the hairline draws, then the row swings down on a hinge at its top edge
+ * (rotateX, transform only).
+ *
+ * Desktop (≥1100): label, H2, the WhatsApp / email links and an observatory
+ * dial sit sticky in columns 1–4 and drift against the list as the section
+ * scrolls (transform only). The dial's needle follows your place in the
+ * list, and points at the open question when one is open; its readout
+ * flips to the question number. Below 1100px everything stacks and the dial
+ * is not rendered.
  */
 import SectionLabel from '../ui/SectionLabel.astro';
 import SplitText from '../ui/SplitText.astro';
 import Arrow from '../ui/Arrow.astro';
-import { faqSection, faq, confirmedOnly, contact, wa } from '../../data/site';
+import { faqSection, faq, confirmedOnly, contact, wa, mail } from '../../data/site';
 
 const items = confirmedOnly(faq);
 const pad = (n: number) => String(n).padStart(2, '0');
 /* The stored label ends in "→"; the arrow is drawn as a hairline SVG so it can
    nudge on hover, and screen readers get the plain label. */
 const sideLabel = faqSection.side.label.replace(/\s*→\s*$/, '');
+const showEmail = contact.email.confirmed;
+
+/* The dial: a 270° instrument (−135° … +135°), one major tick per question,
+   two minor ticks between them. Built once, here. */
+const N = items.length;
+const SWEEP = 270;
+const step = N > 1 ? SWEEP / (N - 1) : 0;
+const ticks: { x1: number; y1: number; x2: number; y2: number; major: boolean }[] = [];
+const minor = 3;
+for (let k = 0; k <= (N - 1) * minor; k++) {
+  const major = k % minor === 0;
+  const a = ((-135 + (k * step) / minor - 90) * Math.PI) / 180;
+  const r1 = major ? 88 : 94;
+  const r2 = 102;
+  ticks.push({
+    x1: +(Math.cos(a) * r1).toFixed(2),
+    y1: +(Math.sin(a) * r1).toFixed(2),
+    x2: +(Math.cos(a) * r2).toFixed(2),
+    y2: +(Math.sin(a) * r2).toFixed(2),
+    major,
+  });
+}
+/* the gauge arc, −135° → +135°, r 110 */
+const arcA = ((-135 - 90) * Math.PI) / 180;
+const arcB = ((135 - 90) * Math.PI) / 180;
+const arc = `M${(Math.cos(arcA) * 110).toFixed(2)} ${(Math.sin(arcA) * 110).toFixed(2)}A110 110 0 1 1 ${(Math.cos(arcB) * 110).toFixed(2)} ${(Math.sin(arcB) * 110).toFixed(2)}`;
 ---
 
 <section id={faqSection.id} class="s-paper section faq" data-nav-theme="light" data-faq aria-labelledby="faq-title">
   <div class="wrap g">
     <div class="faq-aside">
       <div class="faq-sticky">
-        <SectionLabel n={faqSection.label.index} name={faqSection.label.name} />
-        <SplitText as="h2" id="faq-title" class="d2 faq-h2" text={faqSection.h2} />
-        <div class="faq-side" data-reveal style="--d:260ms">
-          <a class="tlink" href={wa(faqSection.side.text)} target="_blank" rel="noopener" data-wa-intent="question">
-            {sideLabel}
-            <Arrow />
-          </a>
-          <p class="small faq-hours">{contact.hours.label}</p>
+        <div class="faq-float">
+          <div class="faq-scene" data-scene="soft">
+          <SectionLabel n={faqSection.label.index} name={faqSection.label.name} />
+          <SplitText as="h2" id="faq-title" class="d2 faq-h2" text={faqSection.h2} />
+          <div class="faq-side" data-reveal style="--d:260ms">
+            <a class="tlink" href={wa(faqSection.side.text)} target="_blank" rel="noopener" data-wa-intent="question">
+              {sideLabel}
+              <Arrow />
+            </a>
+            {
+              showEmail && (
+                <a class="tlink" href={mail(faqSection.email.subject)}>
+                  {faqSection.email.label}
+                  <Arrow />
+                </a>
+              )
+            }
+            <p class="small faq-hours">{contact.hours.label}</p>
+          </div>
+
+          <div class="dial" data-inview data-faq-dial style={`--needle:-135deg`} aria-hidden="true">
+            <svg class="dial-svg" viewBox="-120 -120 240 240" focusable="false">
+              <g class="dial-ring">
+                <path class="dial-arc" d={arc} />
+                {ticks.map((t) => <line class:list={['tick', { major: t.major }]} x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2} />)}
+                <circle class="dial-inner" r="62" />
+              </g>
+              <g class="needle">
+                <line class="needle-line" x1="0" y1="14" x2="0" y2="-96" />
+                <circle class="needle-tip" cx="0" cy="-106" r="4" />
+                <circle class="needle-hub" r="3.5" />
+              </g>
+            </svg>
+            <p class="dial-read label">
+              <span class="dial-mask"><span class="dial-n" data-faq-count>{pad(1)}</span></span>
+              <span class="dial-of">/ {pad(N)}</span>
+            </p>
+          </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="faq-main">
+    <div class="faq-main" data-scene>
       <ol class="faq-list" role="list">
         {
           items.map((item, i) => (
             <li class="faq-item" data-inview>
-              <span class="faq-rule" aria-hidden="true"></span>
-              <details class="faq-row">
+              <span class="faq-rule" aria-hidden="true" />
+              <details class="faq-row" data-i={i}>
                 <summary class="faq-sum">
                   <span class="faq-i label" aria-hidden="true">
                     {pad(i + 1)}
                   </span>
                   <span class="faq-q">{item.q}</span>
-                  <span class="faq-plus" aria-hidden="true">
-                    <span></span>
-                    <span></span>
+                  <span class="faq-icon" aria-hidden="true">
+                    <i />
+                    <i />
                   </span>
                 </summary>
                 <div class="faq-a">
@@ -69,7 +137,7 @@ const sideLabel = faqSection.side.label.replace(/\s*→\s*$/, '');
           ))
         }
       </ol>
-      <span class="faq-rule faq-rule-end" data-reveal="draw" aria-hidden="true"></span>
+      <span class="faq-rule faq-rule-end" data-reveal="draw" aria-hidden="true" />
     </div>
   </div>
 </section>
@@ -86,6 +154,10 @@ const sideLabel = faqSection.side.label.replace(/\s*→\s*$/, '');
     margin-bottom: var(--s-48);
   }
 
+  .faq-float {
+    transform: translate3d(0, var(--fy, 0px), 0);
+  }
+
   .faq-h2 {
     margin-top: var(--s-24);
     max-width: 10ch;
@@ -99,7 +171,130 @@ const sideLabel = faqSection.side.label.replace(/\s*→\s*$/, '');
   }
 
   .faq-hours {
+    margin-top: var(--s-8);
     color: var(--ink-3);
+  }
+
+  /* ---- the dial (≥1100 only) ---- */
+  .dial {
+    display: none;
+  }
+
+  @media (min-width: 1100px) {
+    .dial {
+      display: block;
+      width: min(100%, 248px);
+      margin-top: var(--s-48);
+    }
+  }
+
+  .dial-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+
+  .dial-ring {
+    transform: rotate(var(--ring, 0deg));
+    transition: transform 900ms var(--ease-expo);
+  }
+
+  .dial-arc,
+  .dial-inner {
+    fill: none;
+    stroke: var(--ink);
+    stroke-opacity: 0.16;
+    stroke-width: 1;
+  }
+
+  .dial-inner {
+    stroke-opacity: 0.09;
+  }
+
+  .tick {
+    stroke: var(--ink);
+    stroke-opacity: 0.22;
+    stroke-width: 1;
+  }
+
+  .tick.major {
+    stroke-opacity: 0.6;
+  }
+
+  .needle {
+    transform: rotate(calc(var(--needle, -135deg) + var(--ring, 0deg)));
+    transition: transform 1100ms var(--ease-expo);
+  }
+
+  .needle-line {
+    stroke: var(--violet);
+    stroke-width: 1.5;
+  }
+
+  .needle-tip {
+    fill: var(--violet);
+  }
+
+  .needle-hub {
+    fill: var(--ink);
+  }
+
+  .dial-read {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-top: var(--s-16);
+    color: var(--ink-2);
+  }
+
+  .dial-mask {
+    display: inline-block;
+    overflow: clip;
+    perspective: 400px;
+  }
+
+  .dial-n {
+    display: inline-block;
+    color: var(--violet-ink);
+    transform-origin: 50% 100%;
+  }
+
+  .dial-n.is-flip {
+    animation: dial-flip 520ms var(--ease-expo) both;
+  }
+
+  @keyframes dial-flip {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 90%, 0) rotateX(-80deg);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* dial entry: the ring turns in, the needle sweeps from the stop */
+  .dial-svg,
+  .dial-read {
+    transition:
+      opacity 700ms linear,
+      transform 1600ms var(--ease-expo);
+  }
+
+  .dial-read {
+    transition-delay: 300ms;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .dial:not(.is-in) .dial-svg {
+    opacity: 0;
+    transform: rotate(-70deg) scale(0.86);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .dial:not(.is-in) .dial-read {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
   }
 
   /* ----------------------------------------------------------------- list */
@@ -109,14 +304,15 @@ const sideLabel = faqSection.side.label.replace(/\s*→\s*$/, '');
     /* index column: 40px on phones, 56px on tablets, one grid column on desktop */
     --idx: 40px;
     --q: clamp(1.0625rem, 1rem + 0.3vw, 1.1875rem);
-    --plus: 14px;
+    --icon: 32px;
     /* the summary reaches this far into the row padding, so the focus ring
-       frames the whole row instead of touching the index and the plus */
+       frames the whole row instead of touching the index and the icon */
     --ring: 12px;
   }
 
   .faq-item {
     position: relative;
+    perspective: 1200px;
   }
 
   .faq-rule {
@@ -136,13 +332,28 @@ const sideLabel = faqSection.side.label.replace(/\s*→\s*$/, '');
      and the row content sits inset inside it (see the layout block). */
   .faq-row {
     position: relative;
+    isolation: isolate;
     margin-inline: calc(var(--gut) * -1);
     padding-inline: var(--gut);
     background-color: var(--paper);
-    transition: background-color var(--t-ui) linear;
+    transform-origin: 50% 0;
   }
 
-  /* the open row's edge: a 2px violet bar that draws down with the answer */
+  /* the band: paper-2 sweeps in from the left when the row opens */
+  .faq-row::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-color: var(--paper-2);
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 760ms var(--ease-expo);
+    pointer-events: none;
+  }
+
+  /* the open row's edge: a 2px violet bar that draws down with the answer,
+     and a violet hairline that draws across the top */
   .faq-row::before {
     content: '';
     position: absolute;
@@ -153,7 +364,7 @@ const sideLabel = faqSection.side.label.replace(/\s*→\s*$/, '');
     background-color: var(--violet);
     transform: scaleY(0);
     transform-origin: center top;
-    transition: transform 420ms var(--ease-mech);
+    transition: transform 620ms var(--ease-expo);
     pointer-events: none;
   }
 
@@ -162,11 +373,11 @@ const sideLabel = faqSection.side.label.replace(/\s*→\s*$/, '');
     position: relative;
     z-index: 1;
     display: grid;
-    grid-template-columns: var(--idx) minmax(0, 1fr) var(--plus);
-    align-items: baseline;
+    grid-template-columns: var(--idx) minmax(0, 1fr) var(--icon);
+    align-items: start;
     min-height: 64px;
     margin-inline: calc(var(--ring) * -1);
-    padding: 20px var(--ring);
+    padding: 16px var(--ring);
     list-style: none;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
@@ -187,6 +398,8 @@ const sideLabel = faqSection.side.label.replace(/\s*→\s*$/, '');
   /* proportional figures on purpose: Mona Sans' tabular set draws a slashed,
      monospaced-looking zero */
   .faq-i {
+    /* level with the question's first line */
+    padding-top: calc((var(--q) * 1.3 - 1.2em) / 2 + 1px);
     color: var(--ink-3);
     transition:
       color var(--t-ui) linear,
@@ -201,37 +414,46 @@ const sideLabel = faqSection.side.label.replace(/\s*→\s*$/, '');
     line-height: 1.3;
     letter-spacing: -0.01em;
     text-wrap: balance;
+    transition: transform var(--t-ui) var(--ease-expo);
   }
 
-  /* hairline plus: two 1px lines; the vertical one turns a quarter to lie flat */
-  .faq-plus {
+  /* circled plus → minus: the vertical bar turns and folds into the
+     horizontal one while the disc fills violet and turns half a turn */
+  .faq-icon {
     position: relative;
-    align-self: start;
-    width: var(--plus);
-    height: calc(var(--q) * 1.3);
-    color: var(--ink-2);
-    transition: color var(--t-ui) linear;
+    width: var(--icon);
+    height: var(--icon);
+    margin-top: calc((var(--q) * 1.3 - var(--icon)) / 2);
+    border: 1px solid var(--line-strong);
+    border-radius: 50%;
+    transition:
+      border-color var(--t-ui) linear,
+      background-color var(--t-ui) linear,
+      transform 620ms var(--ease-expo);
   }
 
-  .faq-plus > span {
+  .faq-icon i {
     position: absolute;
-    left: 0;
+    left: 50%;
     top: 50%;
-    width: 100%;
-    height: 1px;
-    background-color: currentColor;
+    width: 12px;
+    height: 1.5px;
+    margin: -0.75px 0 0 -6px;
+    background-color: var(--ink);
+    transition:
+      transform 620ms var(--ease-expo),
+      background-color var(--t-ui) linear;
   }
 
-  .faq-plus > span:last-child {
+  .faq-icon i:last-child {
     transform: rotate(90deg);
-    transition: transform 420ms var(--ease-mech);
   }
 
   /* answer: grid rows 0fr→1fr. The default is the open, final state. */
   .faq-a {
     display: grid;
     grid-template-rows: 1fr;
-    transition: grid-template-rows 420ms var(--ease-mech);
+    transition: grid-template-rows 640ms var(--ease-expo);
   }
 
   .faq-a-in {
@@ -242,22 +464,25 @@ const sideLabel = faqSection.side.label.replace(/\s*→\s*$/, '');
   .faq-a p {
     max-width: 60ch;
     margin-left: var(--idx);
-    /* phones keep the full measure; wider screens stop short of the plus */
+    /* phones keep the full measure; wider screens stop short of the icon */
     padding-bottom: var(--s-24);
     color: var(--ink-2);
     font-size: clamp(1rem, 0.96rem + 0.12vw, 1.0625rem);
     line-height: 1.6;
     text-wrap: pretty;
+    transform-origin: 0 0;
     transition:
-      opacity 160ms linear,
-      transform 160ms linear;
+      opacity 200ms linear,
+      transform 260ms var(--ease-expo);
   }
 
   /* ---- open state (native [open] without JS; .is-open once enhanced) ---- */
 
-  .faq:not(.is-enhanced) .faq-row[open],
-  .faq-row.is-open {
-    background-color: var(--paper-2);
+  .faq:not(.is-enhanced) .faq-row[open]::after,
+  .faq-row.is-open::after,
+  .faq:not(.is-enhanced) .faq-row[open]::before,
+  .faq-row.is-open::before {
+    transform: none;
   }
 
   .faq:not(.is-enhanced) .faq-row[open] .faq-i,
@@ -266,25 +491,27 @@ const sideLabel = faqSection.side.label.replace(/\s*→\s*$/, '');
     color: var(--violet-ink);
   }
 
-  .faq:not(.is-enhanced) .faq-row[open]::before,
-  .faq-row.is-open::before {
-    transform: none;
-  }
-
-  .faq:not(.is-enhanced) .faq-row[open] .faq-plus,
-  .faq-row.is-open .faq-plus {
-    color: var(--ink);
-  }
-
-  .faq:not(.is-enhanced) .faq-row[open] .faq-plus > span:last-child,
-  .faq-row.is-open .faq-plus > span:last-child {
+  .faq:not(.is-enhanced) .faq-row[open] .faq-icon,
+  .faq-row.is-open .faq-icon {
+    border-color: var(--violet);
+    background-color: var(--violet);
     transform: rotate(180deg);
+  }
+
+  .faq:not(.is-enhanced) .faq-row[open] .faq-icon i,
+  .faq-row.is-open .faq-icon i {
+    background-color: var(--white);
+  }
+
+  .faq:not(.is-enhanced) .faq-row[open] .faq-icon i:last-child,
+  .faq-row.is-open .faq-icon i:last-child {
+    transform: rotate(0deg) scaleX(0);
   }
 
   .faq-row.is-open .faq-a p {
     transition:
-      opacity 360ms linear 90ms,
-      transform 700ms var(--ease-expo) 60ms;
+      opacity 420ms linear 120ms,
+      transform 900ms var(--ease-expo) 80ms;
   }
 
   /* enhanced: a row that is closing (or about to open) sits at 0fr */
@@ -294,19 +521,23 @@ const sideLabel = faqSection.side.label.replace(/\s*→\s*$/, '');
 
   .faq.is-enhanced .faq-row:not(.is-open) .faq-a p {
     opacity: 0;
-    transform: translate3d(0, 8px, 0);
+    transform: translate3d(0, 18px, 0);
   }
 
-  /* ---- hover / focus: the index steps 4px right and goes to full ink ---- */
+  /* ---- hover / focus: the index and the question step right ---- */
 
   @media (hover: hover) and (pointer: fine) {
     .faq-sum:hover .faq-i {
-      transform: translate3d(4px, 0, 0);
+      transform: translate3d(6px, 0, 0);
       color: var(--ink);
     }
 
-    .faq-sum:hover .faq-plus {
-      color: var(--ink);
+    .faq-sum:hover .faq-q {
+      transform: translate3d(6px, 0, 0);
+    }
+
+    .faq-sum:hover .faq-icon {
+      border-color: var(--ink);
     }
 
     /* the violet edge draws down the row you are about to open */
@@ -316,7 +547,7 @@ const sideLabel = faqSection.side.label.replace(/\s*→\s*$/, '');
   }
 
   .faq-sum:focus-visible .faq-i {
-    transform: translate3d(4px, 0, 0);
+    transform: translate3d(6px, 0, 0);
     color: var(--ink);
   }
 
@@ -325,7 +556,8 @@ const sideLabel = faqSection.side.label.replace(/\s*→\s*$/, '');
     color: var(--violet-ink);
   }
 
-  /* ---- entry: the hairline draws, then the row rises (rows cascade) ---- */
+  /* ---- entry: the hairline draws, then the row swings down on its top
+     edge (rows cascade) ---- */
 
   .faq-item .faq-rule {
     transition:
@@ -336,10 +568,9 @@ const sideLabel = faqSection.side.label.replace(/\s*→\s*$/, '');
 
   .faq-item .faq-row {
     transition:
-      opacity var(--t-reveal) var(--ease-expo),
-      transform var(--t-reveal) var(--ease-expo),
-      background-color var(--t-ui) linear;
-    transition-delay: calc(var(--d, 0ms) + 140ms), calc(var(--d, 0ms) + 140ms), 0ms;
+      opacity 600ms linear,
+      transform 1300ms var(--ease-expo);
+    transition-delay: calc(var(--d, 0ms) + 120ms);
   }
 
   :global(html.js:not(.motion-reduced):not(.motion-failed)) .faq-item:not(.is-in) .faq-rule {
@@ -349,14 +580,23 @@ const sideLabel = faqSection.side.label.replace(/\s*→\s*$/, '');
 
   :global(html.js:not(.motion-reduced):not(.motion-failed)) .faq-item:not(.is-in) .faq-row {
     opacity: 0;
-    transform: translate3d(0, var(--rise), 0);
+    transform: rotateX(-78deg) translate3d(0, -8px, 0);
   }
 
   :global(html.motion-reduced) .faq-a,
   :global(html.motion-reduced) .faq-a p,
   :global(html.motion-reduced) .faq-row::before,
-  :global(html.motion-reduced) .faq-plus > span:last-child {
+  :global(html.motion-reduced) .faq-row::after,
+  :global(html.motion-reduced) .faq-icon,
+  :global(html.motion-reduced) .faq-icon i,
+  :global(html.motion-reduced) .needle,
+  :global(html.motion-reduced) .dial-ring {
     transition: none;
+  }
+
+  :global(html.motion-reduced) .faq-float,
+  :global(html.motion-failed) .faq-float {
+    transform: none;
   }
 
   /* --------------------------------------------------------------- layout */
@@ -374,8 +614,8 @@ const sideLabel = faqSection.side.label.replace(/\s*→\s*$/, '');
     }
 
     .faq-sum {
-      min-height: 72px;
-      padding-block: 22px;
+      min-height: 76px;
+      padding-block: 18px;
     }
 
     .faq-q {
@@ -383,12 +623,8 @@ const sideLabel = faqSection.side.label.replace(/\s*→\s*$/, '');
     }
 
     .faq-a p {
-      padding-right: calc(var(--plus) + var(--s-24));
+      padding-right: calc(var(--icon) + var(--s-24));
       padding-bottom: var(--s-32);
-    }
-
-    .faq-side {
-      margin-top: var(--s-32);
     }
   }
 
@@ -404,7 +640,7 @@ const sideLabel = faqSection.side.label.replace(/\s*→\s*$/, '');
     }
 
     .faq-side {
-      margin-top: var(--s-48);
+      margin-top: var(--s-40, 40px);
     }
 
     .faq-main {
@@ -422,16 +658,23 @@ const sideLabel = faqSection.side.label.replace(/\s*→\s*$/, '');
 </style>
 
 <script>
-  import { isReduced } from '../../scripts/motion';
+  import { addFrame, requestFrame, isReduced, vestibular } from '../../scripts/motion';
 
-  /* Matches the 420ms grid-template-rows transition in the styles. */
-  const CLOSE_MS = 420;
+  /* Matches the 640ms grid-template-rows transition in the styles. */
+  const CLOSE_MS = 600;
 
   function initFaq(root: HTMLElement): void {
     const rows = Array.from(root.querySelectorAll<HTMLDetailsElement>('details.faq-row'));
     if (!rows.length) return;
 
     const timers = new WeakMap<HTMLDetailsElement, number>();
+    const dial = root.querySelector<HTMLElement>('[data-faq-dial]');
+    const count = root.querySelector<HTMLElement>('[data-faq-count]');
+    const float = root.querySelector<HTMLElement>('.faq-float');
+    const list = root.querySelector<HTMLElement>('.faq-list');
+    const n = rows.length;
+    const pad = (k: number) => String(k).padStart(2, '0');
+    let openIdx = -1;
 
     const clearTimer = (row: HTMLDetailsElement) => {
       const t = timers.get(row);
@@ -439,19 +682,10 @@ const sideLabel = faqSection.side.label.replace(/\s*→\s*$/, '');
       timers.delete(row);
     };
 
-    const open = (row: HTMLDetailsElement, animate: boolean) => {
-      clearTimer(row);
-      if (!row.open) {
-        row.open = true;
-        // commit the collapsed (0fr) frame so the rows transition to 1fr
-        if (animate) void row.offsetHeight;
-      }
-      row.classList.add('is-open');
-    };
-
     const close = (row: HTMLDetailsElement, animate: boolean) => {
       row.classList.remove('is-open');
       clearTimer(row);
+      if (Number(row.dataset.i) === openIdx) openIdx = -1;
       if (!animate) {
         row.open = false;
         return;
@@ -465,6 +699,20 @@ const sideLabel = faqSection.side.label.replace(/\s*→\s*$/, '');
       );
     };
 
+    const open = (row: HTMLDetailsElement, animate: boolean) => {
+      // one answer at a time
+      rows.forEach((r) => r !== row && r.classList.contains('is-open') && close(r, animate));
+      clearTimer(row);
+      openIdx = Number(row.dataset.i);
+      if (!row.open) {
+        row.open = true;
+        // commit the collapsed (0fr) frame so the rows transition to 1fr
+        if (animate) void row.offsetHeight;
+      }
+      row.classList.add('is-open');
+      requestFrame();
+    };
+
     rows.forEach((row) => {
       const summary = row.querySelector('summary');
       if (!summary) return;
@@ -475,6 +723,7 @@ const sideLabel = faqSection.side.label.replace(/\s*→\s*$/, '');
         const animate = !isReduced();
         if (row.classList.contains('is-open')) close(row, animate);
         else open(row, animate);
+        requestFrame();
       });
 
       // Native toggles (find-in-page opening a match) keep the class in step.
@@ -484,23 +733,89 @@ const sideLabel = faqSection.side.label.replace(/\s*→\s*$/, '');
       });
     });
 
-    /* Rows entering the viewport together cascade 60ms apart; a row that
+    /* Rows entering the viewport together cascade 70ms apart; a row that
        scrolls in on its own starts at once. The engine adds .is-in and then
        dispatches vesta:reveal in the same task, so the delay set here is in
        place before the style change is computed. */
-    const list = root.querySelector<HTMLElement>('.faq-list');
     if (list) {
       let last = -Infinity;
-      let n = 0;
+      let k = 0;
       list.addEventListener('vesta:reveal', (e) => {
         const item = e.target as HTMLElement;
         if (!item.classList || !item.classList.contains('faq-item')) return;
         const now = performance.now();
-        n = now - last < 32 ? n + 1 : 0;
+        k = now - last < 32 ? k + 1 : 0;
         last = now;
-        item.style.setProperty('--d', `${Math.min(n, 8) * 60}ms`);
+        item.style.setProperty('--d', `${Math.min(k, 10) * 70}ms`);
       });
     }
+
+    /* ---- scroll: the aside drifts, the dial follows your place ---- */
+    let near = false;
+    let fy = 0;
+    let ringDeg = 0;
+    let needle = -135;
+    let shown = 1;
+    let wFy = NaN;
+    let wRing = NaN;
+    let wNeedle = NaN;
+    const wide = window.matchMedia('(min-width: 1100px)');
+
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(
+        (entries) => {
+          near = entries.some((e) => e.isIntersecting);
+          if (near) requestFrame();
+        },
+        { rootMargin: '10% 0px' }
+      ).observe(root);
+    } else {
+      near = true;
+    }
+
+    addFrame({
+      read(_y, vh) {
+        if (!near || !wide.matches || !list) return;
+        const s = root.getBoundingClientRect();
+        const l = list.getBoundingClientRect();
+        /* section progress 0 → 1 while it crosses the viewport */
+        const p = Math.min(1, Math.max(0, (vh - s.top) / (vh + s.height)));
+        /* place in the list: 0 when its top meets 40% of the viewport, 1
+           when its bottom does */
+        const q = Math.min(1, Math.max(0, (vh * 0.4 - l.top) / Math.max(1, l.height - 40)));
+        const still = vestibular();
+        fy = still ? 0 : (0.5 - p) * 64;
+        ringDeg = still ? 0 : (p - 0.5) * 24;
+        const at = openIdx >= 0 ? openIdx : q * (n - 1);
+        needle = -135 + (n > 1 ? (at / (n - 1)) * 270 : 0);
+        shown = openIdx >= 0 ? openIdx + 1 : Math.round(q * (n - 1)) + 1;
+      },
+      write() {
+        if (float && fy !== wFy) {
+          wFy = fy;
+          float.style.setProperty('--fy', `${fy.toFixed(1)}px`);
+        }
+        if (dial && ringDeg !== wRing) {
+          wRing = ringDeg;
+          dial.style.setProperty('--ring', `${ringDeg.toFixed(2)}deg`);
+        }
+        if (dial && needle !== wNeedle && dial.classList.contains('is-in')) {
+          wNeedle = needle;
+          dial.style.setProperty('--needle', `${needle.toFixed(2)}deg`);
+        }
+        if (count && count.textContent !== pad(shown)) {
+          count.textContent = pad(shown);
+          if (!isReduced()) {
+            count.classList.remove('is-flip');
+            void count.offsetWidth;
+            count.classList.add('is-flip');
+          }
+        }
+      },
+    });
+
+    /* the needle sweeps from its stop once the dial has turned in */
+    dial?.addEventListener('vesta:reveal', () => window.setTimeout(requestFrame, 500));
 
     root.classList.add('is-enhanced');
   }

@@ -1,50 +1,49 @@
 ---
 /**
- * /contact/ (SPEC §7 /contact/, re-skinned by SPEC_COSMOS; no clocks, no QR).
+ * /contact/ (SPEC §7 /contact/, SPEC_COSMOS; ROUND2 points 5 and 10; ROUND3
+ * 3D and motion). No clocks, no QR.
  *
- * 1. Head (void, a quiet star field): label, H1 (word mask on load), haze
- *    lead. Beside it (below it on phones) the primary panel: a faceted violet
- *    plate with the WhatsApp number at N2 and three starlight quick-start
- *    buttons, each with its own prefill. The panel is the page's sticky-bar
- *    anchor: the mobile bar only appears once the panel has scrolled away.
- * 2. Compose (paper): "What to include in your first message" (four
- *    numbered hairline rows) and the message helper — an optional composer
- *    that runs in the browser, shows the exact message and opens WhatsApp
- *    with it. It stores nothing and sends nothing. Without JS it stays
- *    hidden (the `hidden` attribute is removed by the script) and the
- *    quick-start links above remain. While the helper fills the bottom of
- *    the screen the mobile sticky bar steps aside (data-sticky-hide), so it
- *    never sits over the fields or competes with the helper's own button.
- * 3. Details (paper-2): LinkedIn, static hours, company details, and
- *    "Or configure a build →" (/#configure).
+ * 1. Head (void, living star field): label, H1 (3D word flip on load), one
+ *    line of lead. Two channels, equal weight:
+ *    - WhatsApp: the faceted violet plate. It swings in out of depth on
+ *      load, tilts toward the pointer (a soft light follows the pointer
+ *      inside the plate), and a planet rides the hairline orbit in its
+ *      corner. The number at N2, three quick-starts, "Copy number". The
+ *      plate is the page's sticky-bar anchor.
+ *    - Email: the address set large on its own line, flipping up from its
+ *      baseline, with "Write an email" and "Copy address".
+ * 2. Compose (paper): the message helper. Left, its title and "What to
+ *    include" folded into an expandable box; right, the form. The preview
+ *    flips when the message changes; the message opens in WhatsApp OR in the
+ *    visitor's email app. Nothing is stored or sent by the page. Hidden
+ *    without JS (the links above remain).
+ * 3. Details (paper-2): LinkedIn, the time zone line, the company facts in a
+ *    box, and "Or configure a build →".
  */
 import Base from '../layouts/Base.astro';
 import Cosmos from '../components/Cosmos.astro';
 import SectionLabel from '../components/ui/SectionLabel.astro';
 import SplitText from '../components/ui/SplitText.astro';
+import Expand from '../components/ui/Expand.astro';
 import Arrow from '../components/ui/Arrow.astro';
 import WaGlyph from '../components/ui/WaGlyph.astro';
-import { contact, contactPage, finale, wa, type HelperNeed } from '../data/site';
+import MailGlyph from '../components/ui/MailGlyph.astro';
+import { brand, contact, contactPage, finale, mail, wa, type HelperNeed } from '../data/site';
 import { url, absolute } from '../lib/url';
-
-/* Strings the page needs that site.ts does not carry yet (reported). */
-const TODO_SITE = {
-  /** Label at the top of the violet panel. */
-  panelLabel: 'WhatsApp',
-  /** Heading of the live message preview in the helper. */
-  preview: 'Your message',
-};
 
 /* ---- typesetting helpers (the words are unchanged) --------------------- */
 const WJ = String.fromCharCode(0x2060);
-const NBSP = String.fromCharCode(160);
 const keepRange = (s: string) => s.replace(/(\w)–(\w)/g, `$1${WJ}–${WJ}$2`);
-const tie = (t: string) => t.replace(/(^|\s)([AaI])\s+/g, (_m, pre: string, w: string) => pre + w + NBSP);
 
 /* ---- the number: country + area code set small, the line at N2 -------- */
 const numParts = contactPage.panel.number.match(/^(\+\d+\s\d+)\s(.+)$/);
 const [cc, local] = numParts ? [numParts[1], numParts[2]] : ['', contactPage.panel.number];
-const copyValue = `+${contact.whatsapp.e164}`;
+const copyNumber = `+${contact.whatsapp.e164}`;
+
+/* ---- the address: may break before the @ on the narrowest phones ------- */
+const address = contact.email.address;
+const [mailUser, mailHost] = address.includes('@') ? [address.slice(0, address.indexOf('@')), address.slice(address.indexOf('@'))] : [address, ''];
+const mailHref = mail(contact.email.subject);
 
 /* ---- the helper's message template -------------------------------------
    The message wording lives in site.ts (contactPage.helper.message). To keep
@@ -98,61 +97,106 @@ const jsonLd = {
           <SectionLabel name={contactPage.label.name} reveal={false} />
         </div>
         <SplitText as="h1" id="contact-title" class="h1" text={contactPage.h1} load delay={80} />
-        <p class="lead head-lead" data-load style="--d:400ms">{keepRange(contactPage.lead)}</p>
-        {
-          contact.linkedin.confirmed && (
-            <p class="head-alt" data-load style="--d:620ms">
-              <a class="tlink" href={contactPage.linkedin.href} target="_blank" rel="noopener">
-                <span>{linkedinText}</span>
-                <Arrow dir="up-right" />
-              </a>
-            </p>
-          )
-        }
+        <p class="lead head-lead" data-load style="--d:420ms">{keepRange(contactPage.lead)}</p>
       </header>
 
       {
         contact.whatsapp.confirmed && (
-          <div class="panel" data-sticky-anchor data-load style="--d:520ms" data-contact-panel>
-            <svg class="panel-orbit" viewBox="0 0 400 300" preserveAspectRatio="xMaxYMin slice" aria-hidden="true" focusable="false">
-              <g transform="rotate(-24 330 40)">
-                <ellipse cx="330" cy="40" rx="190" ry="72" />
-                <circle cx="520" cy="40" r="3" />
-              </g>
-            </svg>
+          <div class="panel-in" data-sticky-anchor data-contact-panel>
+            <div class="panel" data-tilt="3" data-light>
+              <div class="panel-fx" aria-hidden="true">
+                <svg class="panel-orbit" viewBox="0 0 400 300" preserveAspectRatio="xMaxYMin slice" focusable="false" data-loop>
+                  <g transform="translate(330 40) rotate(-24)">
+                    <ellipse rx="190" ry="72" />
+                    <g class="p-orb-x">
+                      <g class="p-orb-y">
+                        <circle r="3" />
+                      </g>
+                    </g>
+                  </g>
+                </svg>
+                <span class="panel-light"></span>
+              </div>
 
-            <p class="panel-label label">
-              <WaGlyph size={16} />
-              <span>{TODO_SITE.panelLabel}</span>
+              <p class="panel-label label">
+                <WaGlyph size={16} />
+                <span>{contactPage.panel.label}</span>
+              </p>
+
+              <p class="panel-number">
+                <a class="n2 number" href={contact.whatsapp.url} target="_blank" rel="noopener" data-wa-intent="contact-number" id="wa-number">
+                  {cc && <span class="cc">{cc}</span>}
+                  {cc && ' '}
+                  <span class="local">{local}</span>
+                </a>
+              </p>
+              <p class="small panel-note">{finale.reassurance}</p>
+
+              <ul class="quick">
+                {
+                  contactPage.panel.quickStarts.map((q, k) => (
+                    <li class="q-cell" style={`--k:${k}`}>
+                      <a class="btn btn-star q" href={wa(q.text)} target="_blank" rel="noopener" data-wa-intent={`contact-${q.id}`}>
+                        <span class="q-lbl">{q.label}</span>
+                        <Arrow />
+                      </a>
+                    </li>
+                  ))
+                }
+              </ul>
+
+              <p class="panel-copy">
+                <button
+                  type="button"
+                  class="copy"
+                  data-copy={copyNumber}
+                  data-copy-target="wa-number"
+                  data-copied={finale.number.copied}
+                  data-copied-ms={finale.number.copiedMs}
+                >
+                  <span class="copy-text">
+                    <span class="copy-label" data-copy-label>{finale.number.copy}</span>
+                    <span class="copy-sizer" aria-hidden="true">{finale.number.copy}</span>
+                  </span>
+                </button>
+                <span class="visually-hidden" role="status" aria-live="polite" data-copy-status></span>
+              </p>
+            </div>
+          </div>
+        )
+      }
+
+      {
+        contact.email.confirmed && (
+          <div class="mailline">
+            <p class="label ml-k" data-load style="--d:560ms">
+              <MailGlyph size={16} />
+              <span>{contactPage.email.label}</span>
+              <span class="ml-rule" aria-hidden="true" />
             </p>
-
-            <p class="panel-number">
-              <a class="n2 number" href={contact.whatsapp.url} target="_blank" rel="noopener" data-wa-intent="contact-number">
-                {cc && <span class="cc">{cc}</span>}
-                {cc && ' '}
-                <span class="local">{local}</span>
+            <p class="ml-addr-row">
+              <a class="ml-addr" href={mailHref} data-mail-intent="contact-address" id="mail-address">
+                <span class="ml-user">{mailUser}</span>
+                <wbr />
+                <span class="ml-host">{mailHost}</span>
               </a>
             </p>
-            <p class="small panel-note">{finale.reassurance}</p>
-
-            <ul class="quick">
-              {
-                contactPage.panel.quickStarts.map((q) => (
-                  <li>
-                    <a class="btn btn-star q" href={wa(q.text)} target="_blank" rel="noopener" data-wa-intent={`contact-${q.id}`}>
-                      <span class="q-lbl">{q.label}</span>
-                      <Arrow />
-                    </a>
-                  </li>
-                ))
-              }
-            </ul>
-
-            <p class="panel-copy">
-              <button type="button" class="copy" data-copy={copyValue} data-copied={finale.number.copied} data-copied-ms={finale.number.copiedMs}>
+            <p class="ml-acts" data-load style="--d:900ms">
+              <a class="tlink" href={mailHref} data-mail-intent="contact-write">
+                <span>{contactPage.email.write}</span>
+                <Arrow />
+              </a>
+              <button
+                type="button"
+                class="copy"
+                data-copy={address}
+                data-copy-target="mail-address"
+                data-copied={contactPage.email.copied}
+                data-copied-ms={finale.number.copiedMs}
+              >
                 <span class="copy-text">
-                  <span class="copy-label" data-copy-label>{finale.number.copy}</span>
-                  <span class="copy-sizer" aria-hidden="true">{finale.number.copy}</span>
+                  <span class="copy-label" data-copy-label>{contactPage.email.copy}</span>
+                  <span class="copy-sizer" aria-hidden="true">{contactPage.email.copy}</span>
                 </span>
               </button>
               <span class="visually-hidden" role="status" aria-live="polite" data-copy-status></span>
@@ -164,26 +208,27 @@ const jsonLd = {
   </section>
 
   {/* -------------------------------------------------------------- compose */}
-  <section class="compose s-paper section" data-nav-theme="light" aria-labelledby="include-title">
-    <div class="wrap g compose-grid">
-      <div class="include">
-        <SplitText as="h2" id="include-title" class="d3 include-title" text={contactPage.include.title} />
-        <ol class="inc-list">
-          {
-            contactPage.include.items.map((it, r) => (
-              <li class="inc-row" data-inview style={`--r:${r}`}>
-                <span class="inc-line" aria-hidden="true" />
-                <span class="label inc-n" aria-hidden="true">{it.index}</span>
-                <span class="inc-text">{it.text}</span>
-                {r === contactPage.include.items.length - 1 && <span class="inc-line inc-line-end" aria-hidden="true" />}
-              </li>
-            ))
-          }
-        </ol>
+  <section class="compose s-paper section" data-nav-theme="light" aria-labelledby="helper-title">
+    <div class="wrap g compose-grid" data-scene>
+      <div class="compose-head">
+        <SplitText as="h2" id="helper-title" class="d2 helper-title" text={contactPage.helper.title} />
+        <div class="include">
+          <Expand title={contactPage.include.title} keywords={contactPage.more.include.keywords} index="01" i={1}>
+            <ol class="inc-list">
+              {
+                contactPage.include.items.map((it) => (
+                  <li class="inc-row">
+                    <span class="label inc-n" aria-hidden="true">{it.index}</span>
+                    <span class="inc-text">{it.text}</span>
+                  </li>
+                ))
+              }
+            </ol>
+          </Expand>
+        </div>
       </div>
 
       <div class="helper" hidden data-helper data-sticky-hide data-tpl={helperTpl}>
-        <h2 class="d3 helper-title" data-reveal>{contactPage.helper.title}</h2>
         <form class="form" data-helper-form novalidate autocomplete="off">
           <div class="field" data-reveal style="--i:1">
             <label class="label f-label" for="h-business">{contactPage.helper.fields.business.label}</label>
@@ -223,34 +268,56 @@ const jsonLd = {
             <label class="label f-label" for="h-extra">{contactPage.helper.fields.extra.label}</label>
             <textarea class="input area" id="h-extra" name="extra" rows="3" maxlength="600"></textarea>
           </div>
+        </form>
+      </div>
 
-          <div class="preview" data-reveal style="--i:5">
-            <p class="label preview-label" id="h-preview-label">{TODO_SITE.preview}</p>
+      <div class="outbox" hidden data-outbox data-sticky-hide>
+        <div class="preview-wrap" data-reveal style="--i:5">
+          <div class="preview" data-helper-card data-tilt="4">
+            <p class="label preview-label" id="h-preview-label">{contactPage.helper.preview}</p>
             <p class="preview-text" data-helper-preview aria-labelledby="h-preview-label">{initialMessage}</p>
           </div>
+        </div>
 
-          <div class="send" data-reveal style="--i:6">
-            <a class="btn send-btn" href={wa(initialMessage)} target="_blank" rel="noopener" data-wa-intent="contact-helper" data-helper-send>
+        <div class="send" data-reveal style="--i:6">
+          <div class="send-btns">
+            <a class="btn send-btn" href={wa(initialMessage)} target="_blank" rel="noopener" data-wa-intent="contact-helper" data-helper-send data-magnetic=".18">
               <WaGlyph size={16} />
               <span class="b-lbl">{contactPage.helper.button}</span>
               <Arrow />
             </a>
-            <p class="small send-note">{contactPage.helper.note}</p>
+            {
+              contact.email.confirmed && (
+                <a
+                  class="btn btn-line send-mail"
+                  href={mail(contact.email.subject, initialMessage)}
+                  data-mail-intent="contact-helper"
+                  data-helper-mail
+                  data-subject={contact.email.subject}
+                  data-magnetic=".18"
+                >
+                  <MailGlyph size={16} />
+                  <span>{contactPage.helper.emailButton}</span>
+                  <Arrow />
+                </a>
+              )
+            }
           </div>
-        </form>
+          <p class="small send-note">{contactPage.helper.note}</p>
+        </div>
       </div>
     </div>
   </section>
 
   {/* -------------------------------------------------------------- details */}
-  <section class="details s-paper-2 section" data-nav-theme="light">
-    <div class="wrap g details-grid">
+  <section class="details s-paper-2 section" data-nav-theme="light" aria-label={contactPage.company.title}>
+    <div class="wrap g details-grid" data-scene="soft">
       {
         contact.linkedin.confirmed && (
           <div class="d-block d-li">
             <h2 class="label d-title" data-reveal>{contactPage.linkedin.title}</h2>
             <span class="rule d-rule" data-reveal="draw" aria-hidden="true" />
-            <p class="d-li-link" data-reveal style="--i:1">
+            <p class="d-text" data-reveal style="--i:1">
               <a class="tlink li" href={contactPage.linkedin.href} target="_blank" rel="noopener">
                 <span>{linkedinText}</span>
                 <Arrow dir="up-right" />
@@ -263,29 +330,31 @@ const jsonLd = {
       <div class="d-block d-hours">
         <h2 class="label d-title" data-reveal>{contactPage.hours.title}</h2>
         <span class="rule d-rule" data-reveal="draw" style="--d:90ms" aria-hidden="true" />
-        <p class="d-hours-text" data-reveal style="--i:1">{keepRange(contactPage.hours.text)}</p>
+        <p class="d-text d-hours-text" data-reveal style="--i:1">{keepRange(contactPage.hours.text)}</p>
         <p class="small d-hours-offset" data-reveal style="--i:2">{keepRange(contactPage.hours.offset)}</p>
       </div>
 
       <div class="d-block d-company">
         <h2 class="label d-title" data-reveal>{contactPage.company.title}</h2>
         <span class="rule d-rule" data-reveal="draw" style="--d:180ms" aria-hidden="true" />
-        <dl class="d-table">
-          {
-            contactPage.company.rows.map((row, r) => (
-              <div class="d-row" data-reveal style={`--i:${r + 1}`}>
-                <dt class="small">{row.label}</dt>
-                <dd>{row.value}</dd>
-              </div>
-            ))
-          }
-        </dl>
+        <Expand title={brand.legalName} keywords={contactPage.more.company.keywords} i={2}>
+          <dl class="d-table">
+            {
+              contactPage.company.rows.filter((row) => row.value !== brand.legalName).map((row) => (
+                <div class="d-row">
+                  <dt class="small">{row.label}</dt>
+                  <dd>{row.value}</dd>
+                </div>
+              ))
+            }
+          </dl>
+        </Expand>
       </div>
 
       <p class="configure" data-reveal>
         <a class="conf-link" href={url(contactPage.configureLink.href)}>
-          <span>{contactPage.configureLink.label.replace(/\s*→\s*$/, '')}</span>
-          <Arrow size={22} />
+          <span class="conf-text">{contactPage.configureLink.label.replace(/\s*→\s*$/, '')}</span>
+          <span class="conf-arrow" data-magnetic=".35"><Arrow size={22} /></span>
         </a>
       </p>
     </div>
@@ -294,12 +363,12 @@ const jsonLd = {
 
 <style>
   /* =====================================================================
-     1. head + the panel
+     1. head: the two channels
      ===================================================================== */
   .head {
     position: relative;
     overflow: clip;
-    padding-block: calc(var(--nav-h) + clamp(3rem, 1.6rem + 5.4vw, 7.5rem)) clamp(4.5rem, 3rem + 5vw, 8.5rem);
+    padding-block: calc(var(--nav-h) + clamp(3rem, 1.6rem + 5.4vw, 7rem)) clamp(4.5rem, 3rem + 5vw, 8.5rem);
   }
 
   .sky {
@@ -326,17 +395,34 @@ const jsonLd = {
     color: var(--haze);
   }
 
-  /* the second channel, for readers who would rather start on LinkedIn */
-  .head-alt {
-    margin-top: 36px;
+  /* ---- the WhatsApp plate: swings in out of depth, then tilts ---- */
+  .panel-in {
+    position: relative;
+    margin-top: 48px;
   }
 
-  /* ---- the panel: a faceted violet plate ---- */
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .panel-in {
+    animation: plate-in 1700ms var(--ease-expo) 380ms both;
+  }
+
+  @keyframes plate-in {
+    from {
+      opacity: 0;
+      transform: perspective(1600px) translate3d(80px, 40px, -260px) rotateY(-30deg) rotateX(10deg);
+    }
+    30% {
+      opacity: 1;
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
   .panel {
     --pcut: 18px;
     position: relative;
     isolation: isolate;
-    margin-top: 48px;
     padding: 28px 20px 20px;
     color: var(--starlight);
   }
@@ -350,16 +436,23 @@ const jsonLd = {
     clip-path: polygon(var(--pcut) 0, 100% 0, 100% calc(100% - var(--pcut)), calc(100% - var(--pcut)) 100%, 0 100%, 0 var(--pcut));
   }
 
-  /* one hairline orbit through the top-right corner of the plate */
+  /* orbit + pointer light live inside the facet */
+  .panel-fx {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+    clip-path: polygon(var(--pcut) 0, 100% 0, 100% calc(100% - var(--pcut)), calc(100% - var(--pcut)) 100%, 0 100%, 0 var(--pcut));
+  }
+
   .panel-orbit {
     position: absolute;
-    z-index: -1;
     top: 0;
     right: 0;
     width: 100%;
     height: 100%;
-    pointer-events: none;
-    clip-path: polygon(var(--pcut) 0, 100% 0, 100% calc(100% - var(--pcut)), calc(100% - var(--pcut)) 100%, 0 100%, 0 var(--pcut));
+    overflow: visible;
   }
 
   .panel-orbit ellipse {
@@ -371,6 +464,64 @@ const jsonLd = {
 
   .panel-orbit circle {
     fill: var(--starlight);
+  }
+
+  /* the planet rides the ellipse: x and y run a quarter lap apart */
+  .p-orb-x {
+    transform: translateX(190px);
+  }
+
+  .p-orb-y {
+    transform: translateY(0);
+  }
+
+  .panel-orbit {
+    --lap: 13s;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .panel-orbit .p-orb-x {
+    animation: p-orb-x var(--lap) cubic-bezier(0.37, 0, 0.63, 1) infinite alternate;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .panel-orbit .p-orb-y {
+    animation: p-orb-y var(--lap) cubic-bezier(0.37, 0, 0.63, 1) infinite alternate;
+    animation-delay: calc(var(--lap) / -2);
+  }
+
+  .panel-orbit.is-paused .p-orb-x,
+  .panel-orbit.is-paused .p-orb-y {
+    animation-play-state: paused;
+  }
+
+  @keyframes p-orb-x {
+    from {
+      transform: translateX(190px);
+    }
+    to {
+      transform: translateX(-190px);
+    }
+  }
+
+  @keyframes p-orb-y {
+    from {
+      transform: translateY(-72px);
+    }
+    to {
+      transform: translateY(72px);
+    }
+  }
+
+  .panel-light {
+    position: absolute;
+    inset: -50%;
+    background: radial-gradient(circle at 50% 50%, rgb(255 255 255 / 0.09), rgb(255 255 255 / 0) 30%);
+    opacity: 0;
+    transform: translate3d(calc((var(--lx, 0.5) - 0.5) * 50%), calc((var(--ly, 0.5) - 0.5) * 50%), 0);
+    transition: opacity 600ms var(--ease-expo);
+  }
+
+  .panel.is-lit .panel-light {
+    opacity: 1;
   }
 
   .panel-label {
@@ -434,6 +585,24 @@ const jsonLd = {
     margin-top: 28px;
   }
 
+  /* the quick-starts deal in after the plate lands, each from a little
+     deeper than the last */
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .q-cell {
+    animation: q-in 1100ms var(--ease-expo) both;
+    animation-delay: calc(1100ms + var(--k, 0) * 110ms);
+  }
+
+  @keyframes q-in {
+    from {
+      opacity: 0;
+      transform: perspective(900px) translate3d(0, 18px, -60px) rotateX(-24deg);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
   .q {
     display: flex;
     width: 100%;
@@ -473,6 +642,7 @@ const jsonLd = {
     margin-top: 16px;
   }
 
+  /* ---- copy buttons (plate and email line) ---- */
   .copy {
     position: relative;
     padding: 8px 0;
@@ -497,6 +667,7 @@ const jsonLd = {
 
   .copy-text {
     display: grid;
+    perspective: 400px;
   }
 
   .copy-text > * {
@@ -507,8 +678,34 @@ const jsonLd = {
     visibility: hidden;
   }
 
+  /* "Copied" flips in on its baseline */
+  .copy-label {
+    display: block;
+    transform-origin: 50% 100%;
+  }
+
+  .copy.is-done .copy-label {
+    animation: copy-flip 520ms var(--ease-expo) both;
+  }
+
+  @keyframes copy-flip {
+    from {
+      opacity: 0;
+      transform: rotateX(-80deg) translate3d(0, 6px, 0);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
   .copy:focus-visible {
     outline-color: var(--starlight);
+  }
+
+  /* copying needs the script: without it the buttons are not offered */
+  :global(html:not(.js)) .copy {
+    display: none;
   }
 
   @media (hover: hover) and (pointer: fine) {
@@ -517,27 +714,124 @@ const jsonLd = {
     }
   }
 
+  /* ---- the email line: the address as large as the number ---- */
+  .mailline {
+    margin-top: 56px;
+  }
+
+  .ml-k {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--haze);
+  }
+
+  .ml-rule {
+    flex: 1 1 auto;
+    height: 1px;
+    margin-left: 6px;
+    background-color: var(--line);
+  }
+
+  .ml-addr-row {
+    margin-top: 18px;
+    perspective: 900px;
+  }
+
+  .ml-addr {
+    display: inline-block;
+    font-stretch: var(--wd-display);
+    font-size: clamp(1.375rem, 0.62rem + 3.9vw, 3.25rem);
+    font-weight: 600;
+    line-height: 1.08;
+    letter-spacing: -0.022em;
+    color: var(--starlight);
+    text-decoration: none;
+    transform-origin: 0 100%;
+  }
+
+  .ml-user,
+  .ml-host {
+    white-space: nowrap;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .ml-addr {
+    animation: addr-flip 1300ms var(--ease-expo) 640ms both;
+  }
+
+  @keyframes addr-flip {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 0.5em, 0) rotateX(-70deg);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .ml-addr {
+      text-decoration: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 0.16em;
+      text-decoration-color: transparent;
+      transition: text-decoration-color var(--t-micro) linear;
+    }
+
+    .ml-addr:hover {
+      text-decoration-color: rgb(243 240 250 / 0.6);
+    }
+  }
+
+  .ml-acts {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 28px;
+    margin-top: 18px;
+  }
+
   @media (min-width: 768px) {
     .head-copy {
       grid-column: 1 / -1;
     }
 
-    .panel {
+    .panel-in {
       grid-column: 1 / 7;
+    }
+
+    .panel {
       padding: 32px 32px 28px;
+    }
+
+    .mailline {
+      grid-column: 1 / -1;
+      margin-top: 64px;
     }
   }
 
   @media (min-width: 1100px) {
     .head-copy {
-      grid-column: 1 / 7;
+      grid-column: 1 / 8;
+      grid-row: 1;
+    }
+
+    .mailline {
+      grid-column: 1 / 8;
+      grid-row: 2;
+      align-self: end;
+      margin-top: 72px;
+    }
+
+    .panel-in {
+      grid-column: 8 / 13;
+      grid-row: 1 / span 2;
+      margin-top: 44px;
     }
 
     .panel {
       --pcut: 26px;
-      grid-column: 8 / 13;
-      grid-row: 1;
-      margin-top: 44px;
       padding: 40px 40px 32px;
     }
 
@@ -547,42 +841,35 @@ const jsonLd = {
   }
 
   /* =====================================================================
-     2. compose: what to include + the helper
+     2. compose: the message helper
      ===================================================================== */
-  .include-title {
-    max-width: 16ch;
+  .helper-title {
+    max-width: 9ch;
   }
 
-  .inc-list {
+  .include {
     margin-top: 40px;
   }
 
-  .inc-row {
-    position: relative;
+  .include :global(.xp:last-child) {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .inc-list {
     display: grid;
-    grid-template-columns: 48px minmax(0, 1fr);
+  }
+
+  .inc-row {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr);
     align-items: baseline;
-    padding-block: 20px 22px;
+    padding-block: 10px;
+    border-top: 1px solid var(--line);
   }
 
-  .inc-line {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    height: 1px;
-    background-color: var(--line-strong);
-    transform-origin: left center;
-    transition:
-      transform 1000ms var(--ease-quint),
-      opacity 200ms linear;
-    transition-delay: calc(var(--r, 0) * 60ms);
-  }
-
-  .inc-line-end {
-    top: auto;
-    bottom: 0;
-    background-color: var(--line);
+  .inc-row:first-child {
+    border-top: 0;
+    padding-top: 0;
   }
 
   .inc-n {
@@ -591,56 +878,30 @@ const jsonLd = {
 
   .inc-text {
     font-stretch: var(--wd-display);
-    font-size: clamp(1.0625rem, 0.98rem + 0.35vw, 1.25rem);
+    font-size: 1.0625rem;
     font-weight: 540;
     line-height: 1.35;
-    letter-spacing: -0.005em;
     color: var(--ink);
   }
 
-  .inc-n,
-  .inc-text {
-    transition:
-      transform var(--t-reveal) var(--ease-expo),
-      opacity var(--t-reveal) var(--ease-expo);
-    transition-delay: calc(var(--r, 0) * 60ms + 140ms);
-  }
-
-  :global(html.js:not(.motion-reduced):not(.motion-failed)) .inc-row:not(.is-in) .inc-line {
-    opacity: 0;
-    transform: scaleX(0);
-  }
-
-  :global(html.js:not(.motion-reduced):not(.motion-failed)) .inc-row:not(.is-in) .inc-n,
-  :global(html.js:not(.motion-reduced):not(.motion-failed)) .inc-row:not(.is-in) .inc-text {
-    opacity: 0;
-    transform: translate3d(0, 12px, 0);
-  }
-
-  /* without JS the helper never appears: the list takes the wider measure */
+  /* without JS the helper never appears: the head takes the wider measure */
   @media (min-width: 1100px) {
-    :global(html:not(.js)) .include {
+    :global(html:not(.js)) .compose-head {
       grid-column: 1 / 8;
     }
   }
 
-  /* ---- the helper ---- */
   .helper {
-    margin-top: 88px;
+    margin-top: 56px;
   }
 
   .helper[hidden] {
     display: none;
   }
 
-  .helper-title {
-    max-width: 16ch;
-  }
-
   .form {
     display: grid;
     gap: 24px;
-    margin-top: 32px;
   }
 
   .field {
@@ -708,6 +969,7 @@ const jsonLd = {
     position: relative;
     display: block;
     cursor: pointer;
+    perspective: 600px;
     -webkit-tap-highlight-color: transparent;
   }
 
@@ -730,7 +992,7 @@ const jsonLd = {
       background-color var(--t-micro) linear,
       border-color var(--t-micro) linear,
       color var(--t-micro) linear,
-      transform 120ms var(--ease-expo);
+      transform 160ms var(--ease-expo);
   }
 
   .chip-node {
@@ -739,6 +1001,7 @@ const jsonLd = {
     height: 9px;
     border: 1px solid currentColor;
     background-color: transparent;
+    transition: transform 500ms var(--ease-settle);
   }
 
   @media (hover: hover) and (pointer: fine) {
@@ -756,6 +1019,7 @@ const jsonLd = {
   .chip input:checked + .chip-face .chip-node {
     border-color: var(--lilac);
     background-color: var(--lilac);
+    transform: rotate(45deg);
   }
 
   .chip input:focus-visible + .chip-face {
@@ -763,14 +1027,87 @@ const jsonLd = {
     outline-offset: 3px;
   }
 
+  /* pressed: the key sinks back and tips toward the finger */
   .chip:active .chip-face {
-    transform: scale(0.98);
+    transform: translate3d(0, 0, -30px) rotateX(10deg);
+  }
+
+  .outbox {
+    display: grid;
+    gap: 24px;
+    margin-top: 24px;
+  }
+
+  .outbox[hidden] {
+    display: none;
+  }
+
+  /* the message card sits on a small stack of sheets: depth at rest, and
+     the top card turns over whenever the message changes */
+  .preview-wrap {
+    position: relative;
+    isolation: isolate;
+    perspective: 1200px;
+    margin-right: 16px;
+    margin-bottom: 16px;
+  }
+
+  .preview-wrap::before,
+  .preview-wrap::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 1px solid var(--line-strong);
+    background-color: var(--paper);
+    pointer-events: none;
+    transition: transform 900ms var(--ease-expo);
+  }
+
+  .preview-wrap::before {
+    z-index: -2;
+    transform: translate3d(16px, 16px, 0);
+  }
+
+  .preview-wrap::after {
+    z-index: -1;
+    transform: translate3d(8px, 8px, 0);
+  }
+
+  .preview-wrap.is-shuffle::before {
+    animation: sheet-shuffle 700ms var(--ease-expo);
+  }
+
+  .preview-wrap.is-shuffle::after {
+    animation: sheet-shuffle 700ms var(--ease-expo) 60ms;
+  }
+
+  @keyframes sheet-shuffle {
+    40% {
+      transform: translate3d(0, 0, 0);
+    }
   }
 
   .preview {
-    padding: 18px 20px 20px;
+    padding: 20px 24px 24px;
     background-color: var(--paper-2);
     border-left: 2px solid var(--violet);
+    transform-origin: 50% 0;
+  }
+
+  /* each new message turns over from the top edge, like a card */
+  .preview.is-flip {
+    animation: card-over 620ms var(--ease-expo);
+  }
+
+  @keyframes card-over {
+    from {
+      transform: rotateX(-28deg) translate3d(0, -6px, -40px);
+      opacity: 0.35;
+    }
+    to {
+      transform: none;
+      opacity: 1;
+    }
   }
 
   .preview-label {
@@ -788,18 +1125,28 @@ const jsonLd = {
 
   .send {
     display: grid;
-    gap: 16px;
-    margin-top: 4px;
+    gap: 18px;
   }
 
-  .send-btn {
+  .send-btns {
+    display: grid;
+    gap: 10px;
+  }
+
+  .send-btn,
+  .send-mail {
     justify-content: flex-start;
+    min-height: 56px;
   }
 
   .send-btn .b-lbl {
     flex: 1 1 auto;
     background-color: var(--violet);
     transition: background-color var(--t-micro) linear;
+  }
+
+  .send-mail > span {
+    flex: 1 1 auto;
   }
 
   @media (hover: hover) and (pointer: fine) {
@@ -818,46 +1165,35 @@ const jsonLd = {
   }
 
   @media (min-width: 768px) {
-    .send {
-      grid-template-columns: auto minmax(0, 1fr);
-      align-items: center;
-      column-gap: 24px;
+    .send-btns {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .send-btn {
-      min-width: 260px;
+    .compose-head {
+      grid-column: 1 / 7;
     }
   }
 
   @media (min-width: 1100px) {
-    .include {
-      grid-column: 1 / 6;
-      position: sticky;
-      top: calc(var(--nav-h) + 48px);
-      align-self: start;
-    }
-
-    .helper {
-      grid-column: 7 / 13;
-      margin-top: 0;
-    }
-
     .compose-grid {
       align-items: start;
     }
 
-    .send {
-      grid-template-columns: minmax(0, 1fr);
+    .compose-head {
+      grid-column: 1 / 6;
+      grid-row: 1;
     }
 
-    .send-btn {
-      justify-self: start;
+    .outbox {
+      grid-column: 1 / 6;
+      grid-row: 2;
+      margin-top: 56px;
     }
-  }
 
-  @media (min-width: 1280px) {
-    .send {
-      grid-template-columns: auto minmax(0, 1fr);
+    .helper {
+      grid-column: 7 / 13;
+      grid-row: 1 / span 2;
+      margin-top: 8px;
     }
   }
 
@@ -866,6 +1202,12 @@ const jsonLd = {
      ===================================================================== */
   .details {
     padding-block: clamp(4rem, 2.8rem + 4.5vw, 7.5rem);
+  }
+
+  /* the 3D scene entrances must never widen the page */
+  .compose,
+  .details {
+    overflow-x: clip;
   }
 
   .d-block + .d-block {
@@ -881,7 +1223,7 @@ const jsonLd = {
     background-color: var(--line-strong);
   }
 
-  .d-li-link {
+  .d-text {
     margin-top: 18px;
   }
 
@@ -891,8 +1233,7 @@ const jsonLd = {
   }
 
   .d-hours-text {
-    margin-top: 18px;
-    max-width: 24ch;
+    max-width: 26ch;
     font-stretch: var(--wd-display);
     font-size: 1.0625rem;
     font-weight: 540;
@@ -905,8 +1246,26 @@ const jsonLd = {
     color: var(--ink-2);
   }
 
-  .d-table {
-    margin-top: 12px;
+  .d-company :global(.xp) {
+    border-top: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .d-company :global(.xp::before) {
+    top: 0;
+  }
+
+  /* Expand without an index: keep the icon in the last column */
+  .d-company :global(.xp-head:first-child) {
+    grid-column: 1 / 3;
+  }
+
+  .d-company :global(.xp-sum) {
+    padding-block: 14px 18px;
+  }
+
+  .d-company :global(.xp-inner) {
+    padding-bottom: 8px;
   }
 
   .d-row {
@@ -938,32 +1297,40 @@ const jsonLd = {
   .conf-link {
     display: inline-flex;
     align-items: center;
-    gap: 16px;
+    gap: 18px;
     padding-block: 6px;
     font-stretch: var(--wd-display);
-    font-size: var(--t-d3);
+    font-size: clamp(1.75rem, 1.1rem + 2.6vw, 3.5rem);
     font-weight: 600;
-    letter-spacing: -0.012em;
-    line-height: 1.1;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
     color: var(--ink);
     text-decoration: none;
   }
 
-  .conf-link :global(.arrow) {
+  .conf-arrow {
+    display: inline-grid;
+    place-items: center;
     flex: 0 0 auto;
-    color: var(--violet-ink);
+    width: 56px;
+    height: 56px;
+    color: var(--white);
+    background-color: var(--violet);
+  }
+
+  .conf-arrow :global(.arrow) {
     transition: transform var(--t-ui) var(--ease-expo);
   }
 
   @media (hover: hover) and (pointer: fine) {
-    .conf-link:hover :global(.arrow) {
-      transform: translateX(8px);
+    .conf-link:hover .conf-arrow :global(.arrow) {
+      transform: translateX(4px);
     }
 
-    .conf-link:hover span {
+    .conf-link:hover .conf-text {
       text-decoration: underline;
       text-decoration-thickness: 1px;
-      text-underline-offset: 0.16em;
+      text-underline-offset: 0.14em;
     }
   }
 
@@ -1003,23 +1370,28 @@ const jsonLd = {
     .configure {
       margin-top: 96px;
     }
+
+    .conf-arrow {
+      width: 72px;
+      height: 72px;
+    }
   }
 </style>
 
 <script>
-  /* ---- copy number (panel) ---------------------------------------------- */
-  const panel = document.querySelector<HTMLElement>('[data-contact-panel]');
-  const copyBtn = panel?.querySelector<HTMLButtonElement>('[data-copy]');
-  const copyLabel = copyBtn?.querySelector<HTMLElement>('[data-copy-label]');
-  const copyStatus = panel?.querySelector<HTMLElement>('[data-copy-status]');
+  import { isReduced } from '../scripts/motion';
 
-  if (copyBtn && copyLabel) {
-    const idle = copyLabel.textContent ?? '';
-    const done = copyBtn.dataset.copied || 'Copied';
-    const ms = Number(copyBtn.dataset.copiedMs) || 1600;
+  /* ---- copy buttons (number, address) ------------------------------------ */
+  document.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((btn) => {
+    const label = btn.querySelector<HTMLElement>('[data-copy-label]');
+    const status = btn.parentElement?.querySelector<HTMLElement>('[data-copy-status]');
+    if (!label) return;
+    const idle = label.textContent ?? '';
+    const done = btn.dataset.copied || 'Copied';
+    const ms = Number(btn.dataset.copiedMs) || 1600;
     let timer = 0;
-    copyBtn.addEventListener('click', async () => {
-      const value = copyBtn.dataset.copy || '';
+    btn.addEventListener('click', async () => {
+      const value = btn.dataset.copy || '';
       let ok = false;
       try {
         if (navigator.clipboard && window.isSecureContext) {
@@ -1030,31 +1402,61 @@ const jsonLd = {
         ok = false;
       }
       if (!ok) {
-        /* fallback: select the number so the visitor can copy it by hand */
-        const num = panel?.querySelector('.number');
+        /* fallback: select the value so the visitor can copy it by hand */
+        const target = btn.dataset.copyTarget ? document.getElementById(btn.dataset.copyTarget) : null;
         const sel = window.getSelection();
-        if (num && sel) {
+        if (target && sel) {
           const range = document.createRange();
-          range.selectNodeContents(num);
+          range.selectNodeContents(target);
           sel.removeAllRanges();
           sel.addRange(range);
         }
         return;
       }
-      copyLabel.textContent = done;
-      if (copyStatus) copyStatus.textContent = done;
+      label.textContent = done;
+      btn.classList.remove('is-done');
+      void btn.offsetWidth;
+      btn.classList.add('is-done');
+      if (status) status.textContent = done;
       window.clearTimeout(timer);
       timer = window.setTimeout(() => {
-        copyLabel.textContent = idle;
-        if (copyStatus) copyStatus.textContent = '';
+        label.textContent = idle;
+        btn.classList.remove('is-done');
+        if (status) status.textContent = '';
       }, ms);
     });
+  });
+
+  /* ---- the plate: pointer light (fine pointers) + orbit paused offscreen - */
+  const plate = document.querySelector<HTMLElement>('[data-contact-panel] [data-light]');
+  if (plate && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+    plate.addEventListener('pointermove', (e) => {
+      if (isReduced()) return;
+      const r = plate.getBoundingClientRect();
+      plate.style.setProperty('--lx', ((e.clientX - r.left) / r.width).toFixed(3));
+      plate.style.setProperty('--ly', ((e.clientY - r.top) / r.height).toFixed(3));
+      plate.classList.add('is-lit');
+    });
+    plate.addEventListener('pointerleave', () => plate.classList.remove('is-lit'));
+  }
+
+  const loop = document.querySelector<SVGElement>('[data-loop]');
+  if (loop) {
+    let inView = true;
+    const sync = () => loop.classList.toggle('is-paused', !inView || document.hidden);
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver((entries) => {
+        inView = entries.some((e) => e.isIntersecting);
+        sync();
+      }).observe(loop);
+    }
+    document.addEventListener('visibilitychange', sync);
   }
 
   /* ---- message helper ----------------------------------------------------
      Runs entirely in the browser: reads the fields, fills the template that
-     site.ts produced at build time, shows the exact message and points the
-     button at WhatsApp with it. Nothing is stored or sent anywhere. */
+     site.ts produced at build time, shows the exact message and points both
+     buttons (WhatsApp, email) at it. Nothing is stored or sent anywhere. */
   interface Tpl {
     sent: { business: string; currentUrl: string; extra: string };
     withExtra: Record<string, string>;
@@ -1064,8 +1466,11 @@ const jsonLd = {
 
   const helper = document.querySelector<HTMLElement>('[data-helper]');
   const form = helper?.querySelector<HTMLFormElement>('[data-helper-form]');
-  const preview = helper?.querySelector<HTMLElement>('[data-helper-preview]');
-  const send = helper?.querySelector<HTMLAnchorElement>('[data-helper-send]');
+  const preview = document.querySelector<HTMLElement>('[data-helper-preview]');
+  const outbox = document.querySelector<HTMLElement>('[data-outbox]');
+  const card = outbox?.querySelector<HTMLElement>('[data-helper-card]');
+  const send = outbox?.querySelector<HTMLAnchorElement>('[data-helper-send]');
+  const mailBtn = outbox?.querySelector<HTMLAnchorElement>('[data-helper-mail]');
 
   if (helper && form && preview && send) {
     let tpl: Tpl | null = null;
@@ -1075,6 +1480,8 @@ const jsonLd = {
       tpl = null;
     }
     const base = send.href.split('?')[0];
+    const mailBase = mailBtn ? mailBtn.href.split('?')[0] : '';
+    const subject = mailBtn?.dataset.subject || '';
 
     if (tpl) {
       const t = tpl;
@@ -1095,24 +1502,35 @@ const jsonLd = {
           .split(t.sent.extra)
           .join(extra);
       };
-      const sync = () => {
+      const sync = (flip = false) => {
         const text = compose();
         if (!text) return;
         preview.textContent = text;
         send.href = `${base}?text=${encodeURIComponent(text)}`;
+        if (mailBtn) mailBtn.href = `${mailBase}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
+        if (flip && card && !isReduced()) {
+          const stack = card.parentElement;
+          card.classList.remove('is-flip');
+          stack?.classList.remove('is-shuffle');
+          void card.offsetWidth;
+          card.classList.add('is-flip');
+          stack?.classList.add('is-shuffle');
+        }
       };
 
-      form.addEventListener('input', sync);
-      form.addEventListener('change', sync);
+      form.addEventListener('input', () => sync(false));
+      /* a new choice of need turns the card over; typing just updates it */
+      form.addEventListener('change', (e) => sync((e.target as HTMLInputElement | null)?.name === 'need'));
       form.addEventListener('submit', (e) => {
         e.preventDefault();
         sync();
         send.click();
       });
       /* fields restored by back/forward navigation */
-      window.addEventListener('pageshow', sync);
+      window.addEventListener('pageshow', () => sync());
       sync();
       helper.hidden = false;
+      if (outbox) outbox.hidden = false;
     }
   }
 </script>

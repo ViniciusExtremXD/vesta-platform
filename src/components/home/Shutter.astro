@@ -16,12 +16,31 @@
  * - Never overflows sideways: the block clips its sides and bottom with a
  *   static inset clip-path; only the top is open, so the finished dome can
  *   crest into the stations' bottom padding (never into their text).
+ * - Round 2, more drama: two outer atmosphere rings ride their own planes.
+ *   They lead the limb on the way up (the air arrives before the planet)
+ *   and converge onto it as it settles, so the edge reads in depth. Each
+ *   ring is clipped by its own block-sized wrapper, so no layer is ever
+ *   planet-sized; they never rise above their final place.
+ * - Round 3, cinematic: a scattered-light atmosphere (a violet halo that
+ *   fades out from the limb, brighter toward the lit right side), a day-side
+ *   sheen inside the disc, and a faint cloud-banded surface that turns with
+ *   the rise — the surface layer rotates about the planet's centre (≈9° →
+ *   0°), so the planet visibly spins as it comes up. The surface and the
+ *   sheen are block-sized layers clipped to the disc by a circle; nothing
+ *   planet-sized is ever composited.
  */
 ---
 
 <div class="horizon" data-shutter aria-hidden="true">
+  <div class="hz-atm" style="--off: 34px; --lead: 0.22; --a: 0.13"><div class="hz-ring"></div></div>
+  <div class="hz-atm" style="--off: 21px; --lead: 0.12; --a: 0.22"><div class="hz-ring"></div></div>
   <div class="hz-body">
+    <div class="hz-halo"></div>
     <div class="hz-disc"></div>
+    <div class="hz-surf">
+      <div class="hz-tex"></div>
+      <div class="hz-day"></div>
+    </div>
   </div>
 </div>
 
@@ -34,9 +53,17 @@
        to the block's edges */
     --k: 2.4;
     --sagf: 0.1091;
-    /* room above the disc for the atmospheric shell */
+    /* room above the disc for the atmospheric shell and the scattered glow */
     --shell: 7px;
-    --pad: 10px;
+    --glow: 44px;
+    --pad: calc(var(--glow) + 4px);
+
+    /* sagitta in px of this block's width (resolved where it is used, so
+       cqi = .horizon) and how far the finished dome crests above the block,
+       capped so the dome and its rings stay inside the stations' bottom
+       padding on very wide screens */
+    --sag: calc(100cqi * var(--sagf));
+    --crest: min(var(--sag), 6rem);
 
     position: relative;
     z-index: var(--z-shutter);
@@ -51,22 +78,17 @@
 
   @media (min-width: 768px) {
     .horizon {
-      --h: 60vh;
+      --h: 66vh;
       --k: 3;
       --sagf: 0.0858;
       --shell: 10px;
-      --pad: 14px;
+      --glow: 72px;
     }
   }
 
   .hz-body {
-    /* sagitta in px of this block's width (cqi = .horizon) */
-    --sag: calc(100cqi * var(--sagf));
-    /* how far the finished dome crests above the block, capped so it stays
-       inside the stations' bottom padding on very wide screens (there the
-       limb's ends meet the paper a little below the block's top, which is
-       the same paper, so the curve simply runs on) */
-    --crest: min(var(--sag), 7.5rem);
+    /* on very wide screens the limb's ends meet the paper a little below the
+       block's top, which is the same paper, so the curve simply runs on */
     --travel: calc(var(--h) + var(--crest) + var(--pad) + 4px);
     position: absolute;
     left: 0;
@@ -78,8 +100,100 @@
     transform: translate3d(0, calc((1 - var(--e, 1)) * var(--travel)), 0);
   }
 
-  .horizon.is-live .hz-body {
+  .horizon.is-live .hz-body,
+  .horizon.is-live .hz-atm,
+  .horizon.is-live .hz-tex {
     will-change: transform;
+  }
+
+  /* disc geometry in the body's own box: centre (50%, --cy), radius --r */
+  .hz-body {
+    --r: calc(var(--k) * 50cqi);
+    --cy: calc(var(--pad) + var(--r));
+  }
+
+  /* scattered light: violet at 18% on the limb, gone --glow px out; the
+     left (night) side is fainter than the lit right */
+  .hz-halo {
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(
+      circle at 50% var(--cy),
+      rgb(98 54 232 / 0) calc(var(--r) - 1px),
+      rgb(98 54 232 / 0.2) var(--r),
+      rgb(98 54 232 / 0.07) calc(var(--r) + var(--glow) * 0.35),
+      rgb(98 54 232 / 0) calc(var(--r) + var(--glow))
+    );
+    -webkit-mask-image: linear-gradient(to right, rgb(0 0 0 / 0.4), #000 58%, #000 84%, rgb(0 0 0 / 0.75));
+    mask-image: linear-gradient(to right, rgb(0 0 0 / 0.4), #000 58%, #000 84%, rgb(0 0 0 / 0.75));
+  }
+
+  /* the surface window: the body's box, cut to the disc (just inside the rim) */
+  .hz-surf {
+    position: absolute;
+    inset: 0;
+    clip-path: circle(calc(var(--r) - 3px) at 50% var(--cy));
+  }
+
+  /* faint cloud bands, wider than the block so the turn never shows an
+     edge; rotated about the planet's centre by the rise */
+  .hz-tex {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -45%;
+    right: -45%;
+    transform-origin: 50% var(--cy);
+    transform: rotate(calc((1 - var(--e, 1)) * 9deg));
+    background-image:
+      radial-gradient(ellipse 13% 3.2% at 12% calc(var(--pad) + 5%), rgb(185 162 255 / 0.1), rgb(185 162 255 / 0) 72%),
+      radial-gradient(ellipse 20% 4% at 31% calc(var(--pad) + 13%), rgb(185 162 255 / 0.07), rgb(185 162 255 / 0) 72%),
+      radial-gradient(ellipse 9% 2.4% at 44% calc(var(--pad) + 4%), rgb(185 162 255 / 0.11), rgb(185 162 255 / 0) 72%),
+      radial-gradient(ellipse 16% 3.4% at 57% calc(var(--pad) + 9%), rgb(185 162 255 / 0.08), rgb(185 162 255 / 0) 72%),
+      radial-gradient(ellipse 22% 5% at 70% calc(var(--pad) + 22%), rgb(185 162 255 / 0.06), rgb(185 162 255 / 0) 72%),
+      radial-gradient(ellipse 11% 2.6% at 83% calc(var(--pad) + 6%), rgb(185 162 255 / 0.1), rgb(185 162 255 / 0) 72%),
+      radial-gradient(ellipse 26% 6% at 22% calc(var(--pad) + 34%), rgb(185 162 255 / 0.045), rgb(185 162 255 / 0) 72%),
+      radial-gradient(ellipse 24% 6% at 52% calc(var(--pad) + 44%), rgb(185 162 255 / 0.04), rgb(185 162 255 / 0) 72%),
+      radial-gradient(ellipse 28% 7% at 86% calc(var(--pad) + 40%), rgb(185 162 255 / 0.04), rgb(185 162 255 / 0) 72%);
+  }
+
+  /* the day side: a soft sheen in the upper right of the disc (fixed; the
+     light doesn't turn with the planet) */
+  .hz-day {
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(ellipse 58% 46% at 88% var(--pad), rgb(185 162 255 / 0.1), rgb(185 162 255 / 0) 72%);
+  }
+
+  /* an atmosphere ring's wrapper: the body's geometry with room for the
+     ring above the limb. It travels like the body, minus a lead that peaks
+     mid-rise and is zero at both ends (4e(1−e)), capped at a quarter of the
+     travel so the ring never overshoots its final place. */
+  .hz-atm {
+    --pad-a: calc(var(--off) + 6px);
+    --travel-a: calc(var(--h) + var(--crest) + var(--pad-a) + 4px);
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(-1 * (var(--crest) + var(--pad-a)));
+    height: calc(var(--h) + var(--crest) + var(--pad-a) + 2px);
+    overflow: clip;
+    pointer-events: none;
+    transform: translate3d(
+      0,
+      calc((1 - var(--e, 1)) * var(--travel-a) - var(--lead) * 4 * var(--e, 1) * (1 - var(--e, 1)) * var(--travel-a)),
+      0
+    );
+  }
+
+  .hz-ring {
+    position: absolute;
+    top: 6px;
+    left: calc(50% - var(--k) * 50% - var(--off));
+    width: calc(var(--k) * 100% + 2 * var(--off));
+    aspect-ratio: 1;
+    border: 1px solid rgb(98 54 232 / var(--a));
+    border-radius: 50%;
   }
 
   .hz-disc {
@@ -102,6 +216,7 @@
     inset: 2px;
     border: 1px solid var(--lilac);
     border-radius: 50%;
+    z-index: 1;
   }
 
   /* the upper atmosphere: one faint violet hairline standing off the limb */

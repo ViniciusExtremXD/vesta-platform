@@ -1,28 +1,38 @@
 /* =========================================================================
-   Vesta — configurator (#configure, SPEC §5.8)
+   Vesta — configurator (#configure, SPEC §5.8 + ROUND2/3)
    Loaded on demand by Configurator.astro. Every visual state that depends on
-   the choices is CSS (:has); this module writes only TEXT and two numbers:
-   the name/URL on the plate and listing, the build-sheet rows, the odometer
-   price, the delivery line ratio, the WhatsApp href and the mobile sticky-bar
-   summary. Input is coalesced into one rAF. No storage, no network.
+   the choices is CSS (:has); this module writes the TEXT (names, URLs, the
+   build-sheet rows, the WhatsApp + mailto hrefs, the sticky-bar summary),
+   runs the page-deck shuffle, and adds the micro-motion (sheet flips, the
+   preview bump). Input is coalesced into one rAF. No storage, no network.
    All strings arrive pre-derived from src/data/site.ts in a JSON block.
    ========================================================================= */
 
 interface Pk {
   name: string;
-  price: string;
   days: string;
   r: number;
   line: string;
   sticky: string;
 }
 
+interface Cc {
+  name: string;
+  domain: string;
+  niche: string;
+  city: string;
+  svc: string[];
+}
+
 interface Data {
   wa: string;
+  mail: string;
   pk: Record<string, Pk>;
-  msg: Record<'head' | 'tail' | 'startNew' | 'startRe' | 'startReUrl' | 'care' | 'none' | 'biz' | 'noBiz', string>;
+  msg: Record<'head' | 'tail' | 'startNew' | 'startRe' | 'startReUrl' | 'care' | 'none' | 'biz' | 'noBiz' | 'ind', string>;
   sheet: Record<'startNew' | 'startRe' | 'startReUrl' | 'care' | 'none', string>;
-  listing: { url0: string; title: string; name0: string };
+  cc: Record<string, Cc>;
+  other: string;
+  listing: { title: string };
   send: string;
 }
 
@@ -40,6 +50,10 @@ const slugify = (s: string) =>
 /** Fill a template token without re-scanning the user's text. */
 const fill = (tpl: string, token: string, value: string) => tpl.split(token).join(value);
 
+const EXPO = 'cubic-bezier(0.16, 1, 0.3, 1)';
+const QUINT = 'cubic-bezier(0.83, 0, 0.17, 1)';
+const MECH = 'cubic-bezier(0.65, 0, 0.35, 1)';
+
 export function initConfigure(root: HTMLElement): void {
   if (root.dataset.cfgReady) return;
   const form = root.querySelector<HTMLFormElement>('form[data-config]');
@@ -53,28 +67,65 @@ export function initConfigure(root: HTMLElement): void {
   }
   root.dataset.cfgReady = '1';
 
+  const html = document.documentElement;
+  const still = () => html.classList.contains('motion-reduced') || html.classList.contains('motion-failed');
+  const canAnimate = typeof Element.prototype.animate === 'function';
+
   const q = <T extends Element = HTMLElement>(s: string) => root.querySelector<T>(s);
-  const names = Array.from(root.querySelectorAll<HTMLElement>('[data-cp-name]'));
-  const urls = Array.from(root.querySelectorAll<HTMLElement>('[data-cp-url], [data-cfg-url]'));
+  const qa = <T extends Element = HTMLElement>(s: string) => Array.from(root.querySelectorAll<T>(s));
+
+  /* personalisation targets: each concept plate keeps its own defaults, the
+     page cards and the listing follow the chosen concept */
+  const own = qa('[data-cp-name]:not([data-cp-follow]), [data-cp-url]:not([data-cp-follow])');
+  own.forEach((el) => (el.dataset.def = el.textContent || ''));
+  const ownNames = own.filter((el) => el.hasAttribute('data-cp-name'));
+  const ownUrls = own.filter((el) => el.hasAttribute('data-cp-url'));
+  const fNames = qa('[data-cp-name][data-cp-follow]');
+  const fUrls = qa('[data-cp-url][data-cp-follow]');
+  const cities = qa('[data-cp-city]');
+  const svcs = qa('[data-svc]');
   const title = q('[data-cfg-title]');
   const sPackage = q('[data-sheet="package"]');
+  const sIndustry = q('[data-sheet="industry"]');
+  const rIndustry = q('[data-sheet-row="industry"]');
   const sStart = q('[data-sheet="start"]');
   const sOptions = q('[data-sheet="options"]');
-  const sNote = q('[data-sheet="note"]');
   const sDelivery = q('[data-sheet="delivery"]');
   const sLine = q('[data-sheet="dl"]');
-  const odo = q('[data-odometer]');
   const cta = q<HTMLAnchorElement>('[data-cfg-cta]');
+  const mailA = q<HTMLAnchorElement>('[data-cfg-mail]');
+  const bump = q('[data-cfg-bump]');
 
   const text = (el: Element | null, v: string) => {
-    if (el && el.textContent !== v) el.textContent = v;
+    if (!el || el.textContent === v) return false;
+    el.textContent = v;
+    return true;
   };
+
+  /* a changed sheet value flips in on its top hinge (split-flap) */
+  let armed = false;
+  const flip = (el: Element | null) => {
+    if (!armed || !el || still() || !canAnimate) return;
+    el.animate(
+      [
+        { transform: 'perspective(420px) rotateX(-88deg)', opacity: 0 },
+        { transform: 'perspective(420px) rotateX(12deg)', opacity: 1, offset: 0.6 },
+        { transform: 'none', opacity: 1 },
+      ],
+      { duration: 620, easing: EXPO }
+    );
+  };
+  const put = (el: Element | null, v: string) => text(el, v) && flip(el);
 
   const read = () => {
     const f = new FormData(form);
     const id = String(f.get('package') || 'google');
+    const ind = String(f.get('industry') || '');
     return {
+      id,
       p: data.pk[id] || data.pk.google,
+      ind,
+      c: data.cc[ind] || data.cc.halden,
       rebuild: f.get('start') === 'rebuild',
       url: String(f.get('url') || '').trim(),
       care: f.has('care'),
@@ -105,36 +156,180 @@ export function initConfigure(root: HTMLElement): void {
     if (barLabel) text(barLabel, inside ? data.send : barOrig.label);
   };
 
+  /* ================================================================ deck */
+  const deck = q('[data-deck]');
+  const cards = qa('[data-card]');
+  const pageBtns = qa<HTMLButtonElement>('[data-page]');
+  /** slot of each card: 0 = front */
+  const slot = cards.map((_, i) => i);
+  let running: Animation[] = [];
+  let landT = 0;
+
+  const isComplete = () => !!form.querySelector('input[name="package"][value="complete"]:checked');
+
+  const paint = () => {
+    cards.forEach((c, i) => {
+      c.style.setProperty('--k', String(slot[i]));
+      c.classList.toggle('is-front', slot[i] === 0);
+    });
+    pageBtns.forEach((b) => b.setAttribute('aria-pressed', slot[Number(b.dataset.page)] === 0 ? 'true' : 'false'));
+  };
+
+  const settle = () => {
+    running.forEach((a) => a.cancel());
+    running = [];
+    window.clearTimeout(landT);
+    deck?.classList.remove('is-shuffling');
+  };
+
+  const reset = () => {
+    settle();
+    slot.forEach((_, i) => (slot[i] = i));
+    cards.forEach((c) => c.classList.remove('is-landed'));
+    paint();
+  };
+
+  const bringForward = (to: number) => {
+    if (!deck || !isComplete() || !cards[to] || slot[to] === 0) return;
+    settle();
+    const from = slot.indexOf(0);
+    const a = slot[to];
+    const chosen = cards[to];
+    const front = cards[from];
+    const cs = getComputedStyle(deck);
+    const fx = parseFloat(cs.getPropertyValue('--fan-x')) || 12;
+    const fy = parseFloat(cs.getPropertyValue('--fan-y')) || 20;
+    const w = front.offsetWidth;
+    const h = front.offsetHeight;
+    const T = (k: number) => `translate3d(${k * fx}px, ${-k * fy}px, 0px)`;
+
+    slot[to] = 0;
+    slot[from] = a;
+    cards.forEach((c) => c.classList.remove('is-landed'));
+
+    if (still() || !canAnimate) {
+      paint();
+      chosen.classList.add('is-landed');
+      return;
+    }
+
+    deck.classList.add('is-shuffling');
+    paint();
+    const D = 1080;
+    /* the chosen page lifts out of the deck, turns, and lands in front */
+    running.push(
+      chosen.animate(
+        [
+          { transform: T(a), zIndex: 10 - a, easing: 'cubic-bezier(0.3, 0, 0.2, 1)' },
+          {
+            transform: `translate3d(${a * fx + w * 0.22}px, ${-a * fy - h * 0.24}px, 90px) rotateZ(6deg) rotateX(18deg) rotateY(-16deg)`,
+            zIndex: 10 - a,
+            offset: 0.34,
+          },
+          {
+            transform: `translate3d(${w * 0.12}px, ${-h * 0.2}px, 140px) rotateZ(3deg) rotateX(10deg) rotateY(-8deg)`,
+            zIndex: 30,
+            offset: 0.46,
+            easing: EXPO,
+          },
+          { transform: `translate3d(0px, ${h * 0.025}px, 30px) rotateZ(-0.8deg) rotateX(-3deg)`, zIndex: 30, offset: 0.82 },
+          { transform: T(0), zIndex: 30 },
+        ],
+        { duration: D }
+      )
+    );
+    /* the old front card sinks back into the deck with a 3D tilt */
+    running.push(
+      front.animate(
+        [
+          { transform: T(0), zIndex: 10, easing: QUINT },
+          {
+            transform: `translate3d(${-w * 0.05}px, ${h * 0.06}px, -160px) rotateX(-14deg) rotateY(10deg) rotateZ(-2.5deg)`,
+            zIndex: 10,
+            offset: 0.44,
+            easing: MECH,
+          },
+          {
+            transform: `translate3d(${a * fx * 0.6}px, ${-a * fy * 0.5}px, -110px) rotateX(-6deg) rotateY(4deg)`,
+            zIndex: 10 - a,
+            offset: 0.7,
+            easing: EXPO,
+          },
+          { transform: T(a), zIndex: 10 - a },
+        ],
+        { duration: D }
+      )
+    );
+    const done = running;
+    Promise.all(done.map((x) => x.finished))
+      .then(() => {
+        if (running === done) {
+          running = [];
+          deck.classList.remove('is-shuffling');
+        }
+      })
+      .catch(() => {
+        /* cancelled by a newer shuffle */
+      });
+    landT = window.setTimeout(() => chosen.classList.add('is-landed'), D * 0.62);
+  };
+
+  deck?.addEventListener('click', (e) => {
+    const card = (e.target as Element).closest<HTMLElement>('[data-card]');
+    if (!card || card.classList.contains('is-front')) return;
+    bringForward(Number(card.dataset.card));
+  });
+  pageBtns.forEach((b) => b.addEventListener('click', () => bringForward(Number(b.dataset.page))));
+
+  /* the preview answers every choice with a small 3D nod */
+  const nod = () => {
+    if (!armed || !bump || still() || !canAnimate) return;
+    bump.animate(
+      [
+        { transform: 'none' },
+        { transform: 'perspective(1400px) translate3d(0, -10px, 40px) rotateX(5deg) rotateY(-3deg)', offset: 0.35 },
+        { transform: 'none' },
+      ],
+      { duration: 760, easing: EXPO }
+    );
+  };
+
   /* ---- one write per frame ---- */
   let queued = false;
-  let price = '';
+  let wasComplete = isComplete();
 
   const write = () => {
     queued = false;
     const s = read();
-    const { p, rebuild, url, care, biz } = s;
+    const { p, c, ind, rebuild, url, care, biz } = s;
 
-    /* plate + listing: typing updates textContent at once */
+    /* plates, page cards, listing */
     const slug = slugify(biz);
-    const domain = slug ? `${slug}.com` : data.listing.url0;
-    names.forEach((el) => text(el, biz || data.listing.name0));
-    urls.forEach((el) => text(el, domain));
-    text(title, fill(data.listing.title, '{b}', biz || data.listing.name0));
+    ownNames.forEach((el) => text(el, biz || el.dataset.def || ''));
+    ownUrls.forEach((el) => text(el, slug ? `${slug}.com` : el.dataset.def || ''));
+    fNames.forEach((el) => text(el, biz || c.name));
+    fUrls.forEach((el) => text(el, slug ? `${slug}.com` : c.domain));
+    cities.forEach((el) => text(el, c.city));
+    svcs.forEach((el) => text(el, c.svc[Number(el.dataset.svc)] || ''));
+    text(title, fill(data.listing.title, '{b}', biz || c.name));
+
+    /* the deck resets when Complete is left */
+    const complete = s.id === 'complete';
+    if (wasComplete && !complete) reset();
+    wasComplete = complete;
 
     /* build sheet */
+    const niche = ind === 'other' ? data.other : data.cc[ind]?.niche || '';
     const startSheet = !rebuild ? data.sheet.startNew : url ? fill(data.sheet.startReUrl, '{u}', url) : data.sheet.startRe;
-    text(sPackage, p.name);
-    text(sStart, startSheet);
-    text(sOptions, care ? data.sheet.care : data.sheet.none);
-    if (sNote) sNote.hidden = !care;
-    text(sDelivery, p.days);
+    put(sPackage, p.name);
+    if (rIndustry) rIndustry.hidden = !niche;
+    put(sIndustry, niche);
+    put(sStart, startSheet);
+    put(sOptions, care ? data.sheet.care : data.sheet.none);
+    put(sDelivery, p.days);
     sLine?.style.setProperty('--r', p.r.toFixed(4));
-    if (odo && p.price !== price) {
-      if (price) odo.dispatchEvent(new CustomEvent('vesta:odometer', { detail: { value: p.price } }));
-      price = p.price;
-    }
 
-    /* the message */
+    /* the message: WhatsApp and email carry the same build sheet */
     const m = data.msg;
     const msg = [
       m.head,
@@ -142,10 +337,13 @@ export function initConfigure(root: HTMLElement): void {
       !rebuild ? m.startNew : url ? fill(m.startReUrl, '{u}', url) : m.startRe,
       care ? m.care : m.none,
       biz ? fill(m.biz, '{b}', biz) : m.noBiz,
+      ...(niche ? [fill(m.ind, '{i}', niche)] : []),
       m.tail,
     ].join('\n');
     href = data.wa + encodeURIComponent(msg);
     if (cta && cta.getAttribute('href') !== href) cta.setAttribute('href', href);
+    const mhref = `${data.mail}&body=${encodeURIComponent(msg.replace(/\n/g, '\r\n'))}`;
+    if (mailA && mailA.getAttribute('href') !== mhref) mailA.setAttribute('href', mhref);
 
     summary = p.sticky;
     if (inside) syncBar();
@@ -157,11 +355,12 @@ export function initConfigure(root: HTMLElement): void {
     requestAnimationFrame(write);
   };
 
-  /* the price the odometer is already showing (no-JS default) */
-  price = (odo?.querySelector('[data-odo-text]')?.textContent || '').trim();
-
   form.addEventListener('input', schedule);
-  form.addEventListener('change', schedule);
+  form.addEventListener('change', (e) => {
+    schedule();
+    const t = e.target as HTMLInputElement | null;
+    if (t && t.type !== 'text') nod();
+  });
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     (document.activeElement as HTMLElement | null)?.blur?.();
@@ -177,8 +376,9 @@ export function initConfigure(root: HTMLElement): void {
     if (scroll) {
       const r = root.getBoundingClientRect();
       if (r.top > window.innerHeight * 0.5 || r.bottom < 0) {
-        const reduced = document.documentElement.classList.contains('motion-reduced');
-        root.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+        import('./motion')
+          .then((mo) => mo.travelTo(root))
+          .catch(() => root.scrollIntoView({ block: 'start' }));
       }
     }
   };
@@ -197,5 +397,7 @@ export function initConfigure(root: HTMLElement): void {
     ).observe(root);
   }
 
+  paint();
   write();
+  armed = true;
 }

@@ -1,38 +1,63 @@
 ---
 /**
- * #pricing (§5.7 + SPEC_COSMOS), white paper. A price list, not a card grid:
- * three packages that differ in surface — plain · a 2px violet bar · a
- * faceted --void plate cut out of the night sky (faint star field, one
- * hairline orbit) — rows aligned across columns with subgrid on desktop,
- * odometer prices, lead times as proportional dimension lines, then the
- * compare table, Care, Founding clients and the paperwork cells.
- * Every word comes from src/data/site.ts.
+ * #pricing (§5.7 + SPEC_COSMOS + ROUND2 §6/§10), white paper.
+ *
+ * Three packages that differ in surface — plain · a 2px violet bar · a
+ * faceted --void plate cut out of the night sky — condensed to what sells:
+ * name, tagline, "Price on analysis", the lead time as a dimension line,
+ * three keywords and the analysis CTA. The full list of inclusions lives in
+ * an Expand box per package (on desktop the three open together, so the
+ * rows stay aligned through subgrid).
+ *
+ * Then the owner's observation, once: a full-width void band with an
+ * observatory-style dial — the $750–$1,000 range drawn on a scale, a pointer
+ * that swings in and settles — next to the analysis CTA and the email
+ * alternative. Compare, Care, Founding clients and Paperwork follow as
+ * Expand boxes with their keywords visible.
+ *
+ * Motion: the wrappers rise out of depth (data-scene), columns flip up in
+ * 3D (staggered), the recommended bar sweeps, the dial powers on tick by
+ * tick and the pointer settles with an overshoot, then breathes while on
+ * screen. Pointer tilt on each column with its name, price and actions
+ * floating off the plate; on the Complete plate a soft light follows the
+ * pointer and a planet travels its orbit. Every word comes from site.ts.
  */
 import SectionLabel from '../ui/SectionLabel.astro';
 import SplitText from '../ui/SplitText.astro';
 import Arrow from '../ui/Arrow.astro';
 import WaGlyph from '../ui/WaGlyph.astro';
-import Odometer from '../Odometer.astro';
+import Expand from '../ui/Expand.astro';
 import DimensionLine from '../DimensionLine.astro';
 import Cosmos from '../Cosmos.astro';
-import { packages, pricing, compare, care, founding, paperwork, terms, wa, confirmedOnly } from '../../data/site';
+import MailGlyph from '../ui/MailGlyph.astro';
+import {
+  packages,
+  pricing,
+  compare,
+  care,
+  founding,
+  paperwork,
+  terms,
+  contact,
+  waMessages,
+  wa,
+  mail,
+  confirmedOnly,
+} from '../../data/site';
 
 /* CTA labels carry a trailing "→" in site.ts; the arrow is drawn as a hairline SVG so it can nudge on hover. */
 const bare = (s: string) => s.replace(/\s*→\s*$/, '');
 
 const h2Lines = pricing.h2.split(/(?<=\.)\s+/).filter(Boolean);
 
-const COL_STEP = 120; /* ms between columns (§3.1 staggers) */
+const COL_STEP = 140; /* ms between columns */
 const models = packages.map((p, i) => ({
   ...p,
   includesOn: confirmedOnly(p.includes),
+  keys: pricing.keys[p.id],
   ratio: p.dayRange[1] / pricing.dayScaleMax,
   t: i * COL_STEP,
 }));
-
-/* subgrid rows: name, tagline, price, lead time, best for, includes × n, CTA */
-const incRows = Math.max(...models.map((m) => m.includesOn.length));
-const rowCount = 6 + incRows;
 
 const ctaClass: Record<string, string> = {
   landing: 'btn btn-line',
@@ -42,108 +67,163 @@ const ctaClass: Record<string, string> = {
 
 const compareRows = confirmedOnly(compare.rows);
 const slots = founding.slots;
+const openSlots = slots.filter((s) => s.status === 'open').length;
+const foundingKeys = [`${openSlots} ${founding.statusLabels.open.toLowerCase()}`, ...pricing.keys.founding];
+
+/* ------------------------------------------------------------------ dial */
+/* An arc scale from $500 to $1,250 across ±52°, the package range drawn on
+   it. Centre below the viewBox, so only the limb of the dial shows. */
+const lo = Math.min(...packages.map((p) => p.price.min));
+const hi = Math.max(...packages.map((p) => p.price.max ?? p.price.min));
+const usd = (n: number) => `$${n.toLocaleString('en-US')}`;
+
+const DW = 640;
+const DH = 300;
+const CX = 320;
+const CY = 392;
+const R = 300;
+const A = 52;
+const V0 = 500;
+const V1 = 1250;
+const STEP = 25;
+const rad = (deg: number) => (deg * Math.PI) / 180;
+const ang = (v: number) => -A + ((v - V0) / (V1 - V0)) * (2 * A);
+const pt = (deg: number, r: number) => [CX + r * Math.sin(rad(deg)), CY - r * Math.cos(rad(deg))];
+const f = (n: number) => n.toFixed(2);
+const arc = (d0: number, d1: number, r: number) => {
+  const [x0, y0] = pt(d0, r);
+  const [x1, y1] = pt(d1, r);
+  return `M${f(x0)} ${f(y0)}A${r} ${r} 0 0 1 ${f(x1)} ${f(y1)}`;
+};
+const arcLen = (d0: number, d1: number, r: number) => Math.ceil(r * rad(d1 - d0)) + 2;
+
+const ticks: { x1: string; y1: string; x2: string; y2: string; k: number; cls: string }[] = [];
+for (let v = V0, k = 0; v <= V1; v += STEP, k++) {
+  if (v === lo || v === hi) continue; /* the range ends get their own markers */
+  const major = v % 250 === 0;
+  const mid = !major && v % 125 === 0;
+  const len = major ? 24 : mid ? 15 : 8;
+  const a = ang(v);
+  const [x1, y1] = pt(a, R - len);
+  const [x2, y2] = pt(a, R);
+  const inRange = v > lo && v < hi;
+  ticks.push({
+    x1: f(x1),
+    y1: f(y1),
+    x2: f(x2),
+    y2: f(y2),
+    k,
+    cls: ['tk', major ? 'tk-major' : mid ? 'tk-mid' : 'tk-minor', inRange ? 'tk-in' : ''].join(' ').trim(),
+  });
+}
+
+const aLo = ang(lo);
+const aHi = ang(hi);
+const marks = [aLo, aHi].map((a) => {
+  const [x1, y1] = pt(a, R - 30);
+  const [x2, y2] = pt(a, R + 24);
+  return { x1: f(x1), y1: f(y1), x2: f(x2), y2: f(y2) };
+});
+/* HTML labels over the SVG (they keep their size when the dial scales down) */
+const labels = [
+  { text: usd(lo), a: aLo },
+  { text: usd(hi), a: aHi },
+].map(({ text, a }) => {
+  const [x, y] = pt(a, R + 44);
+  return { text, left: ((x / DW) * 100).toFixed(3), top: ((y / DH) * 100).toFixed(3) };
+});
+
+const ring = { d: arc(-A, A, R), len: arcLen(-A, A, R) };
+const track = arc(-A, A, R + 12);
+const range = { d: arc(aLo, aHi, R + 12), len: arcLen(aLo, aHi, R + 12) };
+const inner = arc(-30, 30, R - 64);
+const ptr = { x: CX, y1: CY - (R - 64), y2: CY - (R + 26) };
 ---
 
 <section id="pricing" class="s-paper section pricing" data-nav-theme="light" aria-labelledby="pricing-title">
-  <div class="wrap">
+  <div class="wrap" data-scene>
     <!-- head -->
     <header class="head g">
       <SectionLabel n={pricing.label.index ?? undefined} name={pricing.label.name} class="head-label" />
       <SplitText as="h2" id="pricing-title" class="d2 head-h" lines={h2Lines} />
-      <div class="head-copy">
-        <p class="lead head-lead" data-reveal style="--d:120ms">{pricing.lead}</p>
-        <p class="head-diff" data-reveal style="--d:220ms">{pricing.differentiator}</p>
-      </div>
+      <p class="lead head-lead" data-reveal style="--d:160ms">{pricing.lead}</p>
     </header>
 
     <!-- the three models -->
-    <div class="models" style={`--rows:${rowCount};--inc:${incRows}`}>
+    <div class="models">
       {
         models.map((m) => (
-          <article
-            class:list={['model', `m-${m.id}`, { 's-void': m.id === 'complete' }]}
-            aria-labelledby={`pk-${m.id}`}
-            data-inview={m.id === 'complete' ? '' : undefined}
-            data-model={m.id}
-          >
-            {m.id === 'complete' && (
-              <div class="m-sky" aria-hidden="true">
-                <Cosmos variant="stars" />
-                {/* one inclined circular orbit seen obliquely: star at the
-                    focus-centre, a planet on the near arc. Draws once. */}
-                <svg class="m-orbit" viewBox="0 0 640 640" fill="none" focusable="false">
-                  <g transform="rotate(-24 320 320)">
-                    <ellipse class="orb orb-far" cx="320" cy="320" rx="300" ry="92" data-draw-path />
-                    <ellipse class="orb orb-near" cx="320" cy="320" rx="196" ry="60" data-draw-path />
-                    <circle class="orb-star" cx="320" cy="320" r="2" />
-                    <circle class="orb-planet" cx="171.3" cy="359.1" r="3.5" />
-                  </g>
-                </svg>
-              </div>
-            )}
-            {m.id !== 'complete' && (
-              <span
-                class:list={['m-top', { 'm-bar': m.id === 'google', 'm-rule': m.id !== 'google' }]}
-                data-reveal="draw"
-                style={`--d:${m.t}ms`}
-                aria-hidden="true"
-              />
-            )}
-            {m.recommended && m.recommended.confirmed && (
-              <p class="m-flag label" data-reveal="fade" style={`--d:${m.t + 380}ms`}>
-                {m.recommended.text}
-              </p>
-            )}
+          <article class={`model m-${m.id}`} aria-labelledby={`pk-${m.id}`} data-inview style={`--t:${m.t}ms`}>
+            <div class:list={['m-card', { 's-void': m.id === 'complete' }]} data-tilt="4">
+              {m.id === 'complete' && (
+                <div class="m-sky" aria-hidden="true">
+                  <Cosmos variant="stars" />
+                  {/* a soft light that follows the pointer across the plate */}
+                  <span class="m-light" />
+                  {/* one inclined circular orbit seen obliquely: star at the
+                      centre, a planet travelling the near ellipse (two
+                      phase-shifted sine translations = an ellipse). */}
+                  <svg class="m-orbit" viewBox="0 0 640 640" fill="none" focusable="false" data-parallax="0.08">
+                    <g transform="rotate(-24 320 320)">
+                      <ellipse class="orb orb-far" cx="320" cy="320" rx="300" ry="92" data-draw-path />
+                      <ellipse class="orb orb-near" cx="320" cy="320" rx="196" ry="60" data-draw-path />
+                      <circle class="orb-star" cx="320" cy="320" r="2" />
+                      <g class="orb-run">
+                        <g class="orb-rx">
+                          <g class="orb-ry">
+                            <circle class="orb-planet" cx="320" cy="320" r="3.5" />
+                          </g>
+                        </g>
+                      </g>
+                    </g>
+                  </svg>
+                </div>
+              )}
+              {m.id !== 'complete' && (
+                <span
+                  class:list={['m-top', { 'm-bar': m.id === 'google', 'm-rule': m.id !== 'google' }]}
+                  data-reveal="draw"
+                  style={`--d:${m.t + 260}ms`}
+                  aria-hidden="true"
+                >
+                  {m.id === 'google' && <span class="m-sweep" />}
+                </span>
+              )}
+              {m.recommended && m.recommended.confirmed && (
+                <p class="m-flag label" data-reveal style={`--d:${m.t + 900}ms`}>
+                  <span class="orbit" aria-hidden="true" />
+                  <span>{m.recommended.text}</span>
+                </p>
+              )}
 
-            <div class="m-a">
-              <h3 id={`pk-${m.id}`} class="m-name d3" data-reveal style={`--d:${m.t + 60}ms`}>
+              <h3 id={`pk-${m.id}`} class="m-name d3" data-reveal style={`--d:${m.t + 180}ms`}>
                 {m.name}
               </h3>
-              <p class="m-tag" data-reveal style={`--d:${m.t + 120}ms`}>
+              <p class="m-tag" data-reveal style={`--d:${m.t + 260}ms`}>
                 {m.tagline}
               </p>
-              <div class="m-price">
-                <p class="m-amt n2">
-                  <Odometer value={m.price.display} delay={m.t + 160} />
-                  <span class="m-usd" data-reveal="fade" style={`--d:${m.t + 700}ms`}>
-                    {pricing.labels.currency}
-                  </span>
-                </p>
-                {m.price.sub && (
-                  <p class="m-sub" data-reveal style={`--d:${m.t + 260}ms`}>
-                    {m.price.sub}
-                  </p>
-                )}
-                {m.price.note && m.price.note.confirmed && (
-                  <p class="m-sub" data-reveal style={`--d:${m.t + 300}ms`}>
-                    {m.price.note.text}
-                  </p>
-                )}
-              </div>
+              <p class="m-price" data-reveal style={`--d:${m.t + 340}ms`}>
+                <span class="node is-on" aria-hidden="true" />
+                <span>{pricing.priceLabel}</span>
+              </p>
               <div class="m-dim">
-                <DimensionLine label={m.daysLabel} ratio={m.ratio} delay={m.t + 280} />
+                <DimensionLine label={m.daysLabel} ratio={m.ratio} delay={m.t + 420} />
               </div>
-            </div>
-
-            <div class="m-b">
-              <div class="m-best" data-reveal style={`--d:${m.t + 200}ms`}>
-                <p class="label m-best-l">{pricing.labels.bestFor}</p>
-                <p class="m-best-t">{m.bestFor}</p>
-              </div>
-              <ul class="m-inc">
-                {m.includesOn.map((it, k) => (
-                  <li data-reveal style={`--d:${m.t + 160 + k * 40}ms`}>
-                    {it.text}
+              <ul class="m-keys" aria-label={m.name}>
+                {m.keys.map((k, n) => (
+                  <li class="m-key" data-reveal style={`--d:${m.t + 520 + n * 70}ms`}>
+                    {k}
                   </li>
                 ))}
               </ul>
-              <div class="m-cta" data-reveal style={`--d:${m.t + 200}ms`}>
+              <div class="m-cta" data-reveal style={`--d:${m.t + 640}ms`}>
                 <a
                   class={ctaClass[m.id]}
                   href={wa(m.waText)}
                   target="_blank"
                   rel="noopener"
                   data-wa-intent={`pricing-${m.id}`}
+                  data-magnetic=".2"
                 >
                   <WaGlyph size={16} />
                   <span class="btn-t">{bare(m.cta)}</span>
@@ -154,42 +234,121 @@ const slots = founding.slots;
                   <Arrow />
                 </a>
               </div>
+              <div class="m-x" data-reveal style={`--d:${m.t + 720}ms`}>
+                <Expand title={pricing.labels.includes} class="m-xp" reveal={false}>
+                  <p class="m-best">
+                    <span class="label m-best-l">{pricing.labels.bestFor}</span>
+                    <span class="m-best-t">{m.bestFor}</span>
+                  </p>
+                  <ul class="m-inc">
+                    {m.includesOn.map((it, k) => (
+                      <li style={`--k:${k}`}>{it.text}</li>
+                    ))}
+                  </ul>
+                </Expand>
+              </div>
             </div>
           </article>
         ))
       }
     </div>
+  </div>
 
-    <!-- compare table: open on tablet/desktop, a <details> on phones -->
-    <div class="cmp-block">
-      <details class="cmp" open data-cmp>
-        <summary class="cmp-sum" data-reveal>
-          <span class="cmp-sum-t">{compare.summary}</span>
-          <span class="plus" aria-hidden="true"></span>
-        </summary>
-        <div class="cmp-scroll" role="region" aria-labelledby="cmp-cap" tabindex="0" data-cmp-scroll>
-          <table class="cmp-t" data-inview>
-            <caption id="cmp-cap" class="cmp-cap label">{compare.caption}</caption>
-            <colgroup>
-              <col class="cmp-col-l" />
-              <col class="cmp-col-v" />
-              <col class="cmp-col-v" />
-              <col class="cmp-col-v" />
-            </colgroup>
-            <thead>
-              <tr style="--r:0">
-                <th scope="col" class="cmp-corner">
-                  <span class="visually-hidden">{compare.rowHeader}</span>
-                </th>
-                {compare.columns.map((c, i) => (
+  <!-- the owner's observation, once: an instrument band -->
+  <div class="range s-void" data-nav-theme="dark">
+    <Cosmos variant="stars" />
+    <div class="wrap range-in g" data-scene="soft">
+      <SplitText as="h3" class="d2 range-t" text={pricing.rangeNote.title} />
+
+      <div class="dial-wrap" data-parallax="0.05">
+        <div class="dial" data-inview data-dial data-tilt="5">
+          <svg class="dial-svg" viewBox={`0 0 ${DW} ${DH}`} fill="none" aria-hidden="true" focusable="false">
+            <path class="d-inner" d={inner} />
+            <path class="d-track" d={track} />
+            <path class="d-ring" d={ring.d} style={`--len:${ring.len}`} />
+            {ticks.map((t) => <line class={t.cls} x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2} style={`--k:${t.k}`} />)}
+            <path class="d-range" d={range.d} style={`--len:${range.len}`} />
+            {marks.map((mk, i) => <line class="d-mark" x1={mk.x1} y1={mk.y1} x2={mk.x2} y2={mk.y2} style={`--k:${i}`} />)}
+            <g class="ptr">
+              <g class="ptr-idle">
+                <line class="ptr-line" x1={ptr.x} y1={ptr.y1} x2={ptr.x} y2={ptr.y2} />
+                <circle class="ptr-dot" cx={ptr.x} cy={ptr.y1} r="4.5" />
+              </g>
+            </g>
+          </svg>
+          {
+            labels.map((l, i) => (
+              <span class="d-label label" style={`left:${l.left}%;top:${l.top}%;--k:${i}`} aria-hidden="true">
+                {l.text}
+              </span>
+            ))
+          }
+          <p class="dial-fig" data-split data-split-done style="--d:760ms">
+            <span class="wm"><span class="w" style="--i:0">{usd(lo)}</span></span><span class="wm"
+              ><span class="w" style="--i:1">–</span></span
+            ><span class="wm"><span class="w" style="--i:2">{usd(hi)}</span></span>
+          </p>
+        </div>
+      </div>
+
+      <p class="lead range-p" data-reveal style="--d:120ms">{pricing.rangeNote.text}</p>
+
+      <div class="range-cta" data-reveal style="--d:220ms">
+        <a
+          class="btn btn-lg"
+          href={wa(waMessages.hero)}
+          target="_blank"
+          rel="noopener"
+          data-wa-intent="pricing-analysis"
+          data-magnetic=".25"
+          data-nudge
+        >
+          <WaGlyph size={16} />
+          <span>{pricing.analysisCta}</span>
+          <Arrow />
+        </a>
+        {
+          contact.email.confirmed && (
+            <a class="tlink range-mail" href={mail()} data-mail-intent="pricing" data-nudge>
+              <MailGlyph size={16} />
+              <span>{contact.email.address}</span>
+              <Arrow />
+            </a>
+          )
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- the detail, on demand -->
+  <div class="wrap more" data-scene="soft">
+    <Expand title={compare.summary} keywords={pricing.keys.compare} index="01" class="x-cmp" i={0}>
+      <div class="cmp-scroll" role="region" aria-labelledby="cmp-cap" data-cmp-scroll>
+        <table class="cmp-t" data-inview>
+          <caption id="cmp-cap" class="cmp-cap label">{compare.caption}</caption>
+          <colgroup>
+            <col class="cmp-col-l" />
+            <col class="cmp-col-v" />
+            <col class="cmp-col-v" />
+            <col class="cmp-col-v" />
+          </colgroup>
+          <thead>
+            <tr style="--r:0">
+              <th scope="col" class="cmp-corner">
+                <span class="visually-hidden">{compare.rowHeader}</span>
+              </th>
+              {
+                compare.columns.map((c, i) => (
                   <th scope="col" class:list={['cmp-h', { 'cmp-h-rec': i === 1 }]}>
                     <span class="cmp-h-t">{c}</span>
                   </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {compareRows.map((row, r) => (
+                ))
+              }
+            </tr>
+          </thead>
+          <tbody>
+            {
+              compareRows.map((row, r) => (
                 <tr style={`--r:${r + 1}`}>
                   <th scope="row" style="--c:0">
                     <span class="cmp-l">{row.label}</span>
@@ -212,68 +371,53 @@ const slots = founding.slots;
                     </td>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </details>
-    </div>
-
-    <!-- Care and Founding clients: full-width hairline bands -->
-    <div class="bands">
-      <div class="band g">
-        <span class="band-rule" data-reveal="draw" aria-hidden="true"></span>
-        <h3 class="band-t d3" data-reveal>{care.title}</h3>
-        <p class="band-b" data-reveal style="--d:90ms">{care.body}</p>
-        <div class="band-c" data-reveal style="--d:180ms">
-          <a class="tlink" href={wa(care.cta.text)} target="_blank" rel="noopener" data-wa-intent="pricing-care">
-            <WaGlyph size={14} />
-            <span>{bare(care.cta.label)}</span>
-            <Arrow />
-          </a>
-        </div>
+              ))
+            }
+          </tbody>
+        </table>
       </div>
+    </Expand>
 
-      {
-        founding.confirmed && (
-          <div class="band g band-founding">
-            <span class="band-rule" data-reveal="draw" aria-hidden="true" />
-            <h3 class="band-t d3" data-reveal>
-              {founding.title}
-            </h3>
-            <div class="band-b">
-              <p data-reveal style="--d:90ms">
-                {founding.body}
-              </p>
-              <ol class="slots" data-reveal style="--d:180ms">
-                {slots.map((s) => (
-                  <li class:list={['slot', `is-${s.status}`]}>
-                    <span class:list={['node', { 'is-on': s.status === 'taken' }]} aria-hidden="true" />
-                    <span class="slot-n">{String(s.n).padStart(2, '0')}</span>
-                    <span class="slot-s">{founding.statusLabels[s.status]}</span>
-                  </li>
-                ))}
-              </ol>
-            </div>
-            <div class="band-c" data-reveal style="--d:180ms">
-              <a class="tlink" href={wa(founding.cta.text)} target="_blank" rel="noopener" data-wa-intent="pricing-founding">
-                <WaGlyph size={14} />
-                <span>{bare(founding.cta.label)}</span>
-                <Arrow />
-              </a>
-            </div>
-          </div>
-        )
-      }
-    </div>
+    <Expand title={care.title} keywords={pricing.keys.care} index="02" class="x-care" i={1}>
+      <p class="x-body">{care.body}</p>
+      <p class="x-cta">
+        <a class="tlink" href={wa(care.cta.text)} target="_blank" rel="noopener" data-wa-intent="pricing-care">
+          <WaGlyph size={14} />
+          <span>{bare(care.cta.label)}</span>
+          <Arrow />
+        </a>
+      </p>
+    </Expand>
 
-    <!-- paperwork -->
-    <div class="pw">
-      <SplitText as="h3" class="d3 pw-h" text={paperwork.title} />
+    {
+      founding.confirmed && (
+        <Expand title={founding.title} keywords={foundingKeys} index="03" class="x-found" i={2}>
+          <p class="x-body">{founding.body}</p>
+          <ol class="slots">
+            {slots.map((s, k) => (
+              <li class:list={['slot', `is-${s.status}`]} style={`--k:${k}`}>
+                <span class:list={['node', { 'is-on': s.status === 'taken' }]} aria-hidden="true" />
+                <span class="slot-n">{String(s.n).padStart(2, '0')}</span>
+                <span class="slot-s">{founding.statusLabels[s.status]}</span>
+              </li>
+            ))}
+          </ol>
+          <p class="x-cta">
+            <a class="tlink" href={wa(founding.cta.text)} target="_blank" rel="noopener" data-wa-intent="pricing-founding">
+              <WaGlyph size={14} />
+              <span>{bare(founding.cta.label)}</span>
+              <Arrow />
+            </a>
+          </p>
+        </Expand>
+      )
+    }
+
+    <Expand title={paperwork.title} keywords={pricing.keys.paperwork} index="04" class="x-pw" i={3}>
       <dl class="pw-cells">
         {
-          paperwork.cells.map((c, i) => (
-            <div class="pw-cell" data-reveal style={`--d:${i * 60}ms`}>
+          paperwork.cells.map((c, k) => (
+            <div class="pw-cell" style={`--k:${k}`}>
               <dt class="pw-v">{c.value}</dt>
               <dd class="pw-c">{c.caption}</dd>
             </div>
@@ -282,20 +426,20 @@ const slots = founding.slots;
       </dl>
       {
         terms.assurance.confirmed && (
-          <p class="pw-assure" data-reveal style="--d:120ms">
-            <span class="node" aria-hidden="true" />
+          <p class="pw-assure">
+            <span class="node is-on" aria-hidden="true" />
             <span>{terms.assurance.text}</span>
           </p>
         )
       }
-    </div>
+    </Expand>
   </div>
 </section>
 
 <style>
   /* ------------------------------------------------------------ section */
   .pricing {
-    /* the plate overhang and the hover plates never push the page sideways */
+    /* plate overhangs, the flip-in and the hover plates never push the page sideways */
     overflow: clip;
     --oh: 12px; /* Complete plate overhang */
   }
@@ -321,32 +465,16 @@ const slots = founding.slots;
     max-width: 18ch;
   }
 
-  .head-copy {
-    display: grid;
-    row-gap: 20px;
-  }
-
   .head-lead {
     color: var(--fg);
+    max-width: 38ch;
   }
 
-  .head-diff {
-    max-width: 46ch;
-    color: var(--fg-2);
-    text-wrap: pretty;
-  }
-
-  @media (min-width: 768px) {
+  @media (min-width: 1100px) {
     .head {
       row-gap: 32px;
     }
 
-    .head-copy {
-      grid-column: 1 / span 6;
-    }
-  }
-
-  @media (min-width: 1100px) {
     .head-label {
       margin-bottom: 8px;
     }
@@ -355,7 +483,7 @@ const slots = founding.slots;
       grid-column: 1 / span 7;
     }
 
-    .head-copy {
+    .head-lead {
       grid-column: 9 / span 4;
       align-self: end;
     }
@@ -364,13 +492,66 @@ const slots = founding.slots;
   /* ------------------------------------------------------------- models */
   .models {
     display: grid;
-    row-gap: 80px;
-    margin-top: 88px;
+    row-gap: 104px;
+    margin-top: 104px;
   }
 
+  /* the column rises out of the page and flips up into place */
   .model {
     position: relative;
+    transform-origin: 50% 100%;
+    transition:
+      transform 1500ms var(--ease-expo),
+      opacity 600ms linear;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .model:not(.is-in) {
+    opacity: 0;
+    transform: perspective(1400px) translate3d(0, 96px, 0) rotateX(34deg);
+  }
+
+  /* z-index (not isolation) keeps the plate's z-index:-1 layers inside the
+     card without flattening the tilt's 3D context */
+  .m-card {
+    position: relative;
+    z-index: 0;
+    height: 100%;
     padding-top: 32px;
+  }
+
+  /* depth under the tilt (fine pointers): while the pointer is over a
+     column, its name, price, flag and actions float off the plate at
+     different heights. The individual "translate" property composes with
+     the reveal's "transform", so the two never fight. */
+  @media (hover: hover) and (pointer: fine) {
+    .m-card > :is(.m-name, .m-price, .m-cta, .m-flag, .m-tag) {
+      --rd: calc(var(--i, 0) * 90ms + var(--d, 0ms));
+      transition:
+        opacity var(--t-reveal) var(--ease-expo),
+        transform var(--t-reveal) var(--ease-expo),
+        translate 800ms var(--ease-expo);
+      transition-delay: var(--rd), var(--rd), 0ms;
+    }
+
+    :global(html.js:not(.motion-reduced):not(.motion-failed)) .m-card.is-tilting > .m-name {
+      translate: 0 0 34px;
+    }
+
+    :global(html.js:not(.motion-reduced):not(.motion-failed)) .m-card.is-tilting > .m-flag {
+      translate: 0 0 40px;
+    }
+
+    :global(html.js:not(.motion-reduced):not(.motion-failed)) .m-card.is-tilting > .m-tag {
+      translate: 0 0 16px;
+    }
+
+    :global(html.js:not(.motion-reduced):not(.motion-failed)) .m-card.is-tilting > .m-price {
+      translate: 0 0 24px;
+    }
+
+    :global(html.js:not(.motion-reduced):not(.motion-failed)) .m-card.is-tilting > .m-cta {
+      translate: 0 0 28px;
+    }
   }
 
   /* top edge: a hairline on Landing, the 2px violet bar on + Google */
@@ -380,6 +561,7 @@ const slots = founding.slots;
     right: 0;
     top: 0;
     display: block;
+    overflow: clip;
   }
 
   .m-rule {
@@ -392,32 +574,75 @@ const slots = founding.slots;
     background-color: var(--violet);
   }
 
+  /* a lilac light runs along the bar once it has drawn, and again on hover */
+  .m-sweep {
+    position: absolute;
+    inset: 0;
+    transform: translate3d(-100%, 0, 0);
+  }
+
+  .m-sweep::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    width: 34%;
+    background-color: var(--lilac);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .m-bar.is-in .m-sweep {
+    animation: bar-sweep 1300ms var(--ease-quint) calc(var(--d, 0ms) + 1150ms) both;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    :global(html.js:not(.motion-reduced):not(.motion-failed)) .m-card:hover .m-bar.is-in .m-sweep {
+      animation: bar-sweep-again 1100ms var(--ease-quint) both;
+    }
+  }
+
+  @keyframes bar-sweep {
+    from {
+      transform: translate3d(-100%, 0, 0);
+    }
+    to {
+      transform: translate3d(134%, 0, 0);
+    }
+  }
+
+  @keyframes bar-sweep-again {
+    from {
+      transform: translate3d(-100%, 0, 0);
+    }
+    to {
+      transform: translate3d(134%, 0, 0);
+    }
+  }
+
   /* sits above the column's top edge; wraps upward on the narrowest phones */
   .m-flag {
     position: absolute;
     left: 0;
     right: 0;
     bottom: calc(100% + 14px);
+    display: flex;
+    align-items: center;
+    gap: 12px;
     color: var(--accent-text);
     text-wrap: balance;
   }
 
   /* the Complete plate: a facet of night sky standing proud of the row. The
-     element paints the rectangle (so the contrast gate sees --void behind the
+     card paints the rectangle (so the contrast gate sees --void behind the
      text); ::before adds the overhang with the 45° facet cuts, and .m-sky
      carries the stars and the orbit inside the same facet. */
-  .m-complete {
+  .m-complete .m-card {
     margin-block: var(--oh);
-    padding-block: 20px 16px;
+    padding-block: 20px 8px;
     background-color: var(--void);
-    isolation: isolate;
-    transition:
-      transform 1000ms var(--ease-mech),
-      opacity 360ms linear;
-    transition-delay: 160ms;
   }
 
-  .m-complete::before {
+  .m-complete .m-card::before {
     content: '';
     position: absolute;
     inset: calc(-1 * var(--oh)) 0;
@@ -429,7 +654,7 @@ const slots = founding.slots;
   /* below desktop the plate runs edge to edge; its padding equals the page
      gutter, so its text keeps the same left edge as every other block */
   @media (max-width: 1099px) {
-    .m-complete {
+    .m-complete .m-card {
       margin-inline: calc(-1 * var(--gut));
       padding-inline: var(--gut);
     }
@@ -446,18 +671,40 @@ const slots = founding.slots;
     background-image: radial-gradient(70% 38% at 100% 100%, rgb(98 54 232 / 0.1), transparent 72%);
   }
 
-  /* keep the star field a whisper under the text */
   .m-sky :global(.cosmos) {
-    opacity: 0.6;
+    opacity: 0.75;
   }
 
-  /* the orbit system sits just below the plate's lower-right corner: the
-     star (the SVG's centre) 90px in from the edge and 40px under the facet,
-     so only the upper arcs sweep in, under the empty end of the CTA row */
+  /* the pointer light: a soft lilac pool inside the plate that follows the
+     pointer (transform only; the script writes --lx / --ly in px) */
+  .m-light {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 620px;
+    height: 620px;
+    margin: -310px 0 0 -310px;
+    border-radius: 50%;
+    background-image: radial-gradient(
+      closest-side,
+      rgb(185 162 255 / 0.12),
+      rgb(98 54 232 / 0.07) 42%,
+      rgb(98 54 232 / 0) 100%
+    );
+    opacity: 0;
+    transform: translate3d(var(--lx, 70%), var(--ly, 30%), 0);
+    transition: opacity 900ms var(--ease-expo);
+    pointer-events: none;
+  }
+
+  .m-card.is-lit .m-light {
+    opacity: 1;
+  }
+
   .m-orbit {
     position: absolute;
     right: -230px;
-    bottom: -360px;
+    bottom: -286px;
     width: 640px;
     height: 640px;
     max-width: none;
@@ -498,7 +745,7 @@ const slots = founding.slots;
     transform-box: fill-box;
     transform-origin: center;
     transition:
-      transform 900ms var(--ease-expo),
+      transform 900ms var(--ease-settle),
       opacity 300ms linear;
     transition-delay: 1900ms;
   }
@@ -508,15 +755,45 @@ const slots = founding.slots;
     opacity: 0;
   }
 
-  /* the planet lands once its orbit has drawn */
-  :global(html.js:not(.motion-reduced):not(.motion-failed)) .orb-near:not(.is-in) ~ .orb-planet {
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .orb-near:not(.is-in) ~ .orb-run .orb-planet {
     opacity: 0;
     transform: scale(0);
   }
 
-  :global(html.js:not(.motion-reduced):not(.motion-failed)) .m-complete:not(.is-in) {
-    opacity: 0;
-    transform: translate3d(0, 32px, 0);
+  /* the planet's year: 56 s. x = a·cos, y = b·sin — ease-in-out halves
+     approximate the sine; the y track runs a quarter period behind */
+  .orb-rx {
+    animation: orb-x 28s cubic-bezier(0.37, 0, 0.63, 1) -14s infinite alternate;
+  }
+
+  .orb-ry {
+    animation: orb-y 28s cubic-bezier(0.37, 0, 0.63, 1) -28s infinite alternate;
+  }
+
+  .m-card:not(.is-live) :is(.orb-rx, .orb-ry) {
+    animation-play-state: paused;
+  }
+
+  :global(html.motion-reduced) :is(.orb-rx, .orb-ry) {
+    animation: none;
+  }
+
+  @keyframes orb-x {
+    from {
+      transform: translate(-196px, 0);
+    }
+    to {
+      transform: translate(196px, 0);
+    }
+  }
+
+  @keyframes orb-y {
+    from {
+      transform: translate(0, -60px);
+    }
+    to {
+      transform: translate(0, 60px);
+    }
   }
 
   .m-name {
@@ -525,92 +802,60 @@ const slots = founding.slots;
 
   .m-tag {
     margin-top: 12px;
-    max-width: 36ch;
-    color: var(--fg-2);
-    text-wrap: pretty;
-  }
-
-  .m-price {
-    margin-top: 32px;
-  }
-
-  /* Lining proportional figures, not tabular: Mona Sans's tabular set is
-     the code-style one (slashed zero), which reads as monospace. */
-  .m-amt {
-    display: flex;
-    align-items: flex-end;
-    column-gap: 0.18em;
-    color: var(--fg);
-    font-variant-numeric: lining-nums proportional-nums;
-  }
-
-  .m-usd {
-    font-stretch: var(--wd-display);
-    font-size: 0.6875rem;
-    font-weight: 600;
-    line-height: 1;
-    letter-spacing: 0.18em;
-    color: var(--fg-2);
-    /* on the figures' baseline: measured, the figure baseline sits 0.126em
-       above the bottom of the 1em odometer line; the label's own descent is
-       ~1.4px */
-    margin-bottom: calc(var(--t-n2) * 0.116 - 1.4px);
-  }
-
-  .m-sub {
-    margin-top: 16px;
     max-width: 34ch;
-    font-size: 0.875rem;
-    line-height: 1.5;
     color: var(--fg-2);
     text-wrap: pretty;
+  }
+
+  /* the price is a readout: a lit node and the words */
+  .m-price {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 28px;
+    font-stretch: var(--wd-display);
+    font-size: clamp(1.125rem, 1.02rem + 0.35vw, 1.3125rem);
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.005em;
+    color: var(--fg);
+  }
+
+  .m-price .node {
+    flex: 0 0 auto;
+    color: var(--mark);
   }
 
   .m-dim {
-    margin-top: 28px;
+    margin-top: 24px;
   }
 
-  .m-best {
-    margin-top: 32px;
+  .m-keys {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 28px 0 0;
+    padding: 0;
+    list-style: none;
   }
 
-  .m-best-l {
+  .m-key {
+    padding: 7px 10px 6px;
+    border: 1px solid var(--line-strong);
+    font-stretch: var(--wd-display);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
     color: var(--fg-2);
   }
 
-  .m-best-t {
-    margin-top: 10px;
-    max-width: 38ch;
-    font-size: 0.9375rem;
-    line-height: 1.5;
-    color: var(--fg);
-    text-wrap: pretty;
-  }
-
-  .m-inc {
-    margin-top: 28px;
-    list-style: none;
-    padding: 0;
-  }
-
-  .m-inc li {
-    padding: 13px 0 14px;
-    border-top: 1px solid var(--line);
-    font-size: 0.9375rem;
-    line-height: 1.45;
-    color: var(--fg);
-    text-wrap: pretty;
-  }
-
-  .m-inc li:last-child {
-    border-bottom: 1px solid var(--line);
-  }
-
   .m-cta {
-    margin-top: 28px;
+    margin-top: 32px;
     display: grid;
     justify-items: start;
-    row-gap: 14px;
+    row-gap: 12px;
   }
 
   /* phones: full-width 52px CTAs, label left, arrow to the far edge */
@@ -628,59 +873,129 @@ const slots = founding.slots;
     margin-left: auto;
   }
 
-  /* The violet button paints its faceted fill on ::before. Repeat the fill
-     on the element, clipped to the content box (clear of the cut corners and
-     under ::before), so the contrast gate reads white on violet, not on paper. */
-  .m-cta .btn:not(.btn-line) {
-    background-color: var(--btn-bg);
-    background-clip: content-box;
-    transition:
-      transform 120ms var(--ease-expo),
-      background-color var(--t-micro) linear;
-  }
-
-  @media (hover: hover) and (pointer: fine) {
-    .m-cta .btn:not(.btn-line):hover {
-      background-color: var(--btn-bg-hover);
-    }
-  }
-
-  .m-cta .btn:not(.btn-line):focus-visible {
-    background-color: var(--btn-bg-hover);
-  }
-
   .m-conf {
     font-size: 0.8125rem;
   }
 
-  /* tablet: each model is a row, identity + price on the left, contents on the right */
+  .m-x {
+    margin-top: 28px;
+  }
+
+  /* the Expand inside a column: a quieter title than the section boxes */
+  .model :global(.m-xp .xp-sum) {
+    padding-block: 18px;
+    align-items: center;
+  }
+
+  .model :global(.m-xp .xp-title) {
+    font-size: 0.8125rem;
+    font-weight: 620;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .model :global(.m-xp .xp-icon) {
+    width: 28px;
+    height: 28px;
+    margin-top: 0;
+  }
+
+  .m-best {
+    display: grid;
+    row-gap: 8px;
+    padding-bottom: 18px;
+  }
+
+  .m-best-l {
+    color: var(--fg-2);
+  }
+
+  .m-best-t {
+    max-width: 38ch;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    color: var(--fg);
+    text-wrap: pretty;
+  }
+
+  .m-inc {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .m-inc li {
+    padding: 12px 0 13px;
+    border-top: 1px solid var(--line);
+    font-size: 0.9375rem;
+    line-height: 1.45;
+    color: var(--fg);
+    text-wrap: pretty;
+    transition:
+      opacity 420ms linear,
+      transform 800ms var(--ease-expo);
+    transition-delay: calc(var(--k, 0) * 55ms + 140ms);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) :global(.m-xp:not(.is-open)) .m-inc li {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+
+  /* tablet: identity on the left, price and action on the right */
   @media (min-width: 768px) and (max-width: 1099px) {
     .models {
-      row-gap: 96px;
-      margin-top: 112px;
+      row-gap: 120px;
+      margin-top: 128px;
     }
 
-    .model {
+    .m-card {
       display: grid;
       grid-template-columns: repeat(8, minmax(0, 1fr));
       column-gap: var(--gap);
+      align-items: start;
       padding-top: 40px;
     }
 
-    .m-a {
+    .m-name {
       grid-column: 1 / span 4;
+      grid-row: 1;
     }
 
-    .m-b {
+    .m-tag {
+      grid-column: 1 / span 4;
+      grid-row: 2;
+    }
+
+    .m-keys {
+      grid-column: 1 / span 4;
+      grid-row: 3;
+    }
+
+    .m-price {
       grid-column: 5 / span 4;
+      grid-row: 1;
+      margin-top: 6px;
     }
 
-    .m-best {
-      margin-top: 0;
+    .m-dim {
+      grid-column: 5 / span 4;
+      grid-row: 2;
     }
 
-    .m-complete {
-      padding-block: 32px 28px;
+    .m-cta {
+      grid-column: 5 / span 4;
+      grid-row: 3;
+    }
+
+    .m-x {
+      grid-column: 1 / -1;
+      grid-row: 4;
+      margin-top: 36px;
+    }
+
+    .m-complete .m-card {
+      padding-block: 32px 8px;
     }
 
     .m-cta .btn {
@@ -699,23 +1014,25 @@ const slots = founding.slots;
   @media (min-width: 1100px) {
     .models {
       grid-template-columns: repeat(12, minmax(0, 1fr));
-      grid-template-rows: repeat(var(--rows), auto);
+      grid-template-rows: repeat(7, auto);
       column-gap: var(--gap);
       row-gap: 0;
-      margin-top: 136px;
+      margin-top: 128px;
     }
 
     .model {
       grid-column: span 4;
-      grid-row: 1 / span var(--rows);
+      grid-row: 1 / span 7;
+      display: grid;
+      grid-template-rows: subgrid;
+      transition-delay: var(--t, 0ms);
+    }
+
+    .m-card {
+      grid-row: 1 / -1;
       display: grid;
       grid-template-rows: subgrid;
       padding-top: 40px;
-    }
-
-    .m-a,
-    .m-b {
-      display: contents;
     }
 
     .m-name {
@@ -728,30 +1045,30 @@ const slots = founding.slots;
 
     .m-price {
       grid-row: 3;
-      margin-top: 40px;
+      margin-top: 36px;
     }
 
     .m-dim {
       grid-row: 4;
-      margin-top: 32px;
+      margin-top: 28px;
     }
 
-    .m-best {
+    .m-keys {
       grid-row: 5;
-      margin-top: 36px;
-    }
-
-    .m-inc {
-      grid-row: 6 / span var(--inc);
-      display: grid;
-      grid-template-rows: subgrid;
-      margin-top: 32px;
+      margin-top: 28px;
+      align-self: start;
     }
 
     .m-cta {
-      grid-row: -2 / -1;
+      grid-row: 6;
       align-self: start;
       margin-top: 36px;
+    }
+
+    .m-x {
+      grid-row: 7;
+      align-self: start;
+      margin-top: 32px;
     }
 
     .m-cta .btn {
@@ -766,7 +1083,7 @@ const slots = founding.slots;
     }
 
     /* + Google: the vertical hairline between models, content inset from it */
-    .m-google {
+    .m-google .m-card {
       padding-inline: 36px;
       border-left: 1px solid var(--line);
     }
@@ -775,18 +1092,18 @@ const slots = founding.slots;
       left: 36px;
     }
 
-    .m-landing {
-      padding-right: 8px;
+    .m-landing .m-card {
+      padding-right: 16px;
     }
 
-    .m-complete {
+    .m-complete .m-card {
       margin-block: 0;
       padding: 40px 36px 0;
     }
 
     /* hover (fine pointers): paper columns lift to paper-2 */
-    .m-landing::before,
-    .m-google::before {
+    .m-landing .m-card::before,
+    .m-google .m-card::before {
       content: '';
       position: absolute;
       z-index: -1;
@@ -797,86 +1114,439 @@ const slots = founding.slots;
     }
 
     /* the hover plate ends on the same line as the Complete plate's facet */
-    .m-landing::before {
-      inset: 0 -24px calc(-1 * var(--oh)) -24px;
+    .m-landing .m-card::before {
+      inset: 0 -8px calc(-1 * var(--oh)) -24px;
     }
 
-    .m-google::before {
+    .m-google .m-card::before {
       inset: 0 0 calc(-1 * var(--oh)) 0;
-    }
-
-    .m-landing,
-    .m-google {
-      isolation: isolate;
     }
   }
 
   @media (min-width: 1100px) and (hover: hover) and (pointer: fine) {
-    .m-landing:hover::before,
-    .m-google:hover::before {
+    .m-landing .m-card:hover::before,
+    .m-google .m-card:hover::before {
       opacity: 1;
     }
   }
 
-  /* ------------------------------------------------------ compare table */
-  .cmp-block {
-    margin-top: 80px;
-  }
-
-  .cmp-sum {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    min-height: 64px;
-    border-block: 1px solid var(--line-strong);
-    font-stretch: var(--wd-display);
-    font-size: 1.0625rem;
-    font-weight: 620;
-    letter-spacing: -0.005em;
-    color: var(--fg);
-    cursor: pointer;
-    list-style: none;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .cmp-sum::-webkit-details-marker {
-    display: none;
-  }
-
-  .plus {
+  /* -------------------------------------------------------- range band */
+  .range {
     position: relative;
-    flex: 0 0 auto;
-    width: 14px;
-    height: 14px;
+    isolation: isolate;
+    overflow: clip;
+    margin-top: 120px;
+    padding-block: 88px 96px;
+    background-color: var(--void);
   }
 
-  .plus::before,
-  .plus::after {
+  .range > :global(.cosmos) {
+    z-index: 0;
+  }
+
+  /* one faint nebula pool behind the dial (≤10%, imagery only) */
+  .range::before {
     content: '';
     position: absolute;
-    background-color: currentColor;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: radial-gradient(46% 60% at 72% 62%, rgb(98 54 232 / 0.1), transparent 72%);
   }
 
-  .plus::before {
-    left: 0;
-    right: 0;
-    top: 6.5px;
-    height: 1px;
+  .range-in {
+    position: relative;
+    z-index: 1;
+    row-gap: 28px;
   }
 
-  .plus::after {
-    top: 0;
-    bottom: 0;
-    left: 6.5px;
-    width: 1px;
-    transition: transform var(--t-ui) var(--ease-mech);
+  .range-t {
+    max-width: 14ch;
+    color: var(--fg);
   }
 
-  .cmp[open] .plus::after {
-    transform: rotate(90deg);
+  .range-p {
+    max-width: 38ch;
+    color: var(--fg-2);
   }
 
+  .range-cta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 20px 32px;
+    margin-top: 8px;
+  }
+
+  .range-cta .btn {
+    white-space: normal;
+    text-align: left;
+    line-height: 1.25;
+  }
+
+  .range-mail {
+    font-size: 0.875rem;
+  }
+
+  @media (max-width: 767px) {
+    .range-cta .btn {
+      width: 100%;
+      justify-content: flex-start;
+      padding-inline: 20px;
+    }
+
+    .range-cta .btn .arrow {
+      margin-left: auto;
+    }
+  }
+
+  /* the dial */
+  .dial-wrap {
+    margin-block: 20px 12px;
+  }
+
+  .dial {
+    position: relative;
+    width: 100%;
+    max-width: 760px;
+    aspect-ratio: 640 / 300;
+  }
+
+  /* phones: the scale only uses the middle ~75% of its box, so the dial runs
+     wider than the column (the band clips) and the arc spans the screen */
+  @media (max-width: 767px) {
+    .dial-wrap {
+      margin-top: -4px;
+    }
+
+    .dial {
+      width: 126%;
+      max-width: none;
+      margin-inline: -13%;
+    }
+  }
+
+  .dial-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  .d-inner {
+    stroke: rgb(243 240 250 / 0.14);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+    stroke-dasharray: 2 5;
+  }
+
+  .d-track {
+    stroke: rgb(243 240 250 / 0.14);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .d-inner,
+  .d-track {
+    transition: opacity 900ms linear 200ms;
+  }
+
+  .d-ring {
+    stroke: rgb(243 240 250 / 0.42);
+    stroke-width: 1.4;
+    stroke-dasharray: var(--len);
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset 1500ms var(--ease-quint);
+  }
+
+  .tk {
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+    transition: opacity 420ms linear;
+    transition-delay: calc(var(--k, 0) * 18ms + 240ms);
+  }
+
+  .tk-minor {
+    stroke: rgb(243 240 250 / 0.3);
+  }
+
+  .tk-mid {
+    stroke: rgb(243 240 250 / 0.5);
+  }
+
+  .tk-major {
+    stroke: rgb(243 240 250 / 0.7);
+  }
+
+  .tk-in {
+    stroke: rgb(185 162 255 / 0.85);
+  }
+
+  .d-range {
+    stroke: var(--violet);
+    stroke-width: 8;
+    stroke-dasharray: var(--len);
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset 1100ms var(--ease-quint) 620ms;
+  }
+
+  .d-mark {
+    stroke: var(--lilac);
+    stroke-width: 1.25;
+    vector-effect: non-scaling-stroke;
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+    transition:
+      opacity 300ms linear,
+      transform 700ms var(--ease-expo);
+    transition-delay: calc(var(--k, 0) * 1000ms + 620ms);
+  }
+
+  .d-label {
+    position: absolute;
+    translate: -50% -50%;
+    color: var(--fg);
+    white-space: nowrap;
+    font-variant-numeric: lining-nums proportional-nums;
+    transition:
+      opacity 500ms linear,
+      transform 800ms var(--ease-expo);
+    transition-delay: calc(var(--k, 0) * 1000ms + 760ms);
+  }
+
+  /* the pointer swings in from the top of the scale and settles, with an
+     overshoot, on the middle of the range; then breathes while on screen */
+  .ptr,
+  .ptr-idle {
+    transform-box: view-box;
+    transform-origin: 320px 392px;
+  }
+
+  .ptr {
+    transition:
+      transform 1900ms var(--ease-settle),
+      opacity 300ms linear;
+    transition-delay: 900ms;
+  }
+
+  .dial.is-armed .ptr {
+    transition-delay: 0ms;
+    transition-duration: 1100ms, 300ms;
+  }
+
+  .dial.is-nudge .ptr {
+    transform: rotate(-11deg);
+  }
+
+  .ptr-line {
+    stroke: var(--starlight);
+    stroke-width: 1.5;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .ptr-dot {
+    fill: var(--lilac);
+  }
+
+  .dial.is-in .ptr-idle {
+    animation: ptr-idle 6.4s ease-in-out 3s infinite;
+    animation-play-state: paused;
+  }
+
+  .dial.is-in.is-live .ptr-idle {
+    animation-play-state: running;
+  }
+
+  @keyframes ptr-idle {
+    0%,
+    100% {
+      transform: rotate(0deg);
+    }
+    30% {
+      transform: rotate(1.1deg);
+    }
+    70% {
+      transform: rotate(-1.1deg);
+    }
+  }
+
+  .dial-fig {
+    position: absolute;
+    left: 50%;
+    top: 81%;
+    translate: -50% -50%;
+    margin: 0;
+    font-stretch: var(--wd-display);
+    font-size: clamp(2.5rem, 1.2rem + 3.4vw, 4.25rem);
+    font-weight: 540;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+    font-variant-numeric: lining-nums proportional-nums;
+    color: var(--fg);
+  }
+
+  .dial-fig :global(.w) {
+    transition-delay: calc(var(--i, 0) * 150ms + var(--d, 0ms));
+  }
+
+  .dial-fig :global(.wm:nth-child(2)) {
+    color: var(--lilac);
+    padding-inline: 0.04em;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .dial:not(.is-in) .d-ring {
+    stroke-dashoffset: var(--len);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .dial:not(.is-in) .d-range {
+    stroke-dashoffset: var(--len);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .dial:not(.is-in) :is(.tk, .d-inner, .d-track) {
+    opacity: 0;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .dial:not(.is-in) .d-mark {
+    opacity: 0;
+    transform: scaleY(0.2);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .dial:not(.is-in) .d-label {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .dial:not(.is-in) .ptr {
+    opacity: 0;
+    transform: rotate(56deg);
+  }
+
+  @media (min-width: 768px) {
+    .range {
+      margin-top: 144px;
+      padding-block: 112px;
+    }
+
+    .range-in {
+      row-gap: 32px;
+    }
+
+    .range-t,
+    .range-p,
+    .range-cta {
+      grid-column: 1 / span 6;
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .range {
+      margin-top: 176px;
+      padding-block: 128px;
+    }
+
+    .range-in {
+      grid-template-rows: auto auto 1fr;
+      row-gap: 28px;
+    }
+
+    .range-t {
+      grid-column: 1 / span 5;
+      grid-row: 1;
+    }
+
+    .range-p {
+      grid-column: 1 / span 5;
+      grid-row: 2;
+    }
+
+    .range-cta {
+      grid-column: 1 / span 5;
+      grid-row: 3;
+      align-self: start;
+      margin-top: 16px;
+    }
+
+    .dial-wrap {
+      grid-column: 6 / span 7;
+      grid-row: 1 / span 3;
+      align-self: center;
+      margin: 0;
+    }
+
+    .dial {
+      margin-left: auto;
+    }
+  }
+
+  /* ---------------------------------------------------------- details */
+  .more {
+    margin-top: 96px;
+  }
+
+  .more :global(.xp:last-child) {
+    border-bottom: 1px solid var(--line-strong);
+  }
+
+  /* keywords that wrap on a phone: the separator trails its word instead
+     of opening the next line */
+  @media (max-width: 767px) {
+    .more :global(.xp-key + .xp-key::before) {
+      content: none;
+    }
+
+    .more :global(.xp-key:not(:last-child)::after) {
+      content: '·';
+      margin-inline-start: 12px;
+      color: var(--fg-3);
+    }
+
+    .more :global(.xp-keys) {
+      gap: 6px 12px;
+    }
+  }
+
+  .x-body {
+    max-width: 60ch;
+    color: var(--fg-2);
+    text-wrap: pretty;
+  }
+
+  .x-cta {
+    margin-top: 16px;
+  }
+
+  .x-cta .tlink {
+    font-size: 0.875rem;
+  }
+
+  @media (min-width: 768px) {
+    .more {
+      margin-top: 128px;
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .more {
+      margin-top: 144px;
+    }
+
+    /* the detail text starts on the keyword column, not the index */
+    .more :global(.xp-inner) {
+      padding-left: calc(2.2em + 16px);
+    }
+
+    .more :global(.x-cmp .xp-inner) {
+      padding-left: 0;
+    }
+
+    .x-body {
+      font-size: 1.0625rem;
+    }
+  }
+
+  /* ------------------------------------------------------ compare table */
   /* its own scroll box: the table may be wider than a phone, the page never is */
   .cmp-scroll {
     width: 100%;
@@ -920,11 +1590,11 @@ const slots = founding.slots;
     transition:
       opacity 700ms var(--ease-expo),
       transform 700ms var(--ease-expo);
-    transition-delay: calc(var(--r, 0) * 50ms + 60ms);
+    transition-delay: calc(var(--r, 0) * 45ms + 120ms);
   }
 
   .cmp-t thead th {
-    padding-top: 24px;
+    padding-top: 8px;
     padding-bottom: 14px;
     vertical-align: bottom;
     border-bottom: 1px solid var(--line-strong);
@@ -951,7 +1621,7 @@ const slots = founding.slots;
     position: absolute;
     left: 0;
     right: 12px;
-    top: 0;
+    top: -10px;
     height: 2px;
     background-color: var(--violet);
     transform-origin: left center;
@@ -977,7 +1647,7 @@ const slots = founding.slots;
     background-color: var(--line);
     transform-origin: left center;
     transition: transform 700ms var(--ease-quint);
-    transition-delay: calc(var(--r, 0) * 50ms + var(--c, 0) * 110ms);
+    transition-delay: calc(var(--r, 0) * 45ms + var(--c, 0) * 110ms);
   }
 
   .cmp-t tbody th {
@@ -1059,43 +1729,15 @@ const slots = founding.slots;
     .cmp-t td {
       padding-block: 13px;
     }
-
-    .cmp-t thead th {
-      padding-top: 20px;
-    }
   }
 
   @media (min-width: 768px) {
-    .cmp-block {
-      margin-top: 144px;
-    }
-
-    .cmp-sum {
-      display: none;
-    }
-
-    .cmp-cap {
-      position: static;
-      width: auto;
-      height: auto;
-      overflow: visible;
-      clip: auto;
-      caption-side: top;
-      text-align: left;
-      padding-bottom: 8px;
-      color: var(--fg-2);
-    }
-
     .cmp-t {
       min-width: 0;
     }
   }
 
   @media (min-width: 1100px) {
-    .cmp-block {
-      margin-top: 176px;
-    }
-
     /* row labels in columns 1–3, values in 4–6, 7–9 and 10–12, exactly on
        the page grid: a 3-column span plus its gap is 25% + gap/4 */
     .cmp-scroll {
@@ -1118,7 +1760,7 @@ const slots = founding.slots;
 
     .cmp-t th,
     .cmp-t td {
-      padding-block: 17px;
+      padding-block: 16px;
     }
   }
 
@@ -1132,58 +1774,12 @@ const slots = founding.slots;
     transform: translate3d(0, 10px, 0);
   }
 
-  /* ------------------------------------------------------------- bands */
-  .bands {
-    margin-top: 72px;
-  }
-
-  .band {
-    position: relative;
-    row-gap: 16px;
-    padding-block: 36px 40px;
-  }
-
-  .band-rule {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    display: block;
-    height: 1px;
-    background-color: var(--line-strong);
-  }
-
-  .band:last-child {
-    border-bottom: 1px solid var(--line-strong);
-  }
-
-  .band-t {
-    max-width: 16ch;
-  }
-
-  .band-b {
-    max-width: 54ch;
-    color: var(--fg-2);
-    text-wrap: pretty;
-  }
-
-  .band-b > p {
-    text-wrap: pretty;
-  }
-
-  .band-c {
-    padding-top: 4px;
-  }
-
-  .band .tlink {
-    font-size: 0.875rem;
-  }
-
+  /* ------------------------------------------------------------ founding */
   .slots {
     display: flex;
     flex-wrap: wrap;
     gap: 12px 28px;
-    margin-top: 24px;
+    margin: 22px 0 0;
     padding: 0;
     list-style: none;
   }
@@ -1199,6 +1795,10 @@ const slots = founding.slots;
     letter-spacing: 0.18em;
     text-transform: uppercase;
     color: var(--fg);
+    transition:
+      opacity 400ms linear,
+      transform 800ms var(--ease-settle);
+    transition-delay: calc(var(--k, 0) * 90ms + 200ms);
   }
 
   .slot .node {
@@ -1210,70 +1810,23 @@ const slots = founding.slots;
     color: var(--accent-text);
   }
 
-  @media (min-width: 768px) {
-    .bands {
-      margin-top: 144px;
-    }
-
-    .band {
-      padding-block: 44px 48px;
-    }
-
-    .band-t {
-      grid-column: 1 / span 3;
-    }
-
-    .band-b {
-      grid-column: 4 / span 5;
-    }
-
-    .band-c {
-      grid-column: 4 / span 5;
-    }
-  }
-
-  @media (min-width: 1100px) {
-    .bands {
-      margin-top: 176px;
-    }
-
-    .band {
-      padding-block: 48px 56px;
-    }
-
-    .band-t {
-      grid-column: 1 / span 4;
-    }
-
-    .band-b {
-      grid-column: 5 / span 5;
-      font-size: 1.0625rem;
-    }
-
-    .band-c {
-      grid-column: 10 / span 3;
-      padding-top: 6px;
-    }
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) :global(.x-found:not(.is-open)) .slot {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0) scale(0.92);
   }
 
   /* --------------------------------------------------------- paperwork */
-  .pw {
-    margin-top: 96px;
-  }
-
-  .pw-h {
-    max-width: 18ch;
-  }
-
+  /* a spec sheet: strong rule on top, verticals only BETWEEN cells */
   .pw-cells {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    margin-top: 32px;
+    margin: 0;
     border-top: 1px solid var(--line-strong);
+    container-type: inline-size;
+    --pw-n: 2;
+    --pw-pad: 28px;
   }
 
-  /* a spec sheet: strong rule on top, verticals only BETWEEN cells, so the
-     first column's figures sit on the page's left edge with the headline */
   .pw-cell {
     display: flex;
     flex-direction: column;
@@ -1282,6 +1835,15 @@ const slots = founding.slots;
     border-bottom: 1px solid var(--line);
     border-left: 1px solid var(--line);
     min-width: 0;
+    transition:
+      opacity 420ms linear,
+      transform 900ms var(--ease-expo);
+    transition-delay: calc(var(--k, 0) * 60ms + 160ms);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) :global(.x-pw:not(.is-open)) .pw-cell {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0);
   }
 
   .pw-cell:nth-child(2n + 1) {
@@ -1291,12 +1853,6 @@ const slots = founding.slots;
 
   /* the large print: sized to the cell, so the longest value (W-8BEN-E,
      ~5.4em) always fits on one line from 320px to 1440px */
-  .pw-cells {
-    container-type: inline-size;
-    --pw-n: 2;
-    --pw-pad: 28px;
-  }
-
   .pw-v {
     font-stretch: var(--wd-display);
     font-size: min(2.25rem, calc((100cqi / var(--pw-n) - var(--pw-pad)) * 0.17));
@@ -1309,6 +1865,7 @@ const slots = founding.slots;
   }
 
   .pw-c {
+    margin: 0;
     font-size: 0.875rem;
     line-height: 1.45;
     color: var(--fg-2);
@@ -1319,7 +1876,7 @@ const slots = founding.slots;
     display: flex;
     align-items: baseline;
     gap: 14px;
-    margin-top: 36px;
+    margin-top: 28px;
     max-width: 58ch;
     font-size: var(--t-body);
     line-height: 1.55;
@@ -1334,10 +1891,6 @@ const slots = founding.slots;
   }
 
   @media (min-width: 768px) {
-    .pw {
-      margin-top: 128px;
-    }
-
     .pw-cells {
       grid-template-columns: repeat(3, minmax(0, 1fr));
       --pw-n: 3;
@@ -1345,7 +1898,7 @@ const slots = founding.slots;
     }
 
     .pw-cell {
-      padding: 28px 16px 30px 20px;
+      padding: 26px 16px 28px 20px;
     }
 
     .pw-cell:nth-child(2n + 1) {
@@ -1360,24 +1913,20 @@ const slots = founding.slots;
   }
 
   @media (min-width: 1100px) {
-    .pw {
-      margin-top: 160px;
-    }
-
     .pw-cells {
       grid-template-columns: repeat(6, minmax(0, 1fr));
-      margin-top: 40px;
       --pw-n: 6;
+      border-bottom: 1px solid var(--line-strong);
     }
 
     .pw-cell {
-      padding: 32px 16px 36px 20px;
+      padding: 28px 14px 32px 18px;
       border-bottom: 0;
     }
 
     .pw-cell:nth-child(n) {
       border-left: 1px solid var(--line);
-      padding-left: 20px;
+      padding-left: 18px;
     }
 
     .pw-cell:first-child {
@@ -1385,12 +1934,8 @@ const slots = founding.slots;
       padding-left: 0;
     }
 
-    .pw-cells {
-      border-bottom: 1px solid var(--line-strong);
-    }
-
     .pw-assure {
-      margin-top: 40px;
+      margin-top: 32px;
       font-size: 1.125rem;
     }
   }
@@ -1402,48 +1947,125 @@ const slots = founding.slots;
   const section = document.getElementById('pricing');
 
   if (section) {
-    /* compare table: always open from 768px up; a collapsed <details> on phones */
-    const details = section.querySelector<HTMLDetailsElement>('[data-cmp]');
-    const table = details?.querySelector<HTMLElement>('.cmp-t') ?? null;
-    const scroller = section.querySelector<HTMLElement>('[data-cmp-scroll]');
-    const wide = window.matchMedia('(min-width: 768px)');
+    /* ---- desktop: the three "What's included" boxes open and close together,
+       so the subgrid rows stay aligned; the neighbours follow in a cascade */
+    const wide = window.matchMedia('(min-width: 1100px)');
+    const boxes = Array.from(section.querySelectorAll<HTMLDetailsElement>('details.m-xp'));
+    let syncing = false;
+    boxes.forEach((box, i) => {
+      box.addEventListener(
+        'click',
+        (e) => {
+          if (syncing || !wide.matches) return;
+          const sum = box.querySelector('summary');
+          if (!sum || !(e.target instanceof Node) || !sum.contains(e.target)) return;
+          const willOpen = !box.classList.contains('is-open');
+          boxes.forEach((other, j) => {
+            if (other === box) return;
+            window.setTimeout(
+              () => {
+                if (other.classList.contains('is-open') === willOpen) return;
+                const s = other.querySelector('summary');
+                if (!s) return;
+                syncing = true;
+                s.click();
+                syncing = false;
+              },
+              isReduced() ? 0 : Math.abs(j - i) * 110
+            );
+          });
+        },
+        true
+      );
+    });
 
+    /* ---- compare table: replay the row draw every time it opens */
+    const cmpBox = section.querySelector<HTMLDetailsElement>('details.x-cmp');
+    const table = section.querySelector<HTMLElement>('.cmp-t');
+    const scroller = section.querySelector<HTMLElement>('[data-cmp-scroll]');
     const syncScroller = () => {
       if (!scroller) return;
       const scrollable = scroller.scrollWidth > scroller.clientWidth + 1;
       if (scrollable) scroller.setAttribute('tabindex', '0');
       else scroller.removeAttribute('tabindex');
     };
-
-    if (details) {
-      if (!wide.matches) details.open = false;
-      const onWide = () => {
-        if (wide.matches) details.open = true;
+    if (cmpBox) {
+      cmpBox.addEventListener('toggle', () => {
         syncScroller();
-      };
-      wide.addEventListener?.('change', onWide);
-
-      /* replay the row draw when a phone user opens it */
-      details.addEventListener('toggle', () => {
-        syncScroller();
-        if (!details.open || wide.matches || !table || isReduced()) return;
+        if (!cmpBox.open || !table || isReduced()) return;
         table.classList.remove('is-in');
         void table.offsetWidth;
         requestAnimationFrame(() => requestAnimationFrame(() => table.classList.add('is-in')));
       });
     }
     syncScroller();
+    window.addEventListener('resize', syncScroller, { passive: true });
 
-    /* "Configure" hands the package to #configure through the hash; make sure
-       the configurator is actually brought into view. */
-    section.querySelectorAll<HTMLAnchorElement>('[data-configure]').forEach((a) => {
-      a.addEventListener('click', () => {
-        const target = document.getElementById('configure');
-        if (!target) return;
-        requestAnimationFrame(() =>
-          target.scrollIntoView({ behavior: isReduced() ? 'auto' : 'smooth', block: 'start' })
-        );
+    /* ---- the Complete plate's planet only travels while the plate is on screen */
+    const plate = section.querySelector<HTMLElement>('.m-complete .m-card');
+    if (plate && 'IntersectionObserver' in window) {
+      let seen = false;
+      const run = () => plate.classList.toggle('is-live', seen && !document.hidden);
+      new IntersectionObserver((entries) => {
+        seen = entries.some((e) => e.isIntersecting);
+        run();
+      }).observe(plate);
+      document.addEventListener('visibilitychange', run);
+    }
+
+    /* ---- the Complete plate: a soft light follows the pointer (fine
+       pointers; one rAF per move, transform only) */
+    if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+      section.querySelectorAll<HTMLElement>('.m-complete .m-card').forEach((card) => {
+        const sky = card.querySelector<HTMLElement>('.m-sky');
+        if (!sky) return;
+        let raf = 0;
+        let px = 0;
+        let py = 0;
+        const paint = () => {
+          raf = 0;
+          const r = sky.getBoundingClientRect();
+          card.style.setProperty('--lx', `${(px - r.left).toFixed(1)}px`);
+          card.style.setProperty('--ly', `${(py - r.top).toFixed(1)}px`);
+        };
+        card.addEventListener('pointermove', (e) => {
+          if (isReduced()) return;
+          px = e.clientX;
+          py = e.clientY;
+          card.classList.add('is-lit');
+          if (!raf) raf = requestAnimationFrame(paint);
+        });
+        card.addEventListener('pointerleave', () => card.classList.remove('is-lit'));
       });
-    });
+    }
+
+    /* ---- the dial: breathe only while on screen; hovering the analysis CTA
+       nudges the pointer down the scale */
+    const dial = section.querySelector<HTMLElement>('[data-dial]');
+    if (dial) {
+      let onScreen = false;
+      const live = () => dial.classList.toggle('is-live', onScreen && !document.hidden);
+      if ('IntersectionObserver' in window) {
+        new IntersectionObserver((entries) => {
+          onScreen = entries.some((e) => e.isIntersecting);
+          live();
+        }).observe(dial);
+      }
+      document.addEventListener('visibilitychange', live);
+
+      /* once the entrance has played, the pointer answers without the delay */
+      const arm = () => window.setTimeout(() => dial.classList.add('is-armed'), 3000);
+      if (dial.classList.contains('is-in')) arm();
+      else dial.addEventListener('vesta:reveal', arm, { once: true });
+
+      if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+        section.querySelectorAll<HTMLElement>('[data-nudge]').forEach((el) => {
+          el.addEventListener('pointerenter', () => {
+            if (!isReduced() && dial.classList.contains('is-armed')) dial.classList.add('is-nudge');
+          });
+          el.addEventListener('pointerleave', () => dial.classList.remove('is-nudge'));
+        });
+      }
+    }
   }
 </script>

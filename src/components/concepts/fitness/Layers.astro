@@ -1,0 +1,814 @@
+---
+/**
+ * Concept 05 AFTER — Ironbark Strength Club (fictional), rebuilt, as six
+ * stacked layers. Rendered by ConceptPlate.astro through the registry; DOM
+ * contract: src/components/concepts/README.md.
+ *
+ * Identity: athletic-premium. Chalk hero panel cut by a signal-orange
+ * slash; Mona Sans at its narrowest (wdth 75) and heaviest, uppercase; a 45 lb
+ * bumper plate loaded in front of a rack upright; the week of classes as a
+ * real timetable on graphite. In hero mode the plate turns slowly and the
+ * bottom ticker drifts (transform only, paused offscreen / hidden tab).
+ *
+ *   .cp-layer.cp-l1  wireframe hairlines + box tags          --i:0
+ *   .cp-layer.cp-l2  nav, chalk hero, plate art, timetable   --i:1  (opaque)
+ *   .cp-layer.cp-l3  image frame + load waterfall bars       --i:2
+ *   .cp-layer.cp-l4  JSON-LD card + sitemap tree             --i:3
+ *   .cp-layer.cp-l5  book / call / WhatsApp buttons          --i:4
+ *   .cp-layer.cp-l6  event pins                              --i:5
+ *
+ * Draws in --u (one reference px of the 760 × 475 screen).
+ */
+import { fitness, fitnessPlate as P } from '../../../data/concepts/fitness';
+
+const A = fitness.after;
+const [h1a, h1b] = A.headline.split(/(?<=\.)\s+/);
+
+/* the plate, in the art panel's own units (360 × 256, origin at x400 y44) */
+const cx = 224;
+const cy = 128;
+const arc = (deg: number, span: number, r: number) => {
+  const a0 = ((deg - span / 2) * Math.PI) / 180;
+  const a1 = ((deg + span / 2) * Math.PI) / 180;
+  const p = (a: number) => `${(cx + r * Math.cos(a)).toFixed(1)} ${(cy + r * Math.sin(a)).toFixed(1)}`;
+  return `M${p(a0)}A${r} ${r} 0 0 1 ${p(a1)}`;
+};
+const bolts = Array.from({ length: 6 }, (_, k) => {
+  const a = (k * 60 * Math.PI) / 180;
+  return [(cx + 21 * Math.cos(a)).toFixed(1), (cy + 21 * Math.sin(a)).toFixed(1)];
+});
+const ticker = [...P.ticker, ...P.ticker];
+---
+
+<div class="cp-layer cp-l1" style="--i:0">
+  <svg class="w-grid" viewBox="0 0 760 475" preserveAspectRatio="none" aria-hidden="true">
+    <path
+      d="M32 .5V475M206 .5V475M380 .5V475M554 .5V475M728 .5V475M.5 44H760M.5 300H760"
+      fill="none"
+      stroke="#ABABA4"
+      stroke-opacity=".22"
+      vector-effect="non-scaling-stroke"></path>
+    <path d="M484 44 420 300" fill="none" stroke="#FF5B14" stroke-opacity=".55" stroke-dasharray="4 4" vector-effect="non-scaling-stroke"></path>
+  </svg>
+  <span class="w-box w-nav"><span class="w-tag">{A.wireframeTags[0]}</span></span>
+  <span class="w-box w-h1"><span class="w-tag">{A.wireframeTags[1]}</span></span>
+  <span class="w-box w-cta"><span class="w-tag">{A.wireframeTags[2]}</span></span>
+  <span class="w-box w-svc"><span class="w-tag">{A.wireframeTags[3]}</span></span>
+</div>
+
+<div class="cp-layer cp-l4" style="--i:3">
+  <span class="d-card">
+    <span class="d-brace">{'{'}</span>
+    <span class="d-line">{A.jsonLd[0]},</span>
+    <span class="d-line">{A.jsonLd[1]}</span>
+    <span class="d-brace">{'}'}</span>
+  </span>
+  <span class="d-tree">
+    {A.sitemap.map((p, i) => <span class:list={['d-node', i === 0 ? 'is-root' : 'is-leaf']}>{p}</span>)}
+  </span>
+</div>
+
+<div class="cp-layer cp-l6" style="--i:5">
+  <span class="e-pin e-pin--book"><i></i><span class="e-chip">{A.events[2]}</span></span>
+  <span class="e-pin e-pin--call"><i></i><span class="e-chip">{A.events[1]}</span></span>
+  <span class="e-pin e-pin--wa"><span class="e-chip">{A.events[0]}</span><i></i></span>
+</div>
+
+<div class="cp-layer cp-l2" style="--i:1">
+  <div class="s-nav">
+    <span class="s-logo">
+      <svg class="s-mark" viewBox="0 0 20 14" aria-hidden="true">
+        <path d="M6 0h5L5 14H0Z" fill="#FF5B14"></path>
+        <path d="M15 0h5l-6 14H9Z" fill="#F2F1EC"></path>
+      </svg>
+      <span class="s-name" data-cp-name>{fitness.name}</span>
+    </span>
+    <span class="s-links">{A.nav.map((l, i) => <span class:list={['s-link', i === 0 && 'is-on']}>{l}</span>)}</span>
+  </div>
+
+  <div class="s-hero">
+    <span class="s-eyebrow"><i></i>{P.eyebrow}</span>
+    <span class="s-h1"><span>{h1a}</span><span>{h1b}</span></span>
+    <span class="s-sub">{A.sub}</span>
+  </div>
+
+  <svg class="s-art" viewBox="0 0 360 256" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M84 0H360V256H20Z" fill="#17181B"></path>
+    <path d="M84 0h24L44 256H20Z" fill="#FF5B14"></path>
+    <path d="M122 0 58 256" stroke="#F2F1EC" stroke-opacity=".22" vector-effect="non-scaling-stroke"></path>
+    <!-- rack upright -->
+    <rect x="326" y="0" width="18" height="256" fill="#222327"></rect>
+    <g fill="#0E0F11">
+      {Array.from({ length: 17 }, (_, k) => <rect x="332" y={8 + k * 15} width="6" height="6" />)}
+    </g>
+    <path d="M326.5 0V256M343.5 0V256" stroke="#F2F1EC" stroke-opacity=".12" vector-effect="non-scaling-stroke"></path>
+    <!-- the plates behind it on the sleeve: depth without a gradient -->
+    <circle cx={cx + 30} cy={cy} r="110" fill="#1B1C1F"></circle>
+    <circle cx={cx + 30} cy={cy} r="109.5" fill="none" stroke="#F2F1EC" stroke-opacity=".1" vector-effect="non-scaling-stroke"></circle>
+    <circle cx={cx + 15} cy={cy} r="111" fill="#1F2023"></circle>
+    <circle cx={cx + 15} cy={cy} r="110.5" fill="none" stroke="#FF5B14" stroke-opacity=".45" vector-effect="non-scaling-stroke"></circle>
+    <!-- 45 lb bumper plate -->
+    <g class="s-plate">
+      <circle cx={cx} cy={cy} r="112" fill="#222327"></circle>
+      <circle cx={cx} cy={cy} r="97" fill="none" stroke="#FF5B14" stroke-width="16"></circle>
+      <circle cx={cx} cy={cy} r="111.5" fill="none" stroke="#F2F1EC" stroke-opacity=".22" vector-effect="non-scaling-stroke"></circle>
+      <circle cx={cx} cy={cy} r="84" fill="none" stroke="#F2F1EC" stroke-opacity=".2" stroke-dasharray="1.5 3.5"></circle>
+      <path d={`${arc(-90, 44, 62)}${arc(30, 44, 62)}${arc(150, 44, 62)}`} fill="none" stroke="#0E0F11" stroke-width="13" stroke-linecap="round"></path>
+      <circle cx={cx} cy={cy} r="31" fill="#2E3035"></circle>
+      <circle cx={cx} cy={cy} r="31" fill="none" stroke="#F2F1EC" stroke-opacity=".3" vector-effect="non-scaling-stroke"></circle>
+      {bolts.map(([x, y]) => <circle cx={x} cy={y} r="2.4" fill="#0E0F11" />)}
+      <circle cx={cx} cy={cy} r="12" fill="#0E0F11"></circle>
+      <rect x={cx - 2} y={cy - 112} width="4" height="22" fill="#F2F1EC"></rect>
+    </g>
+  </svg>
+
+  <div class="s-band">
+    <span class="s-week">{P.week}</span>
+    <span class="s-more">
+      {P.scheduleLink}
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 8h11M9 4l4 4-4 4" fill="none" stroke="#FF5B14" stroke-width="1.8"></path></svg>
+    </span>
+    <span class="s-cols">
+      {
+        A.services.map((s, i) => (
+          <span class="s-col">
+            <span class="s-idx">0{i + 1}</span>
+            <span class="s-cls">{s}</span>
+            <span class="s-when">{P.times[i]}</span>
+          </span>
+        ))
+      }
+    </span>
+    <span class="s-tick">
+      <span class="s-tick-track">
+        {
+          ticker.map((t) => (
+            <span class="s-tick-item">
+              {t}
+              <i />
+            </span>
+          ))
+        }
+      </span>
+    </span>
+  </div>
+</div>
+
+<div class="cp-layer cp-l3" style="--i:2">
+  <span class="f-frame f-hero"><i class="f-c f-c1"></i><i class="f-c f-c2"></i><i class="f-c f-c3"></i><i class="f-c f-c4"></i></span>
+  <svg class="f-fall" viewBox="0 0 360 256" preserveAspectRatio="none" aria-hidden="true">
+    <g fill="#F2F1EC" fill-opacity=".2">
+      <rect x="62" y="198" width="22" height="3.5"></rect>
+      <rect x="70" y="208" width="40" height="3.5"></rect>
+      <rect x="80" y="218" width="28" height="3.5"></rect>
+      <rect x="88" y="228" width="52" height="3.5"></rect>
+      <rect x="100" y="238" width="34" height="3.5"></rect>
+    </g>
+    <rect x="62" y="198" width="9" height="3.5" fill="#FF5B14"></rect>
+    <rect x="88" y="228" width="15" height="3.5" fill="#FF5B14"></rect>
+  </svg>
+</div>
+
+<div class="cp-layer cp-l5" style="--i:4">
+  <span class="k-btn k-book">
+    {A.buttons[0]}
+    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 8h11M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8"></path></svg>
+  </span>
+  <span class="k-btn k-call">{A.buttons[1]}</span>
+  <span class="k-btn k-wa">
+    <svg viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M8 1.5a6.5 6.5 0 0 0-5.6 9.8L1.5 14.5l3.3-.9A6.5 6.5 0 1 0 8 1.5Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"></path>
+    </svg>
+    {A.buttons[2]}
+  </span>
+</div>
+
+<style>
+  .cp-layer {
+    --u: calc(100cqi / 760);
+    --f-graph: #17181b;
+    --f-graph-2: #222327;
+    --f-deep: #0e0f11;
+    --f-chalk: #f2f1ec;
+    --f-chalk-2: #e4e3dc;
+    --f-muted: #ababa4; /* 7.7:1 on graphite, 8.7:1 on void */
+    --f-ink-2: #55564f; /* 6.5:1 on chalk */
+    --f-orange: #ff5b14; /* graphite on it 5.7:1; as text only on graphite */
+    position: absolute;
+    inset: 0;
+    color: var(--f-chalk);
+    font-family: var(--font-sans);
+    font-stretch: 100%;
+    font-weight: 450;
+    line-height: 1.2;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  .cp-l1,
+  .cp-l4,
+  .cp-l6 {
+    z-index: 0;
+  }
+
+  .cp-l2 {
+    z-index: 1;
+    background-color: var(--f-graph);
+  }
+
+  .cp-l3 {
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  .cp-l5 {
+    z-index: 3;
+  }
+
+  /* ---------- L1 wireframe ---------- */
+  .w-grid {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .w-box {
+    position: absolute;
+    border: 1px solid rgb(171 171 164 / 0.6);
+  }
+
+  .w-nav {
+    left: calc(8 * var(--u));
+    top: calc(6 * var(--u));
+    width: calc(744 * var(--u));
+    height: calc(34 * var(--u));
+  }
+
+  .w-h1 {
+    left: calc(22 * var(--u));
+    top: calc(78 * var(--u));
+    width: calc(396 * var(--u));
+    height: calc(118 * var(--u));
+  }
+
+  .w-cta {
+    left: calc(22 * var(--u));
+    top: calc(232 * var(--u));
+    width: calc(350 * var(--u));
+    height: calc(52 * var(--u));
+  }
+
+  .w-svc {
+    left: calc(8 * var(--u));
+    top: calc(334 * var(--u));
+    width: calc(744 * var(--u));
+    height: calc(84 * var(--u));
+  }
+
+  .w-tag {
+    position: absolute;
+    left: -1px;
+    bottom: 100%;
+    padding: calc(2 * var(--u)) calc(5 * var(--u));
+    background-color: var(--f-orange);
+    color: var(--f-graph);
+    font-size: calc(7.5 * var(--u));
+    font-weight: 750;
+    letter-spacing: 0.14em;
+    white-space: nowrap;
+  }
+
+  .w-nav .w-tag,
+  .w-svc .w-tag {
+    bottom: auto;
+    top: -1px;
+  }
+
+  /* ---------- L2 nav ---------- */
+  .s-nav {
+    position: absolute;
+    inset: 0 0 auto;
+    height: calc(44 * var(--u));
+    display: flex;
+    align-items: center;
+    padding-inline: calc(32 * var(--u));
+    background-color: var(--f-graph);
+  }
+
+  .s-logo {
+    display: flex;
+    align-items: center;
+    gap: calc(8 * var(--u));
+    min-width: 0;
+    max-width: calc(270 * var(--u));
+  }
+
+  .s-mark {
+    flex: 0 0 auto;
+    width: calc(20 * var(--u));
+    height: calc(14 * var(--u));
+  }
+
+  .s-name {
+    overflow: hidden;
+    color: var(--f-chalk);
+    font-size: calc(12.5 * var(--u));
+    font-stretch: 75%;
+    font-weight: 820;
+    letter-spacing: 0.05em;
+    line-height: 1;
+    text-transform: uppercase;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .s-links {
+    position: absolute;
+    left: calc(326 * var(--u));
+    display: flex;
+    gap: calc(22 * var(--u));
+  }
+
+  .s-link {
+    color: var(--f-muted);
+    font-size: calc(9.5 * var(--u));
+    font-weight: 560;
+    letter-spacing: 0.02em;
+  }
+
+  .s-link.is-on {
+    color: var(--f-chalk);
+  }
+
+  /* ---------- L2 chalk hero ---------- */
+  .s-hero {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(44 * var(--u));
+    height: calc(256 * var(--u));
+    background-color: var(--f-chalk);
+    color: var(--f-graph);
+  }
+
+  .s-eyebrow {
+    position: absolute;
+    left: calc(32 * var(--u));
+    top: calc(22 * var(--u));
+    display: flex;
+    align-items: center;
+    gap: calc(8 * var(--u));
+    color: var(--f-ink-2);
+    font-size: calc(8.5 * var(--u));
+    font-weight: 650;
+    letter-spacing: 0.2em;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .s-eyebrow i {
+    width: calc(14 * var(--u));
+    height: calc(8 * var(--u));
+    background-color: var(--f-orange);
+    clip-path: polygon(35% 0, 100% 0, 65% 100%, 0 100%);
+  }
+
+  .s-h1 {
+    position: absolute;
+    left: calc(28 * var(--u));
+    top: calc(40 * var(--u));
+    display: flex;
+    flex-direction: column;
+    color: var(--f-graph);
+    font-size: calc(68 * var(--u));
+    font-stretch: 75%;
+    font-weight: 880;
+    line-height: 0.86;
+    letter-spacing: -0.012em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .s-sub {
+    position: absolute;
+    left: calc(32 * var(--u));
+    top: calc(166 * var(--u));
+    width: calc(380 * var(--u));
+    color: var(--f-ink-2);
+    font-size: calc(11.5 * var(--u));
+    font-weight: 480;
+    line-height: 1.45;
+  }
+
+  /* ---------- L2 art: the slash, the rack, the plate ---------- */
+  .s-art {
+    position: absolute;
+    left: calc(400 * var(--u));
+    top: calc(44 * var(--u));
+    display: block;
+    width: calc(360 * var(--u));
+    height: calc(256 * var(--u));
+  }
+
+  .s-plate {
+    transform-box: fill-box;
+    transform-origin: 50% 50%;
+  }
+
+  /* ---------- L2 timetable band ---------- */
+  .s-band {
+    position: absolute;
+    inset: auto 0 0;
+    height: calc(175 * var(--u));
+    overflow: hidden;
+    border-top: 1px solid rgb(242 241 236 / 0.16);
+    background-color: var(--f-graph);
+  }
+
+  .s-week {
+    position: absolute;
+    left: calc(32 * var(--u));
+    top: calc(16 * var(--u));
+    color: var(--f-muted);
+    font-size: calc(8.5 * var(--u));
+    font-weight: 650;
+    letter-spacing: 0.22em;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .s-more {
+    position: absolute;
+    right: calc(32 * var(--u));
+    top: calc(14 * var(--u));
+    display: flex;
+    align-items: center;
+    gap: calc(6 * var(--u));
+    color: var(--f-chalk);
+    font-size: calc(9 * var(--u));
+    font-stretch: 90%;
+    font-weight: 720;
+    letter-spacing: 0.1em;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .s-more svg {
+    width: calc(11 * var(--u));
+    height: calc(11 * var(--u));
+  }
+
+  .s-cols {
+    position: absolute;
+    left: calc(32 * var(--u));
+    top: calc(36 * var(--u));
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    width: calc(696 * var(--u));
+  }
+
+  .s-col {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: calc(5 * var(--u));
+    padding: calc(11 * var(--u)) calc(12 * var(--u)) 0 0;
+    border-top: 1px solid rgb(242 241 236 / 0.2);
+  }
+
+  .s-col:first-child::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: -1px;
+    width: calc(56 * var(--u));
+    height: calc(3 * var(--u));
+    background-color: var(--f-orange);
+  }
+
+  .s-idx {
+    color: var(--f-orange);
+    font-size: calc(8.5 * var(--u));
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 1;
+  }
+
+  .s-cls {
+    color: var(--f-chalk);
+    font-size: calc(21 * var(--u));
+    font-stretch: 75%;
+    font-weight: 820;
+    line-height: 0.95;
+    letter-spacing: 0;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .s-when {
+    color: var(--f-muted);
+    font-size: calc(9 * var(--u));
+    font-weight: 500;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  .s-tick {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(126 * var(--u));
+    height: calc(30 * var(--u));
+    overflow: hidden;
+    border-top: 1px solid rgb(242 241 236 / 0.12);
+    background-color: var(--f-graph);
+  }
+
+  .s-tick-track {
+    display: flex;
+    width: max-content;
+    height: 100%;
+    align-items: center;
+    padding-left: calc(32 * var(--u));
+  }
+
+  .s-tick-item {
+    display: flex;
+    align-items: center;
+    gap: calc(16 * var(--u));
+    padding-right: calc(16 * var(--u));
+    color: var(--f-muted);
+    font-size: calc(8.5 * var(--u));
+    font-stretch: 85%;
+    font-weight: 650;
+    letter-spacing: 0.2em;
+    line-height: 1;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .s-tick-item i {
+    width: calc(8 * var(--u));
+    height: calc(8 * var(--u));
+    background-color: var(--f-orange);
+    clip-path: polygon(40% 0, 100% 0, 60% 100%, 0 100%);
+  }
+
+  /* hero mode only: the plate turns, the ticker drifts (transform only;
+     ConceptPlate pauses the hero figure offscreen and in hidden tabs) */
+  :global(.cp--hero) .s-plate {
+    animation: fit-spin 36s linear infinite;
+  }
+
+  :global(.cp--hero) .s-tick-track {
+    animation: fit-tick 38s linear infinite;
+  }
+
+  :global(.cp--hero) .k-book svg {
+    animation: fit-nudge 2.6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  }
+
+  :global(.cp.is-offscreen) .s-plate,
+  :global(.cp.is-paused) .s-plate,
+  :global(.cp.is-offscreen) .s-tick-track,
+  :global(.cp.is-paused) .s-tick-track,
+  :global(.cp.is-offscreen) .k-book svg,
+  :global(.cp.is-paused) .k-book svg {
+    animation-play-state: paused;
+  }
+
+  @keyframes fit-nudge {
+    0%,
+    60%,
+    100% {
+      transform: translate3d(0, 0, 0);
+    }
+    30% {
+      transform: translate3d(calc(3 * var(--u)), 0, 0);
+    }
+  }
+
+  @keyframes fit-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes fit-tick {
+    to {
+      transform: translate3d(-50%, 0, 0);
+    }
+  }
+
+  /* ---------- L3 frame + waterfall ---------- */
+  .f-frame {
+    position: absolute;
+    border: 1px solid rgb(242 241 236 / 0.2);
+  }
+
+  .f-hero {
+    left: calc(506 * var(--u));
+    top: calc(54 * var(--u));
+    width: calc(236 * var(--u));
+    height: calc(236 * var(--u));
+  }
+
+  .f-c {
+    position: absolute;
+    width: calc(10 * var(--u));
+    height: calc(10 * var(--u));
+    border: 0 solid var(--f-orange);
+  }
+
+  .f-c1 {
+    left: -1px;
+    top: -1px;
+    border-width: 2px 0 0 2px;
+  }
+
+  .f-c2 {
+    right: -1px;
+    top: -1px;
+    border-width: 2px 2px 0 0;
+  }
+
+  .f-c3 {
+    left: -1px;
+    bottom: -1px;
+    border-width: 0 0 2px 2px;
+  }
+
+  .f-c4 {
+    right: -1px;
+    bottom: -1px;
+    border-width: 0 2px 2px 0;
+  }
+
+  .f-fall {
+    position: absolute;
+    left: calc(400 * var(--u));
+    top: calc(44 * var(--u));
+    display: block;
+    width: calc(360 * var(--u));
+    height: calc(256 * var(--u));
+  }
+
+  /* ---------- L4 data ---------- */
+  .d-card {
+    position: absolute;
+    left: calc(452 * var(--u));
+    top: calc(70 * var(--u));
+    display: flex;
+    flex-direction: column;
+    gap: calc(3 * var(--u));
+    width: calc(262 * var(--u));
+    padding: calc(10 * var(--u)) calc(12 * var(--u));
+    border: 1px solid rgb(255 91 20 / 0.6);
+    background-color: var(--f-deep);
+    font-size: calc(9 * var(--u));
+    line-height: 1.35;
+  }
+
+  .d-brace {
+    color: var(--f-muted);
+  }
+
+  .d-line {
+    padding-left: calc(12 * var(--u));
+    color: var(--f-chalk);
+    white-space: nowrap;
+  }
+
+  .d-tree {
+    position: absolute;
+    left: calc(32 * var(--u));
+    top: calc(352 * var(--u));
+    display: grid;
+    grid-template-columns: repeat(2, auto);
+    justify-content: start;
+    gap: calc(5 * var(--u)) calc(28 * var(--u));
+    font-size: calc(9 * var(--u));
+  }
+
+  .d-node {
+    position: relative;
+    color: var(--f-muted);
+    white-space: nowrap;
+  }
+
+  .d-node.is-root {
+    grid-column: 1 / -1;
+    color: var(--f-chalk);
+  }
+
+  .d-node.is-leaf {
+    padding-left: calc(12 * var(--u));
+  }
+
+  .d-node.is-leaf::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 55%;
+    width: calc(7 * var(--u));
+    height: 1px;
+    background-color: rgb(171 171 164 / 0.6);
+  }
+
+  /* ---------- L5 buttons ---------- */
+  .k-btn {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: calc(7 * var(--u));
+    height: calc(36 * var(--u));
+    font-size: calc(9.5 * var(--u));
+    font-stretch: 88%;
+    font-weight: 740;
+    letter-spacing: 0.07em;
+    line-height: 1;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .k-btn svg {
+    flex: 0 0 auto;
+    width: calc(11 * var(--u));
+    height: calc(11 * var(--u));
+  }
+
+  .k-book {
+    left: calc(32 * var(--u));
+    top: calc(236 * var(--u));
+    width: calc(190 * var(--u));
+    padding-right: calc(8 * var(--u));
+    background-color: var(--f-orange);
+    color: var(--f-graph);
+    clip-path: polygon(0 0, 100% 0, calc(100% - 10 * var(--u)) 100%, 0 100%);
+  }
+
+  .k-call {
+    left: calc(226 * var(--u));
+    top: calc(236 * var(--u));
+    width: calc(146 * var(--u));
+    border: 1px solid var(--f-graph);
+    background-color: var(--f-chalk);
+    color: var(--f-graph);
+  }
+
+  .k-wa {
+    right: calc(28 * var(--u));
+    top: calc(9 * var(--u));
+    height: calc(26 * var(--u));
+    padding-inline: calc(12 * var(--u));
+    border: 1px solid rgb(171 171 164 / 0.45);
+    background-color: var(--f-graph);
+    color: var(--f-chalk);
+    font-size: calc(8.5 * var(--u));
+  }
+
+  .k-wa svg {
+    color: var(--f-orange);
+  }
+
+  /* ---------- L6 events ---------- */
+  .e-pin {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    gap: calc(5 * var(--u));
+  }
+
+  .e-pin i {
+    width: calc(7 * var(--u));
+    height: calc(7 * var(--u));
+    background-color: var(--f-orange);
+  }
+
+  .e-chip {
+    padding: calc(2 * var(--u)) calc(5 * var(--u));
+    background-color: var(--f-orange);
+    color: var(--f-graph);
+    font-size: calc(8 * var(--u));
+    font-weight: 650;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+
+  .e-pin--book {
+    left: calc(34 * var(--u));
+    top: calc(280 * var(--u));
+  }
+
+  .e-pin--call {
+    left: calc(228 * var(--u));
+    top: calc(280 * var(--u));
+  }
+
+  .e-pin--wa {
+    right: calc(30 * var(--u));
+    top: calc(42 * var(--u));
+  }
+</style>

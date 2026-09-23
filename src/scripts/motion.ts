@@ -61,23 +61,20 @@ function applyPreference(pref: 'full' | 'reduced'): void {
   document.dispatchEvent(new CustomEvent('vesta:motion', { detail: { reduced: pref === 'reduced' } }));
 }
 
+/**
+ * Motion is always on — the owner removed the footer toggle (2026-09-23).
+ * The html.motion-reduced plumbing stays in CSS/scripts as a fail-safe, but
+ * nothing turns it on any more, and an old saved opt-out is cleared.
+ */
 function initPreference(): void {
-  applyPreference(storedPreference() ?? 'full');
-
-  document.addEventListener('click', (e) => {
-    const btn = (e.target as HTMLElement | null)?.closest('[data-motion-toggle]');
-    if (!btn) return;
-    e.preventDefault();
-    const next = isReduced() ? 'full' : 'reduced';
+  if (storedPreference() === 'reduced') {
     try {
-      localStorage.setItem(STORAGE_KEY, next);
+      localStorage.removeItem(STORAGE_KEY);
     } catch {
-      /* private mode — the class still applies for this session */
+      /* private mode */
     }
-    applyPreference(next);
-    if (next === 'reduced') revealAll(true);
-    requestFrame();
-  });
+  }
+  applyPreference('full');
 }
 
 /* ---------------------------------------------------------------------- */
@@ -387,6 +384,33 @@ function initScroll(): void {
       },
       write() {
         hero.style.setProperty('--hx', p.toFixed(4));
+      },
+    });
+  }
+
+  /* 3D scene entrance: [data-scene] rises out of depth as it scrolls in.
+     --scene goes 0 → 1 while the element's top travels from the bottom of
+     the viewport to 55% of it; CSS turns that into a perspective tilt. The
+     default (no JS, reduced, before the first frame) is 1 = final. */
+  const scenes = Array.from(document.querySelectorAll<HTMLElement>('[data-scene]'));
+  if (scenes.length) {
+    const tops: number[] = [];
+    let vhNow = 0;
+    addFrame({
+      read(_y, vh) {
+        vhNow = vh;
+        scenes.forEach((el, i) => (tops[i] = el.getBoundingClientRect().top));
+      },
+      write() {
+        const off = vestibular();
+        scenes.forEach((el, i) => {
+          const t = tops[i];
+          if (t > vhNow * 1.6 || t < -vhNow) return;
+          const raw = off ? 1 : (vhNow - t) / (vhNow * 0.45);
+          const s = Math.min(1, Math.max(0, raw));
+          const eased = 1 - Math.pow(1 - s, 3);
+          el.style.setProperty('--scene', eased.toFixed(4));
+        });
       },
     });
   }

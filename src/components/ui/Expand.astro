@@ -91,6 +91,7 @@ const { title, keywords = [], index, open = false, size = 'm', reveal = true, i 
   .xp-sum {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: 'idx head icon';
     align-items: start;
     gap: 16px;
     padding-block: 22px;
@@ -104,6 +105,7 @@ const { title, keywords = [], index, open = false, size = 'm', reveal = true, i 
   }
 
   .xp-idx {
+    grid-area: idx;
     min-width: 2.2em;
     padding-top: 0.35em;
     color: var(--accent-text, var(--fg-2));
@@ -111,6 +113,7 @@ const { title, keywords = [], index, open = false, size = 'm', reveal = true, i 
   }
 
   .xp-head {
+    grid-area: head;
     display: grid;
     gap: 10px;
     min-width: 0;
@@ -135,7 +138,7 @@ const { title, keywords = [], index, open = false, size = 'm', reveal = true, i 
   .xp-keys {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px 14px;
+    gap: 6px 20px;
   }
 
   .xp-key {
@@ -147,14 +150,9 @@ const { title, keywords = [], index, open = false, size = 'm', reveal = true, i 
     color: var(--fg-2);
   }
 
-  .xp-key + .xp-key::before {
-    content: '·';
-    margin-inline-end: 14px;
-    color: var(--fg-3);
-  }
-
   /* plus → minus: the vertical bar turns and folds into the horizontal one */
   .xp-icon {
+    grid-area: icon;
     position: relative;
     flex: 0 0 auto;
     width: 32px;

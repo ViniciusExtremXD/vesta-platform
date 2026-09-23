@@ -23,7 +23,7 @@
    and in hidden tabs, drops the canvas on context loss, never logs.
    ========================================================================= */
 
-import { isReduced } from './motion';
+import { addFrame, isReduced, requestFrame, vestibular } from './motion';
 
 type Variant = 'galaxy' | 'stars';
 type RGB = [number, number, number];
@@ -80,11 +80,15 @@ const COMMON = /* glsl */ `#version 300 es
 precision highp float;
 uniform vec4 u_mask;   // A.xy, B.xy in normalized target coords
 uniform float u_maskFloor;
-float textMask(vec2 uv) {
+/* 0 behind the text column (A) → 1 in the open sky (B) */
+float maskT(vec2 uv) {
   vec2 d = u_mask.zw - u_mask.xy;
   float t = clamp(dot(uv - u_mask.xy, d) / max(dot(d, d), 1e-5), 0.0, 1.0);
   t = t * t * (3.0 - 2.0 * t);
-  return mix(u_maskFloor, 1.0, t * t);
+  return t * t;
+}
+float textMask(vec2 uv) {
+  return mix(u_maskFloor, 1.0, maskT(uv));
 }
 `;
 
@@ -102,14 +106,17 @@ uniform vec4 u_view;   // inclination, yaw, position angle, perspective
 uniform float u_mode;  // 0 stars, 1 glow, 2 dust
 uniform float u_maxPt;
 uniform float u_gain;
+uniform float u_boost;  // resolved stars thin out as the disc swells: keep its surface brightness
 out vec3 v_col;
 out float v_size;
 out float v_sig;
 out float v_hsig;
 out float v_h;
+out float v_g;
+out float v_sl;
 
-const float OMP = 0.01308997; // 2π / 480 s: one turn every 8 minutes at mid-disc
-const float TAU = 540.0;
+const float OMP = 0.02991993; // 2π / 210 s: one turn every 3.5 minutes at mid-disc
+const float TAU = 236.25; // bounds the shear: same maximum winding as the 8-minute disc
 
 void main() {
   float r = a_p.x;
@@ -131,12 +138,14 @@ void main() {
 
   v_h = a_h;
   v_hsig = 1.0;
+  v_g = 0.0;
+  v_sl = 1.0;
   if (u_mode < 0.5) {
     float sig = max(a_c.w * u_dpr, 0.6);
     v_sig = sig;
     v_hsig = sig * 5.5;
     v_size = 2.0 * (a_h > 0.0 ? 2.8 * v_hsig : 3.2 * sig) + 1.0;
-    v_col = a_c.rgb * a_p.w * textMask(uv) * u_gain;
+    v_col = a_c.rgb * a_p.w * textMask(uv) * u_gain * u_boost;
   } else if (u_mode < 1.5) {
     v_sig = a_c.w * u_R * persp;
     v_size = 4.6 * v_sig;
@@ -154,35 +163,84 @@ void main() {
 }
 `;
 
-/* Background field: a_s = (x, y normalized, flux, sigma css px), a_c = (rgb, halo), a_t = (twinkle, phase) */
+/* Background field, three depth layers.
+   a_s = (x, y in the wrap domain [0,1], flux, sigma css px)
+   a_c = (rgb, halo)
+   a_t = (twinkle depth, phase, glint, layer 0 far · 1 mid · 2 near)
+   Every layer lags the page by its own factor as the section scrolls, drifts
+   sideways at its own speed and follows the pointer by its own amount; the
+   domain wraps with a margin, so no star ever pops inside the frame. */
 const VS_FIELD = COMMON + /* glsl */ `
 layout(location = 0) in vec4 a_s;
 layout(location = 1) in vec4 a_c;
-layout(location = 2) in vec2 a_t;
+layout(location = 2) in vec4 a_t;
 uniform float u_t;
 uniform vec2 u_res;
+uniform vec2 u_css;     // canvas size in css px
 uniform float u_dpr;
-uniform vec2 u_par;
+uniform vec2 u_par;     // pointer parallax, css px at the near layer
+uniform float u_scroll; // section scroll offset, css px
+uniform vec3 u_lag;     // scroll lag per layer (far, mid, near)
+uniform float u_drift;  // sideways drift of the near layer, css px/s
 uniform float u_maxPt;
 uniform float u_gain;
+uniform float u_glint;
+uniform float u_keep;   // share of stars kept behind the text column
+uniform float u_dive;   // 0 → 1 as the hero scrolls away
+uniform vec2 u_zc;      // dive centre (the galaxy core), css px
 out vec3 v_col;
 out float v_size;
 out float v_sig;
 out float v_hsig;
 out float v_h;
+out float v_g;
+out float v_sl;
+
+const float M = 40.0;   // wrap margin, css px
+
 void main() {
-  float depth = 0.35 + 0.65 * fract(a_t.y * 7.31);
-  vec2 px = a_s.xy * u_res + u_par * depth;
-  vec2 uv = px / u_res;
+  float layer = a_t.w;
+  // layer 3 is the stream in the hero: as far as the far layer, but it only
+  // scrolls — its haze is painted in the composite and must stay on it
+  float depth = layer < 0.5 ? 0.34 : (layer < 1.5 ? 0.62 : (layer < 2.5 ? 1.0 : 0.34));
+  float lag = layer < 0.5 ? u_lag.x : (layer < 1.5 ? u_lag.y : (layer < 2.5 ? u_lag.z : u_lag.x));
+  float drift = layer > 2.5 ? 0.0 : depth;
+  vec2 dom = u_css + 2.0 * M;
+  vec2 p = a_s.xy * dom;
+  p += vec2(u_t * u_drift * drift, u_scroll * lag) + u_par * depth;
+  p = mod(p, dom) - M;
+  // the dive: the sky opens outward from the galaxy core, near layers fastest
+  float zoom = u_dive * (0.18 + 1.05 * depth * depth);
+  p = u_zc + (p - u_zc) * (1.0 + zoom);
+  vec2 uv = p / u_css;
   gl_Position = vec4(uv.x * 2.0 - 1.0, 1.0 - uv.y * 2.0, 0.0, 1.0);
-  float tw = 1.0 + a_t.x * (0.62 * sin(u_t * 0.83 + a_t.y) + 0.38 * sin(u_t * 2.17 + a_t.y * 2.3));
-  float sig = max(a_s.w * u_dpr, 0.6);
+
+  // scintillation: three incommensurate waves at a per-star tempo, so the
+  // light shimmers and dips instead of blinking on a beat
+  float f = 0.65 + 0.7 * fract(a_t.y * 3.17);
+  float s = 0.5 * sin(u_t * 1.7 * f + a_t.y) + 0.32 * sin(u_t * 3.9 * f + a_t.y * 2.3) + 0.18 * sin(u_t * 7.1 * f + a_t.y * 4.1);
+  float tw = max(1.0 + a_t.x * s, 0.08);
+
+  float sig = max(a_s.w * u_dpr * (1.0 + 0.6 * zoom), 0.6);
   v_sig = sig;
   v_hsig = sig * 5.5;
   v_h = a_c.w;
-  v_size = min(2.0 * (a_c.w > 0.0 ? 2.8 * v_hsig : 3.2 * sig) + 1.0, u_maxPt);
-  v_col = a_c.rgb * a_s.z * tw * textMask(uv) * u_gain;
-  gl_PointSize = v_size;
+  v_size = 2.0 * (a_c.w > 0.0 ? 2.8 * v_hsig : 3.2 * sig) + 1.0;
+  // diffraction glint on the brightest stars: breathes on its own slow cycle
+  v_g = a_t.z * u_glint * (0.35 + 0.65 * pow(0.5 + 0.5 * sin(u_t * 0.55 * f + a_t.y * 1.7), 2.0));
+  v_sl = (7.0 + 11.0 * a_t.z) * u_dpr;
+  if (a_t.z > 0.0) v_size = max(v_size, 2.0 * v_sl + 1.0);
+  v_size = min(v_size, u_maxPt);
+  // behind the text column the sky thins out star by star (each star has
+  // its own threshold, so they fade in and out as they drift across it)
+  // and the survivors are dimmer; no glints there at all
+  float mt = maskT(uv);
+  float rnd = fract(a_t.y * 7.1231 + a_s.x * 13.37);
+  float keep = smoothstep(rnd - 0.1, rnd + 0.1, mix(u_keep, 1.0, mt));
+  float m = textMask(uv) * keep;
+  v_col = a_c.rgb * a_s.z * tw * m * u_gain;
+  v_g *= mt * keep;
+  gl_PointSize = keep < 0.004 ? 0.0 : v_size;
 }
 `;
 
@@ -193,6 +251,8 @@ in float v_size;
 in float v_sig;
 in float v_hsig;
 in float v_h;
+in float v_g;
+in float v_sl;
 uniform float u_mode;
 out vec4 o;
 void main() {
@@ -202,10 +262,20 @@ void main() {
   if (e <= 0.0) discard;
   float w = e * e;
   if (u_mode < 0.5) {
-    // energy-normalised gaussian core + wide faint halo (no spikes)
+    // energy-normalised gaussian core + wide faint halo
     float core = exp(-0.5 * r2 / (v_sig * v_sig)) / (6.2831853 * v_sig * v_sig);
     float halo = exp(-0.5 * r2 / (v_hsig * v_hsig)) / (6.2831853 * v_hsig * v_hsig);
-    o = vec4(v_col * ((1.0 - v_h) * core + v_h * halo) * w, 1.0);
+    float I = (1.0 - v_h) * core + v_h * halo;
+    if (v_g > 0.0) {
+      // four-point diffraction spikes, turned 14° off the axes
+      vec2 k = vec2(c.x * 0.9703 - c.y * 0.2419, c.x * 0.2419 + c.y * 0.9703);
+      vec2 a = abs(k);
+      float wd = 0.45 * v_sig;
+      float fall = v_sl * 0.3;
+      float sp = exp(-a.x / fall) * exp(-0.5 * k.y * k.y / (wd * wd)) + exp(-a.y / fall) * exp(-0.5 * k.x * k.x / (wd * wd));
+      I += v_g * 0.075 * sp * (1.0 - smoothstep(0.55 * v_sl, v_sl, max(a.x, a.y)));
+    }
+    o = vec4(v_col * I * w, 1.0);
   } else {
     o = vec4(v_col * exp(-0.5 * r2 / (v_sig * v_sig)) * w, 1.0);
   }
@@ -239,8 +309,8 @@ uniform vec3 u_cDisc;
 uniform vec3 u_cOuter;
 out vec4 o;
 
-const float OMP = 0.01308997;
-const float TAU = 540.0;
+const float OMP = 0.02991993;
+const float TAU = 236.25; // bounds the shear: same maximum winding as the 8-minute disc
 const float SINP = 0.46947156;  // sin 28°
 const float COTP = 1.88072647;  // cot 28°
 const float R0 = 0.12;
@@ -324,18 +394,26 @@ void main() {
 }
 `;
 
-const FS_COMPOSITE = /* glsl */ `#version 300 es
-precision highp float;
+/* Composite: tone curve, vignette, then the living layers that sit on top of
+   the light — breathing nebula haze (stars) or a faint star stream (galaxy),
+   and the occasional meteor. Coordinates here are top-left, y down. */
+const FS_COMPOSITE = COMMON + /* glsl */ `
 in vec2 v_uv;
 uniform sampler2D u_hi;
 uniform sampler2D u_lo;
 uniform float u_decode;
 uniform float u_exposure;
 uniform vec2 u_res;
-uniform float u_haze;      // 0 galaxy, 1 stars-with-nebula
+uniform float u_t;
+uniform float u_haze;      // nebula strength (0 = none)
+uniform vec2 u_hazeOff;    // nebula parallax + drift, in aspect units
+uniform vec4 u_stream;     // star stream: point (x, y), angle, strength
 uniform vec3 u_violet;
 uniform vec3 u_lilac;
 uniform float u_vig;
+uniform float u_textFloor; // how much light is allowed behind text
+uniform vec4 u_m0;         // meteor head (canvas px, top-left), unit direction
+uniform vec4 u_m1;         // tail length px, width px, intensity, 0
 out vec4 o;
 
 float hash(vec2 p) {
@@ -351,7 +429,7 @@ float vnoise(vec2 p) {
 }
 float fbm(vec2 p) {
   float s = 0.0, a = 0.5;
-  for (int i = 0; i < 5; i++) { s += a * vnoise(p); p = p * 2.03 + 17.1; a *= 0.5; }
+  for (int i = 0; i < 4; i++) { s += a * vnoise(p); p = p * 2.03 + 17.1; a *= 0.5; }
   return s;
 }
 
@@ -362,19 +440,59 @@ void main() {
   vec3 L = 1.0 - exp(-h * u_exposure);
   L = pow(L, vec3(1.0 / 2.2));
 
+  vec2 uv = vec2(v_uv.x, 1.0 - v_uv.y);
   vec2 a = vec2(u_res.x / u_res.y, 1.0);
-  vec2 vv = (v_uv - 0.5) * a;
+  vec2 vv = (uv - 0.5) * a;
   L *= 1.0 - u_vig * smoothstep(0.3, 1.1, length(vv));
+  float tm = textMask(uv);
 
-  if (u_haze > 0.5) {
-    // two faint emission clouds, shaped by noise; ≤ ~8% at their densest
-    vec2 p = v_uv * a;
-    float n = fbm(p * 2.2 + 3.7);
-    float n2 = fbm(p * 5.0 - 1.3);
-    float c1 = exp(-dot((v_uv - vec2(0.78, 0.30)) * a, (v_uv - vec2(0.78, 0.30)) * a) * 3.2);
-    float c2 = exp(-dot((v_uv - vec2(0.18, 0.86)) * a, (v_uv - vec2(0.18, 0.86)) * a) * 5.0);
-    float cloud = (c1 + 0.6 * c2) * smoothstep(0.38, 0.78, n) * (0.55 + 0.45 * n2);
-    L += (u_violet * 0.20 + u_lilac * 0.05) * cloud * 0.9;
+  if (u_haze > 0.0) {
+    // two emission clouds that drift with the far sky and breathe out of
+    // phase with each other; the noise itself flows very slowly
+    vec2 p = uv * a + u_hazeOff;
+    vec2 flow = vec2(u_t * 0.006, -u_t * 0.004);
+    float n = fbm(p * 2.2 + 3.7 + flow);
+    float n2 = fbm(p * 5.0 - 1.3 - flow * 1.7);
+    vec2 d1 = p - vec2(0.8 * a.x, 0.66);
+    vec2 d2 = p - vec2(0.16 * a.x, 0.12);
+    float b1 = 0.72 + 0.28 * sin(u_t * 0.31);
+    float b2 = 0.72 + 0.28 * sin(u_t * 0.23 + 2.1);
+    float c1 = exp(-dot(d1, d1) * 2.6) * b1;
+    float c2 = exp(-dot(d2, d2) * 4.2) * b2 * 0.7;
+    float cloud = (c1 + c2) * smoothstep(0.34, 0.8, n) * (0.5 + 0.5 * n2);
+    L += (u_violet * 0.22 + u_lilac * 0.06) * cloud * u_haze * mix(u_textFloor, 1.0, tm);
+  }
+
+  if (u_stream.w > 0.0) {
+    // a faint band of unresolved stars crossing the sky behind the galaxy
+    vec2 p = uv * a;
+    vec2 dir = vec2(cos(u_stream.z), sin(u_stream.z));
+    vec2 q = p - u_stream.xy * a;
+    float along = dot(q, dir);
+    float across = dot(q, vec2(-dir.y, dir.x));
+    float wob = 0.05 * sin(along * 3.1 + 0.7) + 0.03 * sin(along * 7.3);
+    float band = exp(-pow((across - wob) / 0.16, 2.0));
+    float mott = fbm(vec2(along * 3.0, across * 9.0) + vec2(u_t * 0.004, 0.0));
+    float rift = smoothstep(0.02, 0.07, abs(across - wob + 0.02 * sin(along * 11.0)));
+    L += (u_lilac * 0.05 + u_violet * 0.1) * band * smoothstep(0.3, 0.85, mott) * mix(0.35, 1.0, rift) * u_stream.w * mix(u_textFloor, 1.0, tm);
+  }
+
+  if (u_m1.z > 0.0) {
+    vec2 px = uv * u_res;
+    vec2 d = px - u_m0.xy;
+    float behind = -dot(d, u_m0.zw);
+    float side = abs(d.x * u_m0.w - d.y * u_m0.z);
+    float len = u_m1.x;
+    if (behind > -6.0 * u_m1.y && behind < len) {
+      float k = clamp(1.0 - behind / len, 0.0, 1.0);
+      float w = u_m1.y * (0.35 + 0.65 * k);
+      float tail = pow(k, 2.2) * step(0.0, behind);
+      float core = exp(-0.5 * side * side / (w * w));
+      float glow = 0.16 * exp(-0.5 * side * side / (9.0 * w * w));
+      float head = exp(-0.5 * dot(d, d) / (2.2 * u_m1.y * u_m1.y));
+      float I = u_m1.z * ((core + glow) * tail + 0.9 * head);
+      L += vec3(0.96, 0.95, 1.0) * I * tm;
+    }
   }
 
   L += (hash(gl_FragCoord.xy + 0.5) - 0.5) / 255.0;
@@ -388,7 +506,7 @@ void main() {
 /* ---------------------------------------------------------------------- */
 
 const G_STRIDE = 9; // r, theta, z, flux, r, g, b, size, halo
-const F_STRIDE = 10; // x, y, flux, sigma, r, g, b, halo, twinkle, phase
+const F_STRIDE = 12; // x, y, flux, sigma, r, g, b, halo, twinkle, phase, glint, layer
 
 interface GalaxyData {
   stars: Float32Array;
@@ -637,16 +755,78 @@ function buildGalaxy(nStars: number, nGlow: number, nDust: number): GalaxyData {
   return { stars: new Float32Array(stars), glow: new Float32Array(glow), dust: new Float32Array(dust) };
 }
 
-function buildField(n: number, seed: number, dimLo: number, galaxies: number, w: number, h: number): Float32Array {
+/** The band of unresolved stars crossing the hero: a point (uv, top-left),
+    an angle in aspect-corrected units, and the share of the field it takes. */
+interface Stream {
+  x: number;
+  y: number;
+  angle: number;
+  share: number;
+}
+
+/** wrap margin in css px — mirrors M in VS_FIELD */
+const WRAP = 40;
+
+/**
+ * Background field in three depth layers (+ layer 3: the stream, which only
+ * scrolls, never drifts). Far: many faint, small, barely twinkling. Near:
+ * few, brighter, larger, twinkling harder; the brightest of them carry a
+ * diffraction glint. Positions live in the wrap domain (css box + margin).
+ */
+function buildField(n: number, seed: number, galaxies: number, w: number, h: number, stream: Stream | null): Float32Array {
   const R = rng(seed);
   const out: number[] = [];
-  for (let i = 0; i < n; i++) {
-    const flux = R.power(dimLo, 60, 1.3);
+  const dw = w + 2 * WRAP;
+  const dh = h + 2 * WRAP;
+  const toDom = (ux: number, uy: number): [number, number] => [(ux * w + WRAP) / dw, (uy * h + WRAP) / dh];
+  const colour = (): RGB => {
     const t = R.next();
-    const col = t < 0.13 ? mix(STARLIGHT, WARM, 0.8) : t < 0.3 ? mix(STARLIGHT, BLUEWHITE, 0.9) : STARLIGHT;
+    return t < 0.13 ? mix(STARLIGHT, WARM, 0.8) : t < 0.32 ? mix(STARLIGHT, BLUEWHITE, 0.9) : t < 0.4 ? mix(STARLIGHT, LILAC, 0.5) : STARLIGHT;
+  };
+  const push = (x: number, y: number, flux: number, sigma: number, col: RGB, halo: number, tw: number, glint: number, layer: number) => {
+    out.push(x, y, flux, sigma, col[0], col[1], col[2], halo, tw, R.next() * 6.2831853, glint, layer);
+  };
+
+  const nStream = stream ? Math.round(n * stream.share) : 0;
+  const nMain = n - nStream;
+  const near: number[] = [];
+  for (let i = 0; i < nMain; i++) {
+    const t = R.next();
+    const layer = t < 0.56 ? 0 : t < 0.87 ? 1 : 2;
+    const flux = layer === 0 ? R.power(0.02, 3, 1.5) : layer === 1 ? R.power(0.035, 16, 1.35) : R.power(0.07, 80, 1.2);
+    const sigma = layer === 0 ? 0.48 + 0.08 * R.next() : layer === 1 ? 0.54 + 0.1 * R.next() : 0.6 + 0.14 * R.next();
     const bright = flux > 9;
-    out.push(R.next(), R.next(), flux, 0.52 + 0.12 * R.next(), col[0], col[1], col[2], bright ? Math.min(0.14, 0.04 + flux * 0.002) : 0, bright ? 0.12 + 0.1 * R.next() : 0, R.next() * 6.2831853);
+    const tw = layer === 0 ? 0.16 + 0.2 * R.next() : layer === 1 ? 0.26 + 0.26 * R.next() : 0.32 + 0.3 * R.next();
+    if (layer === 2 && flux > 10) near.push(out.length);
+    push(R.next(), R.next(), flux, sigma, colour(), bright ? Math.min(0.14, 0.04 + flux * 0.002) : 0, tw, 0, layer);
   }
+  // the brightest near stars get the glint, a handful per canvas
+  const glints = Math.round(Math.min(14, Math.max(4, (w * h) / 100000)));
+  near
+    .sort((a, b) => out[b + 2] - out[a + 2])
+    .slice(0, glints)
+    .forEach((o) => {
+      out[o + 10] = 0.45 + 0.55 * R.next();
+      out[o + 2] = Math.max(out[o + 2], 22);
+    });
+
+  if (stream) {
+    const ax = w / h;
+    const dx = Math.cos(stream.angle);
+    const dy = Math.sin(stream.angle);
+    for (let i = 0; i < nStream; i++) {
+      const along = (R.next() * 2 - 1) * 1.6;
+      const wob = 0.05 * Math.sin(along * 3.1 + 0.7) + 0.03 * Math.sin(along * 7.3);
+      const across = wob + R.gauss() * 0.075;
+      const px = stream.x * ax + dx * along - dy * across;
+      const py = stream.y + dy * along + dx * across;
+      const [x, y] = toDom(px / ax, py);
+      if (x < 0 || x > 1 || y < 0 || y > 1) continue;
+      const col = R.next() < 0.3 ? mix(STARLIGHT, LILAC, 0.6) : R.next() < 0.3 ? mix(STARLIGHT, WARM, 0.5) : STARLIGHT;
+      push(x, y, R.power(0.012, 1.6, 1.5), 0.46 + 0.06 * R.next(), col, 0, 0.12 + 0.2 * R.next(), 0, 3);
+    }
+  }
+
   // a few very distant galaxies: tiny faint elongated smudges, sized in
   // CSS px so they keep their shape on any aspect ratio
   for (let g = 0; g < galaxies; g++) {
@@ -658,7 +838,7 @@ function buildField(n: number, seed: number, dimLo: number, galaxies: number, w:
     for (let k = 0; k < 18; k++) {
       const u = R.gauss() * len;
       const v = R.gauss() * len * (0.25 + 0.2 * R.next());
-      out.push(cx + (u * Math.cos(ang) - v * Math.sin(ang)) / w, cy + (u * Math.sin(ang) + v * Math.cos(ang)) / h, 0.035 + 0.035 * R.next(), 0.7, col[0], col[1], col[2], 0, 0, 0);
+      push(cx + (u * Math.cos(ang) - v * Math.sin(ang)) / dw, cy + (u * Math.sin(ang) + v * Math.cos(ang)) / dh, 0.035 + 0.035 * R.next(), 0.7, col, 0, 0, 0, 0);
     }
   }
   return new Float32Array(out);
@@ -692,9 +872,97 @@ interface Prog {
 
 const DEG = Math.PI / 180;
 
+/* per-variant tuning */
+interface Tune {
+  /** scroll lag of the galaxy itself: the farthest object on the page */
+  lagGalaxy: number;
+  /** scroll lag per star layer (far, mid, near) */
+  lag: [number, number, number];
+  /** sideways drift of the near layer, css px/s (far/mid are slower) */
+  drift: number;
+  /** pointer parallax of the near layer, css px */
+  par: [number, number];
+  fieldGain: number;
+  glint: number;
+  exposure: number;
+  vignette: number;
+  haze: number;
+  /** share of field stars kept behind a masked text column */
+  keep: number;
+}
+const TUNE: Record<Variant, Tune> = {
+  galaxy: {
+    lagGalaxy: 0.5,
+    lag: [0.4, 0.26, 0.12],
+    drift: -3.2,
+    par: [16, 11],
+    fieldGain: 1.6,
+    glint: 1,
+    exposure: 1.7,
+    vignette: 0.5,
+    haze: 0.45,
+    keep: 0.18,
+  },
+  stars: {
+    lagGalaxy: 0,
+    lag: [0.46, 0.3, 0.14],
+    drift: -4,
+    par: [10, 7],
+    fieldGain: 1.55,
+    glint: 1,
+    exposure: 1.0,
+    vignette: 0.35,
+    haze: 1,
+    keep: 0.45,
+  },
+};
+
+/** one pointer for every sky on the page, mouse only */
+const pointer = { x: 0, y: 0 };
+let pointerBound = false;
+function bindPointer(): void {
+  if (pointerBound) return;
+  pointerBound = true;
+  window.addEventListener(
+    'pointermove',
+    (e) => {
+      if (e.pointerType !== 'mouse') return;
+      pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+      pointer.y = (e.clientY / window.innerHeight) * 2 - 1;
+    },
+    { passive: true },
+  );
+}
+
+interface Meteor {
+  t0: number;
+  dur: number;
+  x: number;
+  y: number;
+  dx: number;
+  dy: number;
+  speed: number;
+  len: number;
+  width: number;
+  peak: number;
+}
+
+interface Composition {
+  cx: number;
+  cy: number;
+  R: number;
+  /** text-safe gradient "ax ay bx by" (dark at A → full at B) */
+  mask: number[];
+  masked: boolean;
+  /** where meteors may start, "x0 y0 x1 y1" as fractions of the box */
+  meteor: number[];
+  stream: Stream | null;
+}
+
 class Sky {
   private el: HTMLElement;
   private variant: Variant;
+  private tune: Tune;
   private canvas: HTMLCanvasElement;
   private gl: WebGL2RenderingContext;
   private pGalaxy!: Prog;
@@ -717,21 +985,35 @@ class Sky {
   private visible = true;
   private dead = false;
   private live = false;
-  /** the loop runs only after the visitor has interacted with the page */
-  private engaged = false;
   /** first frame was expensive: keep the still image, never animate */
   private slow = false;
   private lowPower: boolean;
   private fine: boolean;
-  private tx = 0;
-  private ty = 0;
+  /** pointer parallax, eased */
   private px = 0;
   private py = 0;
-  private comp = { cx: 0.7, cy: 0.42, R: 0.4, mask: [0.3, 0.6, 0.6, 0.4] as number[] };
+  /** section scroll offset in css px (read in the page's scroll loop) */
+  private scroll = 0;
+  private scrollAt = 0;
+  /** the hero dive, 0 → 1 (eased in draw); external driver or automatic */
+  private dive = 0;
+  private diveHost: HTMLElement | null = null;
+  private meteor: Meteor | null = null;
+  private nextMeteor = 1.6 + Math.random() * 2.4;
+  private comp: Composition = {
+    cx: 0.7,
+    cy: 0.42,
+    R: 0.4,
+    mask: [0.3, 0.6, 0.6, 0.4],
+    masked: true,
+    meteor: [0.5, 0.04, 0.97, 0.45],
+    stream: null,
+  };
 
   constructor(el: HTMLElement, variant: Variant) {
     this.el = el;
     this.variant = variant;
+    this.tune = TUNE[variant];
     this.canvas = document.createElement('canvas');
     this.canvas.className = 'cosmos__gl';
     this.canvas.setAttribute('aria-hidden', 'true');
@@ -745,8 +1027,8 @@ class Sky {
       powerPreference: 'default',
     });
     if (!gl) throw new Error('no webgl2');
-    // A software rasteriser (SwiftShader, llvmpipe — headless Chrome, GPU-less
-    // VMs, Lighthouse/PageSpeed) draws this on the CPU at seconds per frame.
+    // A software rasteriser (SwiftShader, llvmpipe — GPU-less VMs,
+    // Lighthouse/PageSpeed) draws this on the CPU at seconds per frame.
     // Those get the CSS sky instead.
     const dbg = gl.getExtension('WEBGL_debug_renderer_info');
     const renderer = String(gl.getParameter(dbg ? dbg.UNMASKED_RENDERER_WEBGL : gl.RENDERER) || '');
@@ -756,9 +1038,12 @@ class Sky {
     this.fine = window.matchMedia('(pointer: fine)').matches;
     this.lowPower = !this.fine || (nav.hardwareConcurrency || 8) <= 4 || (nav.deviceMemory || 8) <= 4;
 
-    this.pGalaxy = this.program(VS_GALAXY, FS_SPRITE);
+    // a star sky never draws the galaxy: skip those two compiles
+    if (variant === 'galaxy') {
+      this.pGalaxy = this.program(VS_GALAXY, FS_SPRITE);
+      this.pDisc = this.program(VS_QUAD, FS_DISC);
+    }
     this.pField = this.program(VS_FIELD, FS_SPRITE);
-    this.pDisc = this.program(VS_QUAD, FS_DISC);
     this.pComp = this.program(VS_QUAD, FS_COMPOSITE);
 
     const half = gl.getExtension('EXT_color_buffer_float') || gl.getExtension('EXT_color_buffer_half_float');
@@ -770,13 +1055,24 @@ class Sky {
 
     this.measure();
     this.resize();
-    const t0 = performance.now();
+    const r0 = el.getBoundingClientRect();
+    this.scroll = this.scrollOf(r0.top, r0.height, window.innerHeight);
+    this.dive = this.diveOf(r0.top, r0.height);
+    // The first frame pays for shader compiles and uploads; the second is
+    // what every frame will cost. A slow first frame (>250 ms) or a second
+    // one over ~50 ms means the device can't carry the animation: the still
+    // frame stays, the loop never starts.
+    let t0 = performance.now();
     this.draw();
     gl.finish();
+    const first = performance.now() - t0;
+    t0 = performance.now();
+    this.draw();
+    gl.finish();
+    const second = performance.now() - t0;
     if (gl.isContextLost()) throw new Error('lost');
-    // One frame over ~60ms means the device can't carry the animation: the
-    // still frame stays, the loop never starts.
-    this.slow = performance.now() - t0 > 60;
+    this.slow = first > 250 || second > 50;
+    el.dataset.cosmosMs = `${Math.round(first)}/${Math.round(second)}${this.slow ? ' still' : ''}`;
 
     // first frame is in the drawing buffer — now it may enter the page
     el.appendChild(this.canvas);
@@ -796,41 +1092,69 @@ class Sky {
     new IntersectionObserver(
       (entries) => {
         this.visible = entries[entries.length - 1].isIntersecting;
+        if (this.visible) requestFrame();
         this.sync();
       },
       { rootMargin: '80px' },
     ).observe(el);
 
+    // depth on scroll: the layout read happens in the page's one scroll
+    // loop; this sky's own frame turns it into uniforms
+    addFrame({
+      read: (_y, vh) => {
+        if (this.dead || !this.visible || this.slow) return;
+        const r = this.el.getBoundingClientRect();
+        const s = this.scrollOf(r.top, r.height, vh);
+        const d = this.diveOf(r.top, r.height);
+        if (Math.abs(s - this.scroll) > 0.05 || Math.abs(d - this.dive) > 0.0005) {
+          this.scroll = s;
+          this.dive = d;
+          this.scrollAt = performance.now();
+        }
+      },
+    });
+
     document.addEventListener('visibilitychange', () => this.sync());
     document.addEventListener('vesta:motion', () => {
       if (isReduced()) {
-        this.tx = this.ty = 0;
+        this.px = this.py = 0;
+        this.meteor = null;
         this.draw();
       }
       this.sync();
     });
-    if (this.variant === 'galaxy' && this.fine) {
-      window.addEventListener(
-        'pointermove',
-        (e) => {
-          if (e.pointerType !== 'mouse') return;
-          this.tx = (e.clientX / window.innerWidth) * 2 - 1;
-          this.ty = (e.clientY / window.innerHeight) * 2 - 1;
-        },
-        { passive: true },
-      );
-    }
-    // The galaxy turns once every ~8 minutes, so a still first frame reads as
-    // the same sky. The loop waits for the visitor's first move — it costs
-    // nothing to someone who is only reading, or to an automated audit.
-    const engage = () => {
-      if (this.engaged) return;
-      this.engaged = true;
-      for (const ev of ENGAGE_EVENTS) window.removeEventListener(ev, engage);
-      this.sync();
-    };
-    for (const ev of ENGAGE_EVENTS) window.addEventListener(ev, engage, { passive: true });
+    if (this.fine) bindPointer();
     this.sync();
+  }
+
+  /**
+   * The dive, 0 → 1. A parent can drive it: an inline `--dive` custom
+   * property (style.setProperty) or a `data-dive` attribute on the cosmos
+   * root or any ancestor. Without a driver the galaxy dives by itself as its
+   * section scrolls away; star skies never dive.
+   */
+  private diveOf(top: number, height: number): number {
+    if (vestibular()) return 0;
+    if (!this.diveHost) {
+      for (let n: HTMLElement | null = this.el; n && n !== document.body; n = n.parentElement) {
+        if (n.hasAttribute('data-dive') || n.style.getPropertyValue('--dive')) {
+          this.diveHost = n;
+          break;
+        }
+      }
+    }
+    const h = this.diveHost;
+    if (h) {
+      const raw = parseFloat(h.style.getPropertyValue('--dive') || h.getAttribute('data-dive') || '');
+      if (Number.isFinite(raw)) return Math.min(1, Math.max(0, raw));
+    }
+    if (this.variant !== 'galaxy') return 0;
+    return Math.min(1, Math.max(0, -top / Math.max(height * 0.85, 1)));
+  }
+
+  /** galaxy: 0 with the hero at the top of the page; star fields: 0 when centred */
+  private scrollOf(top: number, height: number, vh: number): number {
+    return this.variant === 'galaxy' ? -top : vh * 0.5 - (top + height * 0.5);
   }
 
   /* ---------------- GL plumbing ---------------- */
@@ -929,21 +1253,41 @@ class Sky {
       const n = parseFloat(cs.getPropertyValue(name));
       return Number.isFinite(n) ? n : fb;
     };
-    const m = cs.getPropertyValue('--cosmos-mask').trim().split(/\s+/).map(Number);
-    const maskVar = m.length === 4 && m.every(Number.isFinite) ? m : null;
-    if (landscape) {
-      this.comp = {
-        cx: v('--cosmos-x', 0.73),
-        cy: v('--cosmos-y', 0.44),
-        R: Math.min(v('--cosmos-r', 0.36) * this.cssW, this.cssH * 0.95),
-        mask: maskVar || [0.34, 0.62, 0.62, 0.4],
-      };
+    const quad = (name: string) => {
+      const m = cs.getPropertyValue(name).trim().split(/\s+/).map(Number);
+      return m.length === 4 && m.every(Number.isFinite) ? m : null;
+    };
+    const maskVar = quad('--cosmos-mask');
+    const meteorVar = quad('--cosmos-meteor');
+    if (this.variant === 'galaxy') {
+      this.comp = landscape
+        ? {
+            cx: v('--cosmos-x', 0.73),
+            cy: v('--cosmos-y', 0.44),
+            R: Math.min(v('--cosmos-r', 0.36) * this.cssW, this.cssH * 0.95),
+            mask: maskVar || [0.34, 0.62, 0.62, 0.4],
+            masked: true,
+            meteor: meteorVar || [0.52, 0.04, 0.97, 0.42],
+            stream: { x: 0.66, y: 1.0, angle: -60 * DEG, share: 0.2 },
+          }
+        : {
+            cx: v('--cosmos-x', 0.7),
+            cy: v('--cosmos-y', 0.2),
+            R: v('--cosmos-r', 0.86) * this.cssW,
+            mask: maskVar || [0.3, 0.56, 0.6, 0.26],
+            masked: true,
+            meteor: meteorVar || [0.3, 0.6, 1.0, 0.8],
+            stream: { x: 0.7, y: 0.9, angle: -34 * DEG, share: 0.16 },
+          };
     } else {
       this.comp = {
-        cx: v('--cosmos-x', 0.7),
-        cy: v('--cosmos-y', 0.2),
-        R: v('--cosmos-r', 0.86) * this.cssW,
-        mask: maskVar || [0.3, 0.56, 0.6, 0.26],
+        cx: 0,
+        cy: 0,
+        R: 1,
+        mask: maskVar || [0, 0, 1, 0],
+        masked: !!maskVar,
+        meteor: meteorVar || (landscape ? [0.56, 0.05, 0.97, 0.55] : [0.25, 0.03, 1.0, 0.3]),
+        stream: null,
       };
     }
   }
@@ -955,7 +1299,9 @@ class Sky {
       this.canvas.width = w;
       this.canvas.height = h;
       this.hi = this.target(w, h, this.hi);
-      this.lo = this.target(Math.max(1, Math.ceil(w / 2)), Math.max(1, Math.ceil(h / 2)), this.lo);
+      // only the galaxy draws into the half-res target
+      const g = this.variant === 'galaxy';
+      this.lo = this.target(g ? Math.max(1, Math.ceil(w / 2)) : 1, g ? Math.max(1, Math.ceil(h / 2)) : 1, this.lo);
     }
     // particle budget follows canvas area; rebuild only on a real change
     const area = this.cssW * this.cssH;
@@ -963,17 +1309,17 @@ class Sky {
     this.builtFor = area;
     const small = this.cssW < 768;
     if (this.variant === 'galaxy') {
-      // ≈ 57k particles at 1440×900, ≈ 14k on a phone
+      // ≈ 57k galaxy particles at 1440×900, ≈ 14k on a phone
       const nStars = Math.round(Math.min(32000, Math.max(5000, area * (small ? 0.02 : 0.024))));
       const g = buildGalaxy(nStars, small ? 4000 : 12000, small ? 1300 : 4200);
       this.layers.stars = this.layer(g.stars, G_STRIDE, [4, 4, 1], this.layers.stars);
       this.layers.glow = this.layer(g.glow, G_STRIDE, [4, 4, 1], this.layers.glow);
       this.layers.dust = this.layer(g.dust, G_STRIDE, [4, 4, 1], this.layers.dust);
-      const nField = Math.round(Math.min(9000, Math.max(1500, area * 0.0062)));
-      this.layers.field = this.layer(buildField(nField, 29, 0.02, 4, this.cssW, this.cssH), F_STRIDE, [4, 4, 2], this.layers.field);
+      const nField = Math.round(Math.min(15000, Math.max(3000, area * 0.0105)));
+      this.layers.field = this.layer(buildField(nField, 29, 4, this.cssW, this.cssH, this.comp.stream), F_STRIDE, [4, 4, 4], this.layers.field);
     } else {
-      const nField = Math.round(Math.min(7000, Math.max(1200, area * 0.0046)));
-      this.layers.field = this.layer(buildField(nField, 431, 0.02, 3, this.cssW, this.cssH), F_STRIDE, [4, 4, 2], this.layers.field);
+      const nField = Math.round(Math.min(13000, Math.max(2400, area * 0.0085)));
+      this.layers.field = this.layer(buildField(nField, 431, 3, this.cssW, this.cssH, null), F_STRIDE, [4, 4, 4], this.layers.field);
     }
   }
 
@@ -984,10 +1330,31 @@ class Sky {
     if (this.dead || gl.isContextLost() || !this.hi || !this.lo) return;
     const hi = this.hi;
     const lo = this.lo;
+    const T = this.tune;
     const galaxy = this.variant === 'galaxy';
-    const view = [(60 + this.py * 1.4) * DEG, this.px * 1.8 * DEG, -21 * DEG, 0.14];
-    const mask = galaxy ? this.comp.mask : [0, 0, 1, 0];
+    const still = isReduced();
+    const scroll = still ? 0 : this.scroll;
+    // the dive: as the hero leaves, the galaxy swells, swings toward face-on
+    // and turns a little, the camera closes in (stronger perspective) and the
+    // star field opens outward from the core. The pointer tilts it ≤ 4°.
+    const dv = still ? 0 : this.dive;
+    const d = dv * dv * (3 - 2 * dv);
+    const view = [(60 + this.py * 3.4 - d * 26) * DEG, this.px * 4 * DEG, (-21 - d * 12) * DEG, 0.14 + d * 0.22];
+    // landscape: the galaxy sits beside the copy and holds its place on
+    // screen as it swells; portrait: it sits below the copy, so it rises
+    // with the page into the part of the hero still in view
+    const wide = this.cssW >= this.cssH * 1.05;
+    const lagG = wide ? T.lagGalaxy + d * 0.44 : T.lagGalaxy * (1 - d);
+    const cy = this.comp.cy - (wide ? 0 : 0.14 * d);
+    const grow = 1 + 1.35 * d * d + 0.12 * d;
+    // …and slides in toward the middle of the frame as it comes closer
+    const cx = this.comp.cx + (0.62 - this.comp.cx) * d * 0.3;
+    // the text-safe mask lives in the section's frame, but the diving galaxy
+    // sinks into its lower half while the copy leaves upward: let it through
+    const gFloor = Math.min(0.8, 0.85 * d * d);
+    const mask = this.comp.mask;
     const t = this.time;
+    const par = [-this.px * T.par[0], -this.py * T.par[1]];
 
     gl.disable(gl.DEPTH_TEST);
     gl.enable(gl.BLEND);
@@ -1006,8 +1373,9 @@ class Sky {
     };
     const setGalaxy = (pr: Prog, tgt: Target) => {
       const s = tgt.w / this.cssW;
-      gl.uniform2f(pr.u.u_center, this.comp.cx * tgt.w, this.comp.cy * tgt.h);
-      gl.uniform1f(pr.u.u_R, this.comp.R * s);
+      gl.uniform2f(pr.u.u_center, cx * tgt.w, (cy * this.cssH + scroll * lagG) * s);
+      gl.uniform1f(pr.u.u_R, this.comp.R * s * grow);
+      if (pr.u.u_boost) gl.uniform1f(pr.u.u_boost, Math.pow(grow, 1.4));
       gl.uniform4fv(pr.u.u_view, view);
     };
     const points = (pr: Prog, layer: Layer | undefined, mode: number) => {
@@ -1027,13 +1395,13 @@ class Sky {
     gl.clear(gl.COLOR_BUFFER_BIT);
     if (galaxy) {
       gl.useProgram(this.pGalaxy.p);
-      setCommon(this.pGalaxy, lo, 0);
+      setCommon(this.pGalaxy, lo, gFloor);
       setGalaxy(this.pGalaxy, lo);
       points(this.pGalaxy, this.layers.glow, 1);
       points(this.pGalaxy, this.layers.dust, 2);
 
       gl.useProgram(this.pDisc.p);
-      setCommon(this.pDisc, lo, 0);
+      setCommon(this.pDisc, lo, gFloor);
       setGalaxy(this.pDisc, lo);
       gl.uniform3fv(this.pDisc.u.u_cCore, CORE);
       gl.uniform3fv(this.pDisc.u.u_cDisc, mix(CORE, LILAC, 0.3));
@@ -1043,17 +1411,27 @@ class Sky {
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     }
 
-    // full-res target: resolved stars
+    // full-res target: the star field in depth, then resolved galaxy stars
     gl.bindFramebuffer(gl.FRAMEBUFFER, hi.fb);
     gl.viewport(0, 0, hi.w, hi.h);
     gl.clear(gl.COLOR_BUFFER_BIT);
-    gl.useProgram(this.pField.p);
-    setCommon(this.pField, hi, galaxy ? 0.5 : 1);
-    gl.uniform2f(this.pField.u.u_par, -this.px * 5 * this.dpr, -this.py * 4 * this.dpr);
-    points(this.pField, this.layers.field, 0);
+    const pf = this.pField;
+    gl.useProgram(pf.p);
+    setCommon(pf, hi, this.comp.masked ? (galaxy ? 0.36 : 0.35) : 1);
+    gl.uniform1f(pf.u.u_gain, this.gain * T.fieldGain);
+    gl.uniform2f(pf.u.u_css, this.cssW, this.cssH);
+    gl.uniform2f(pf.u.u_par, par[0], par[1]);
+    gl.uniform1f(pf.u.u_scroll, scroll);
+    gl.uniform3fv(pf.u.u_lag, T.lag);
+    gl.uniform1f(pf.u.u_drift, still ? 0 : T.drift);
+    gl.uniform1f(pf.u.u_glint, T.glint);
+    gl.uniform1f(pf.u.u_keep, this.comp.masked ? T.keep : 1);
+    gl.uniform1f(pf.u.u_dive, d);
+    gl.uniform2f(pf.u.u_zc, cx * this.cssW, cy * this.cssH + scroll * lagG);
+    points(pf, this.layers.field, 0);
     if (galaxy) {
       gl.useProgram(this.pGalaxy.p);
-      setCommon(this.pGalaxy, hi, 0);
+      setCommon(this.pGalaxy, hi, gFloor);
       setGalaxy(this.pGalaxy, hi);
       points(this.pGalaxy, this.layers.stars, 0);
       points(this.pGalaxy, this.layers.dust, 2);
@@ -1064,8 +1442,9 @@ class Sky {
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
     gl.disable(gl.BLEND);
     gl.clear(gl.COLOR_BUFFER_BIT);
-    gl.useProgram(this.pComp.p);
-    const u = this.pComp.u;
+    const pc = this.pComp;
+    gl.useProgram(pc.p);
+    const u = pc.u;
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, hi.tex);
     gl.uniform1i(u.u_hi, 0);
@@ -1073,21 +1452,71 @@ class Sky {
     gl.bindTexture(gl.TEXTURE_2D, lo.tex);
     gl.uniform1i(u.u_lo, 1);
     gl.uniform1f(u.u_decode, 1 / this.gain);
-    gl.uniform1f(u.u_exposure, galaxy ? 1.7 : 1.0);
+    gl.uniform1f(u.u_exposure, T.exposure * (1 + 0.3 * d));
     gl.uniform2f(u.u_res, this.canvas.width, this.canvas.height);
-    gl.uniform1f(u.u_haze, galaxy ? 0 : 1);
+    gl.uniform1f(u.u_t, t);
+    gl.uniform4fv(u.u_mask, mask);
+    gl.uniform1f(u.u_maskFloor, this.comp.masked ? 0 : 1);
+    gl.uniform1f(u.u_textFloor, galaxy ? 0.3 : 0.45);
+    // the nebula is the farthest thing in a star section: it lags the most
+    gl.uniform1f(u.u_haze, T.haze);
+    gl.uniform2f(u.u_hazeOff, (-par[0] * 0.2) / this.cssH, -(scroll * 0.6 + par[1] * 0.2) / this.cssH);
+    const st = this.comp.stream;
+    if (st) {
+      gl.uniform4f(u.u_stream, st.x + (par[0] * 0.34) / this.cssW, st.y + (scroll * T.lag[0] + par[1] * 0.34) / this.cssH, st.angle, 1);
+    } else gl.uniform4f(u.u_stream, 0, 0, 0, 0);
     gl.uniform3fv(u.u_violet, VIOLET);
     gl.uniform3fv(u.u_lilac, LILAC);
-    gl.uniform1f(u.u_vig, galaxy ? 0.5 : 0.35);
+    gl.uniform1f(u.u_vig, T.vignette);
+    const m = this.meteor;
+    if (m && !still) {
+      const e = (t - m.t0) / m.dur;
+      const env = smoothstep(0, 0.12, e) * (1 - smoothstep(0.5, 1, e));
+      const d = m.speed * (t - m.t0);
+      const k = this.dpr;
+      gl.uniform4f(u.u_m0, (m.x + m.dx * d) * k, (m.y + m.dy * d) * k, m.dx, m.dy);
+      gl.uniform4f(u.u_m1, m.len * Math.min(1, e * 3) * k + 1, m.width * k, m.peak * env, 0);
+    } else gl.uniform4f(u.u_m1, 0, 0, 0, 0);
     gl.bindVertexArray(null);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     gl.activeTexture(gl.TEXTURE0);
   }
 
+  /* ---------------- meteors ---------------- */
+
+  /** a thin, fast streak starting inside the meteor box and heading down,
+      away from the text side; one at a time, every ~5–12 s of visible time */
+  private launch(): void {
+    const [x0, y0, x1, y1] = this.comp.meteor;
+    const W = this.cssW;
+    const H = this.cssH;
+    const small = W < 768;
+    const x = (x0 + Math.random() * (x1 - x0)) * W;
+    const y = (y0 + Math.random() * (y1 - y0)) * H;
+    const ang = (16 + Math.random() * 22) * DEG;
+    const speed = (small ? 560 : 820) + Math.random() * 360;
+    const dur = 0.5 + Math.random() * 0.35;
+    let dir = Math.random() < 0.6 ? 1 : -1;
+    const end = x + dir * Math.cos(ang) * speed * dur;
+    if (end < (x0 - 0.06) * W || end > W * 1.04) dir = -dir;
+    this.meteor = {
+      t0: this.time,
+      dur,
+      x,
+      y,
+      dx: dir * Math.cos(ang),
+      dy: Math.sin(ang),
+      speed,
+      len: (small ? 70 : 110) + Math.random() * 90,
+      width: 0.62 + Math.random() * 0.3,
+      peak: 0.5 + Math.random() * 0.4,
+    };
+  }
+
   /* ---------------- loop ---------------- */
 
   private sync(): void {
-    const run = this.live && this.engaged && !this.slow && !this.dead && this.visible && !document.hidden && !isReduced();
+    const run = this.live && !this.slow && !this.dead && this.visible && !document.hidden && !isReduced();
     if (run && !this.raf) {
       this.last = performance.now();
       this.raf = requestAnimationFrame(this.tick);
@@ -1100,15 +1529,25 @@ class Sky {
   private tick = (now: number): void => {
     this.raf = requestAnimationFrame(this.tick);
     const dt = now - this.last;
-    const settling = Math.abs(this.tx - this.px) + Math.abs(this.ty - this.py) > 0.002;
-    const interval = this.lowPower || !settling || this.variant === 'stars' ? 1000 / 30 : 1000 / 60;
+    const tx = this.fine ? pointer.x : 0;
+    const ty = this.fine ? pointer.y : 0;
+    const settling = Math.abs(tx - this.px) + Math.abs(ty - this.py) > 0.002;
+    const scrolling = now - this.scrollAt < 400;
+    // 60fps while something moves fast (pointer ease, scroll, a meteor);
+    // 30fps for the slow sky, and always on low-power devices
+    const fast = !this.lowPower && (settling || scrolling || !!this.meteor);
+    const interval = fast ? 1000 / 60 : 1000 / 30;
     if (dt < interval - 1.5) return;
     this.last = now;
     const s = Math.min(dt, 100) / 1000;
     this.time += s;
-    const k = 1 - Math.exp(-s * 2.2);
-    this.px += (this.tx - this.px) * k;
-    this.py += (this.ty - this.py) * k;
+    const k = 1 - Math.exp(-s * 2.4);
+    this.px += (tx - this.px) * k;
+    this.py += (ty - this.py) * k;
+    if (this.meteor && this.time - this.meteor.t0 > this.meteor.dur) {
+      this.meteor = null;
+      this.nextMeteor = this.time + 5 + Math.random() * 7;
+    } else if (!this.meteor && this.time >= this.nextMeteor) this.launch();
     this.draw();
   };
 
@@ -1126,32 +1565,53 @@ class Sky {
 /* boot                                                                    */
 /* ---------------------------------------------------------------------- */
 
-const ENGAGE_EVENTS = ['pointermove', 'pointerdown', 'wheel', 'touchstart', 'keydown', 'scroll'] as const;
-
 export function initCosmos(): void {
   const roots = Array.from(document.querySelectorAll<HTMLElement>('[data-cosmos]'));
   if (!roots.length) return;
   const conn = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
   if (conn && conn.saveData) return;
 
-  const start = () => {
-    for (const el of roots) {
-      if (el.dataset.cosmosReady) continue;
-      el.dataset.cosmosReady = '1';
-      const variant: Variant = el.dataset.cosmos === 'galaxy' ? 'galaxy' : 'stars';
-      try {
-        new Sky(el, variant);
-      } catch {
-        /* no WebGL2 / compile failure: the CSS sky stays */
-        el.querySelector('canvas.cosmos__gl')?.remove();
-      }
+  const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+  const idle = (cb: () => void) => (w.requestIdleCallback ? w.requestIdleCallback(cb, { timeout: 1200 }) : window.setTimeout(cb, 200));
+
+  const make = (el: HTMLElement) => {
+    if (el.dataset.cosmosReady) return;
+    el.dataset.cosmosReady = '1';
+    const variant: Variant = el.dataset.cosmos === 'galaxy' ? 'galaxy' : 'stars';
+    try {
+      new Sky(el, variant);
+    } catch {
+      /* no WebGL2 / software renderer / compile failure: the CSS sky stays */
+      el.querySelector('canvas.cosmos__gl')?.remove();
     }
   };
-  const idle = () => {
-    const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
-    if (w.requestIdleCallback) w.requestIdleCallback(start, { timeout: 1200 });
-    else window.setTimeout(start, 200);
+
+  // Each sky is its own context: build it on idle when it comes within about
+  // a viewport of the screen, one per idle slot, so the compiles never land
+  // together and a sky that is never reached (a closed menu) costs nothing.
+  const queue: HTMLElement[] = [];
+  let pumping = false;
+  const pump = () => {
+    const el = queue.shift();
+    if (el) make(el);
+    if (queue.length) idle(pump);
+    else pumping = false;
   };
-  if (document.readyState === 'complete') idle();
-  else window.addEventListener('load', idle, { once: true });
+  const near = new IntersectionObserver(
+    (entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+        near.unobserve(e.target);
+        queue.push(e.target as HTMLElement);
+      }
+      if (queue.length && !pumping) {
+        pumping = true;
+        idle(pump);
+      }
+    },
+    { rootMargin: '150% 0px' },
+  );
+  const start = () => roots.forEach((el) => near.observe(el));
+  if (document.readyState === 'complete') start();
+  else window.addEventListener('load', start, { once: true });
 }

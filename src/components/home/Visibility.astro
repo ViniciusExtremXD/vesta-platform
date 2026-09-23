@@ -4,38 +4,52 @@
  * buttons drive a search illustration drawn in Vesta's own neutrals
  * (no Google logo, blue, green, fonts, stars or reviews).
  *
+ * Round 2: the checklist shows titles only (plus a package tag where an item
+ * is not in every package); the one-line explanation opens under the row
+ * that is playing or was picked. The honesty line and the source live in an
+ * Expand box. The panel plays a bolder sequence: the query types itself, the
+ * result lifts into the list with depth, lines roll over in 3D, the map zooms
+ * to the pin, which drops, pings and gets an orbiting planet.
+ *
  * Default markup = the final state (all six items done). src/scripts/serp.ts
  * arms the section and plays it once when the panel comes into view.
  */
 import SectionLabel from '../ui/SectionLabel.astro';
 import SplitText from '../ui/SplitText.astro';
 import Arrow from '../ui/Arrow.astro';
-import { visibility as v, concept, wa } from '../../data/site';
+import WaGlyph from '../ui/WaGlyph.astro';
+import Expand from '../ui/Expand.astro';
+import { visibility as v, concept, wa, getPackage } from '../../data/site';
+import type { PackageId } from '../../data/site';
 import measured from '../../data/measurements.json';
 
 const shortDate = (iso: string) =>
   new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).format(new Date(iso));
 
-/* TODO_SITE: strings the spec implies but site.ts does not carry yet. */
+/* Aria-only / illustration-only strings (kept here, next to the drawing). */
 const TODO_SITE = {
   /** role="img" label for the panel. */
-  panelAria: `Illustration: a search for "${v.panel.query}". The result for Halden Roofing, a fictional business, goes from a page called "Home" to a clear title, description, opening hours, questions and a map listing.`,
+  panelAria: `Illustration: a search for "${v.panel.query}". The result for Halden Roofing, a fictional business, goes from a page called "Home" to a clear title, description, opening hours, questions, a map listing, a speed check and tracked calls.`,
   /** Small label inside the query field. */
   queryLabel: 'Query',
-  /** Map card readout: Austin, TX (the concept's city), real coordinates. */
-  mapCoords: '30.27° N · 97.74° W',
   /** Under the "Speed" gauge label. The number is this page's measured score. */
   gaugeNote: ['Lighthouse, mobile', `This page · ${shortDate(measured.date)}`],
 };
 
 const STEPS = 6;
 const pad = (n: number) => String(n).padStart(2, '0');
-const items = v.items.map((item, i) => ({ ...item, state: i + 1 })).filter((item) => item.confirmed);
+const ALL: PackageId[] = ['landing', 'google', 'complete'];
+/* A tag only where an item is not in every package: "+ Google · Complete". */
+const tagOf = (ids: PackageId[]) =>
+  ALL.every((id) => ids.includes(id)) ? '' : ids.map((id) => getPackage(id).shortName).join(' · ');
+const items = v.items
+  .map((item, i) => ({ ...item, state: i + 1, short: tagOf(item.packages) }))
+  .filter((item) => item.confirmed);
 const p = v.panel;
 const score = measured.performance;
-/* This page's own score is shown only when it is one worth showing (90+). */
+/* This page's own score is shown only when it is one worth showing (90+).
+   Otherwise state 5 is an illustrated vitals check with no number in it. */
 const showGauge = score >= 90;
-const ctaLabel = v.cta.label.replace(/\s*→\s*$/, '');
 const [open, ...hoursRest] = p.after.hours.split(' · ');
 
 /* Keep the phone number on one line inside the snippet. */
@@ -47,8 +61,6 @@ const snipParts = p.after.snippet.split(phoneRe);
 const copies = ['sizer', 'live'] as const;
 
 /* ---- map: a faint star-chart graticule under a small street plan ------- */
-/* Parallels: arcs of circles centred far below the card (pole at 160,900).
-   Meridians: straight lines radiating from that pole. ≤8% ink, static. */
 const POLE = { x: 160, y: 900 };
 const parallels = [872, 836, 800, 764, 728].map((R) => {
   const half = 190;
@@ -76,212 +88,266 @@ const ticks = Array.from({ length: 21 }, (_, i) => {
   return { d: `M${x1} ${y1}L${x2} ${y2}`, major, band: val >= 90 };
 });
 const needleDeg = -120 + score * 2.4;
+/* query characters, for the typing cover's step count */
+const qLen = p.query.length;
 ---
 
 <section id={v.id} class="vz s-paper section" data-nav-theme="light" data-serp-root>
-  <div class="wrap g vz-grid">
+  <div class="wrap g vz-grid" data-scene>
     <header class="vz-head">
       <SectionLabel n={v.label.index ?? undefined} name={v.label.name} />
       <SplitText as="h2" class="d2" text={v.h2} />
-      <p class="lead vz-lead" data-reveal style="--d:120ms">{v.lead}</p>
+      <p class="lead vz-lead" data-reveal style="--d:160ms">{v.lead}</p>
     </header>
 
     <div class="vz-l">
-      <ol class="vz-list">
-        {
-          items.map((item, i) => (
-            <li data-reveal style={`--d:${i * 50}ms`}>
-              <button type="button" class="vz-item" data-serp-item={item.state} aria-controls="vz-panel">
-                <span class="vz-ind" aria-hidden="true">
-                  <span class="vz-ind-f" />
-                  <svg viewBox="0 0 12 12" width="12" height="12">
-                    <path d="M2.6 6.3 5 8.6 9.4 3.8" pathLength="1" />
-                  </svg>
-                </span>
-                <span class="vz-t">{item.title}</span>
-                <span class="vz-x">{item.text}</span>
-                <span class="vz-tag label">{item.tag}</span>
-                <span class="vz-n label" aria-hidden="true">{pad(item.state)}</span>
-              </button>
-            </li>
-          ))
-        }
-      </ol>
+      <div class="vz-list-w">
+        <p class="label vz-lh" data-reveal>{v.listHead}</p>
+        <ol class="vz-list">
+          {
+            items.map((item, i) => (
+              <li data-reveal style={`--d:${80 + i * 70}ms`}>
+                <button
+                  type="button"
+                  class="vz-item"
+                  data-serp-item={item.state}
+                  aria-controls="vz-panel"
+                  aria-describedby={`vz-x-${item.state}`}
+                >
+                  <span class="vz-ind" aria-hidden="true">
+                    <span class="vz-ind-f" />
+                    <svg viewBox="0 0 12 12" width="12" height="12">
+                      <path d="M2.6 6.3 5 8.6 9.4 3.8" pathLength="1" />
+                    </svg>
+                  </span>
+                  <span class="vz-t">{item.title}</span>
+                  <span class="vz-n label" aria-hidden="true">{pad(item.state)}</span>
+                  <span class="vz-xw" aria-hidden="true">
+                    <span class="vz-xc">
+                      <span class="vz-x" id={`vz-x-${item.state}`}>{item.text}</span>
+                    </span>
+                  </span>
+                  {item.short && <span class="vz-tag label">{item.short}</span>}
+                  <span class="vz-timer" aria-hidden="true" />
+                </button>
+              </li>
+            ))
+          }
+        </ol>
+      </div>
 
-      <div class="vz-ctrl" data-reveal>
-        <button type="button" class="vz-replay" data-serp-replay hidden>{v.replay}</button>
-        <a class="tlink vz-cta" href={wa(v.cta.text)} target="_blank" rel="noopener" data-wa-intent="visibility">
-          <span>{ctaLabel}</span>
+      <div class="vz-ctrl" data-reveal style="--d:120ms">
+        <a class="btn vz-cta" href={wa(v.cta.text)} target="_blank" rel="noopener" data-wa-intent="visibility" data-magnetic=".25">
+          <WaGlyph size={16} />
+          <span>{v.cta.label.replace(/\s*→\s*$/, '')}</span>
           <Arrow />
         </a>
+        <button type="button" class="vz-replay" data-serp-replay hidden>
+          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3.2 8a4.8 4.8 0 1 0 1.4-3.4M3.2 2.6v2.6h2.6" /></svg>
+          <span>{v.replay}</span>
+        </button>
       </div>
     </div>
 
     <div class="vz-r">
-      <figure class="vz-fig" data-reveal>
-        <div class="pz" id="vz-panel" data-serp role="img" aria-label={TODO_SITE.panelAria}>
-          <div class="pz-bar">
-            <span class="label pz-bar-l">{p.label}</span>
-            <span class="pz-count" data-serp-count>{pad(STEPS)}/{pad(STEPS)}</span>
-            <span class="pz-prog" />
-          </div>
+      <div class="vz-par" data-parallax="0.05">
+        <figure class="vz-fig" data-reveal>
+          <div class="pz" id="vz-panel" data-serp data-tilt="3" role="img" aria-label={TODO_SITE.panelAria} style={`--qn:${qLen}`}>
+            <div class="pz-bar">
+              <span class="label pz-bar-l">{p.label}</span>
+              <span class="pz-count" data-serp-count>{pad(STEPS)}/{pad(STEPS)}</span>
+              <span class="pz-prog" />
+            </div>
 
-          <div class="pz-q">
-            <span class="label pz-q-l">{TODO_SITE.queryLabel}</span>
-            <span class="pz-q-t">{p.query}</span>
-          </div>
+            <div class="pz-q">
+              <span class="label pz-q-l">{TODO_SITE.queryLabel}</span>
+              <span class="pz-q-t">
+                <span class="pz-q-s">
+                  {p.query}
+                  <span class="pz-cov" aria-hidden="true"><span class="pz-caret" /></span>
+                </span>
+              </span>
+            </div>
 
-          <div class="pz-body">
-            <div class="pz-results">
-              {
-                copies.map((copy) => (
-                  <div class={`pz-${copy}`}>
-                    <div class="ph ph-1">
-                      <span class="u" />
-                      <span class="t" />
-                      <span class="s" />
-                      <span class="s2" />
-                    </div>
+            <div class="pz-body">
+              <div class="pz-results">
+                {
+                  copies.map((copy) => (
+                    <div class={`pz-${copy}`}>
+                      <div class="ph ph-1">
+                        <span class="u" />
+                        <span class="t" />
+                        <span class="s" />
+                        <span class="s2" />
+                      </div>
 
-                    <div class="slot">
-                      <div class="res">
-                        <div class="res-in">
-                          <div class="sw sw-url">
-                            <div class="sw-b"><span class="sw-t">{p.before.url}</span></div>
-                            <div class="sw-a"><span class="sw-t">{p.after.url}</span></div>
-                          </div>
-                          <div class="sw sw-title" style="--sd:50ms">
-                            <div class="sw-b"><span class="sw-t">{p.before.title}</span></div>
-                            <div class="sw-a"><span class="sw-t">{p.after.title}</span></div>
-                          </div>
-                          <span class="res-rule" />
-                          <div class="sw sw-snip" style="--sd:100ms">
-                            <div class="sw-b"><span class="sw-t">{p.before.snippet}</span></div>
-                            <div class="sw-a">
-                              <span class="sw-t">
-                                {snipParts.map((part) => (phoneRe.test(part) ? <span class="nw">{part}</span> : part))}
-                              </span>
+                      <div class="slot">
+                        <div class="res">
+                          <div class="res-in">
+                            <div class="sw sw-url">
+                              <div class="sw-b"><span class="sw-t">{p.before.url}</span></div>
+                              <div class="sw-a"><span class="sw-t">{p.after.url}</span></div>
                             </div>
-                          </div>
-                          <div class="rich">
-                            <div class="rich-in">
-                              <p class="hrs" style="--r:0">
-                                <span class="sq" />
-                                <span>{open}{hoursRest.length ? ` · ${hoursRest.join(' · ')}` : ''}</span>
-                              </p>
-                              <ul class="faq">
-                                {p.after.faq.map((q, j) => (
-                                  <li style={`--r:${j + 1}`}>
-                                    <span>{q}</span>
-                                    <span class="plus" />
-                                  </li>
-                                ))}
-                              </ul>
+                            <div class="sw sw-title" style="--sd:60ms">
+                              <div class="sw-b"><span class="sw-t">{p.before.title}</span></div>
+                              <div class="sw-a"><span class="sw-t">{p.after.title}</span></div>
+                            </div>
+                            <span class="res-rule" />
+                            <div class="sw sw-snip" style="--sd:120ms">
+                              <div class="sw-b"><span class="sw-t">{p.before.snippet}</span></div>
+                              <div class="sw-a">
+                                <span class="sw-t">
+                                  {snipParts.map((part) => (phoneRe.test(part) ? <span class="nw">{part}</span> : part))}
+                                </span>
+                              </div>
+                            </div>
+                            <div class="rich">
+                              <div class="rich-in">
+                                <p class="hrs" style="--r:0">
+                                  <span class="sq" />
+                                  <span>{open}{hoursRest.length ? ` · ${hoursRest.join(' · ')}` : ''}</span>
+                                </p>
+                                <ul class="faq">
+                                  {p.after.faq.map((q, j) => (
+                                    <li style={`--r:${j + 1}`}>
+                                      <span>{q}</span>
+                                      <span class="plus" />
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
+
+                      <div class="ph ph-2">
+                        <span class="u" />
+                        <span class="t" />
+                        <span class="s" />
+                      </div>
                     </div>
-
-                    <div class="ph ph-2">
-                      <span class="u" />
-                      <span class="t" />
-                      <span class="s" />
-                    </div>
-                  </div>
-                ))
-              }
-            </div>
-
-            <div class="pz-map">
-              <div class="plot">
-                <svg class="grat" viewBox="0 0 320 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-                  {parallels.map((d) => <path d={d} />)}
-                  {meridians.map((d) => <path d={d} />)}
-                </svg>
-                <svg class="streets" viewBox="0 0 320 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-                  <g transform="rotate(-24 160 100)">
-                    <path class="st" style="--i:0" d="M-120 109H440" pathLength="1" />
-                    <path class="st" style="--i:1" d="M-120 38H440" pathLength="1" />
-                    <path class="st" style="--i:2" d="M-120 184H440" pathLength="1" />
-                    <path class="st" style="--i:1" d="M118 -160V360" pathLength="1" />
-                    <path class="st" style="--i:3" d="M226 -160V360" pathLength="1" />
-                    <path class="st" style="--i:4" d="M22 -160V360" pathLength="1" />
-                  </g>
-                  <path class="st st-main" style="--i:2" d="M212 -12C226 24 258 48 334 56" pathLength="1" />
-                </svg>
-                <span class="pin" aria-hidden="true" />
-                <span class="orb" aria-hidden="true">
-                  <svg viewBox="0 0 120 70">
-                    <ellipse class="orb-e" cx="60" cy="35" rx="54" ry="24" transform="rotate(-24 60 35)" pathLength="1" />
-                  </svg>
-                  <span class="orb-p" />
-                </span>
-                <span class="coords">{TODO_SITE.mapCoords}</span>
-              </div>
-
-              <div class="pl-head">
-                <p class="pl-name">{p.map.name}</p>
-                <p class="pl-meta">
-                  <span>{p.map.category} · </span>
-                  <span class="op"><span class="sq" />{p.map.status}</span>
-                </p>
-              </div>
-
-              <div class="acts">
-                {
-                  p.map.actions.map((a, j) =>
-                    j === p.map.actions.length - 1 ? (
-                      <span class="act act-call">
-                        {a}
-                        <span class="ld-sq" />
-                        <span class="ld-v" />
-                        <span class="ld-h" />
-                        <span class="ld-l label">{p.tracked}</span>
-                      </span>
-                    ) : (
-                      <span class="act">{a}</span>
-                    )
-                  )
+                  ))
                 }
               </div>
 
-              {showGauge && (
-              <div class="gz-row">
-                <div class="gz">
-                  <svg viewBox="0 0 56 56" width="56" height="56" aria-hidden="true">
-                    <g class="gz-ticks">
-                      {ticks.map((t) => <path d={t.d} class:list={['tk', { m: t.major, b: t.band }]} />)}
-                    </g>
-                    <path class="gz-track" d="M8.95 39A22 22 0 1 1 47.05 39" pathLength="100" />
-                    <path class="gz-val" d="M8.95 39A22 22 0 1 1 47.05 39" pathLength="100" style={`--off:${100 - score}`} />
-                    <g class="gz-ndl" style={`--deg:${needleDeg}deg`}>
-                      <path d="M28 9.5V1" />
-                    </g>
+              <div class="pz-map">
+                <div class="plot">
+                  <svg class="grat" viewBox="0 0 320 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+                    {parallels.map((d) => <path d={d} />)}
+                    {meridians.map((d) => <path d={d} />)}
                   </svg>
-                  <span class="gz-n" data-serp-num>{score}</span>
-                </div>
-                <p class="gz-txt">
-                  <span class="label gz-l">{p.gaugeLabel}</span>
-                  <span class="gz-note">
-                    <span>{TODO_SITE.gaugeNote[0]}</span>
-                    <span>{TODO_SITE.gaugeNote[1]}</span>
+                  <svg class="streets" viewBox="0 0 320 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+                    <g transform="rotate(-24 160 100)">
+                      <path class="st" style="--i:0" d="M-120 109H440" pathLength="1" />
+                      <path class="st" style="--i:1" d="M-120 38H440" pathLength="1" />
+                      <path class="st" style="--i:2" d="M-120 184H440" pathLength="1" />
+                      <path class="st" style="--i:1" d="M118 -160V360" pathLength="1" />
+                      <path class="st" style="--i:3" d="M226 -160V360" pathLength="1" />
+                      <path class="st" style="--i:4" d="M22 -160V360" pathLength="1" />
+                    </g>
+                    <path class="st st-main" style="--i:2" d="M212 -12C226 24 258 48 334 56" pathLength="1" />
+                  </svg>
+                  <span class="orb" aria-hidden="true">
+                    <svg viewBox="0 0 120 70">
+                      <ellipse class="orb-e" cx="60" cy="35" rx="54" ry="24" transform="rotate(-24 60 35)" pathLength="1" />
+                    </svg>
+                    <span class="orb-rot">
+                      <span class="orb-x"><span class="orb-y"><span class="orb-p" /></span></span>
+                    </span>
                   </span>
-                </p>
+                  <span class="ring" aria-hidden="true" />
+                  <span class="ring ring-2" aria-hidden="true" />
+                  <span class="pin" aria-hidden="true" />
+                </div>
+
+                <div class="pl-head">
+                  <p class="pl-name">{p.map.name}</p>
+                  <p class="pl-meta">
+                    <span>{p.map.category} · </span>
+                    <span class="op"><span class="sq" />{p.map.status}</span>
+                  </p>
+                </div>
+
+                <div class="acts">
+                  {
+                    p.map.actions.map((a, j) =>
+                      j === p.map.actions.length - 1 ? (
+                        <span class="act act-call" style={`--r:${j}`}>
+                          {a}
+                          <span class="ld-sq" />
+                          <span class="ld-v" />
+                          <span class="ld-h" />
+                          <span class="ld-l label">{p.tracked}</span>
+                        </span>
+                      ) : (
+                        <span class="act" style={`--r:${j}`}>{a}</span>
+                      )
+                    )
+                  }
+                </div>
+
+                {
+                  showGauge ? (
+                    <div class="gz-row">
+                      <div class="gz">
+                        <svg viewBox="0 0 56 56" width="56" height="56" aria-hidden="true">
+                          <g class="gz-ticks">
+                            {ticks.map((t) => <path d={t.d} class:list={['tk', { m: t.major, b: t.band }]} />)}
+                          </g>
+                          <path class="gz-track" d="M8.95 39A22 22 0 1 1 47.05 39" pathLength="100" />
+                          <path class="gz-val" d="M8.95 39A22 22 0 1 1 47.05 39" pathLength="100" style={`--off:${100 - score}`} />
+                          <g class="gz-ndl" style={`--deg:${needleDeg}deg`}>
+                            <path d="M28 9.5V1" />
+                          </g>
+                        </svg>
+                        <span class="gz-n" data-serp-num>{score}</span>
+                      </div>
+                      <p class="gz-txt">
+                        <span class="label gz-l">{p.gaugeLabel}</span>
+                        <span class="gz-note">
+                          <span>{TODO_SITE.gaugeNote[0]}</span>
+                          <span>{TODO_SITE.gaugeNote[1]}</span>
+                        </span>
+                      </p>
+                    </div>
+                  ) : (
+                    <div class="vt-row">
+                      <p class="vt-h">
+                        <span class="label vt-l">{p.gaugeLabel}</span>
+                        <span class="vt-note">{p.vitals.note}</span>
+                      </p>
+                      <ul class="vt">
+                        {p.vitals.metrics.map((m, j) => (
+                          <li style={`--r:${j}`}>
+                            <span class="vt-m">{m}</span>
+                            <span class="vt-tr" aria-hidden="true">
+                              <span class="vt-good" />
+                              <span class="vt-tk" />
+                              <span class="vt-tk vt-tk-2" />
+                              <span class="vt-mk" />
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )
+                }
               </div>
-              )}
             </div>
           </div>
-        </div>
-        <figcaption class="small vz-cap">{concept.caption}</figcaption>
-      </figure>
+          <figcaption class="small vz-cap">{concept.caption}</figcaption>
+        </figure>
+      </div>
 
       <div class="vz-notes">
-        <p class="lead vz-honest" data-reveal>{v.honesty}</p>
-        <p class="small vz-src" data-reveal style="--d:90ms">
-          <span class="vz-src-t">{v.source.text}</span>{' '}
-          <a href={v.source.url} target="_blank" rel="noopener">{v.source.citation}<Arrow dir="up-right" size={12} /></a>
-        </p>
+        <Expand title={v.more.title} keywords={v.more.keywords} class="vz-more">
+          <p class="vz-honest">{v.honesty}</p>
+          <p class="small vz-src">
+            <span class="vz-src-t">{v.source.text}</span>{' '}
+            <a href={v.source.url} target="_blank" rel="noopener">{v.source.citation}<Arrow dir="up-right" size={12} /></a>
+          </p>
+        </Expand>
       </div>
     </div>
   </div>
@@ -295,7 +361,7 @@ const needleDeg = -120 + score * 2.4;
 <style>
   /* =====================================================================
      Layout
-     ≤1099: head, panel, checklist, controls, notes (one column, §5.5 390px)
+     ≤1099: head, panel, checklist, controls, notes (one column)
      ≥1100: head in 1–7; checklist + controls in 1–5; panel + notes in 6–12
      ===================================================================== */
 
@@ -314,7 +380,8 @@ const needleDeg = -120 + score * 2.4;
   }
 
   .vz-lead {
-    margin-top: 28px;
+    margin-top: 24px;
+    max-width: 40ch;
     color: var(--ink-2);
   }
 
@@ -323,33 +390,35 @@ const needleDeg = -120 + score * 2.4;
     display: contents;
   }
 
-  .vz-fig {
+  .vz-par {
     order: 1;
     grid-column: 1 / -1;
+  }
+
+  .vz-fig {
     margin: 0;
   }
 
-  .vz-list {
+  .vz-list-w {
     order: 2;
     grid-column: 1 / -1;
     margin-top: 56px;
-    border-bottom: 1px solid var(--line-light);
   }
 
   .vz-ctrl {
     order: 3;
     grid-column: 1 / -1;
-    margin-top: 28px;
+    margin-top: 32px;
   }
 
   .vz-notes {
     order: 4;
     grid-column: 1 / -1;
-    margin-top: 72px;
+    margin-top: 56px;
   }
 
   @media (min-width: 768px) {
-    .vz-list,
+    .vz-list-w,
     .vz-ctrl,
     .vz-notes {
       grid-column: 1 / 8;
@@ -374,36 +443,45 @@ const needleDeg = -120 + score * 2.4;
       grid-column: 6 / 13;
     }
 
-    .vz-list {
+    .vz-list-w {
       margin-top: 0;
     }
 
     .vz-ctrl {
-      margin-top: 32px;
+      margin-top: 40px;
     }
 
     .vz-notes {
-      margin-top: 64px;
-      padding-right: calc((100% - 6 * var(--gap)) / 7);
+      margin-top: 48px;
     }
   }
 
   /* =====================================================================
-     Checklist: six real buttons
+     Checklist: six real buttons. Title (and a tag where it matters); the
+     explanation opens under the row that is playing or was picked.
      ===================================================================== */
 
+  .vz-lh {
+    padding-bottom: 14px;
+    color: var(--ink-3);
+  }
+
+  .vz-list {
+    border-bottom: 1px solid var(--line-light);
+  }
+
   .vz-item {
+    position: relative;
     display: grid;
     grid-template-columns: 12px minmax(0, 1fr) auto;
     column-gap: 18px;
     width: 100%;
-    padding: 22px 0 24px;
+    padding: 19px 0 20px;
     border-top: 1px solid var(--line-light);
     background-color: var(--paper);
     color: var(--ink);
     text-align: left;
     -webkit-tap-highlight-color: transparent;
-    position: relative;
   }
 
   /* the current step: its top hairline draws across in violet */
@@ -417,11 +495,31 @@ const needleDeg = -120 + score * 2.4;
     background-color: var(--violet);
     transform: scaleX(0);
     transform-origin: left center;
-    transition: transform 700ms var(--ease-quint);
+    transition: transform 800ms var(--ease-expo);
   }
 
   .vz-item[aria-current='step']::before {
     transform: scaleX(1);
+  }
+
+  /* the step timer: while the run plays, the row's bottom hairline fills
+     until the next item ticks */
+  .vz-timer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    z-index: 1;
+    height: 1px;
+    background-color: var(--violet);
+    transform: scaleX(0);
+    transform-origin: left center;
+    pointer-events: none;
+  }
+
+  .vz-item.is-timing .vz-timer {
+    transform: scaleX(1);
+    transition: transform var(--step, 1900ms) linear;
   }
 
   .vz-ind {
@@ -439,7 +537,17 @@ const needleDeg = -120 + score * 2.4;
     position: absolute;
     inset: -1px;
     background-color: var(--ink);
-    transition: transform var(--t-micro) var(--ease-expo);
+    transition: transform 520ms var(--ease-settle);
+  }
+
+  /* a hairline square pings out of the box when the item ticks */
+  .vz-ind::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border: 1px solid var(--violet);
+    opacity: 0;
+    pointer-events: none;
   }
 
   .vz-ind svg {
@@ -455,7 +563,7 @@ const needleDeg = -120 + score * 2.4;
     stroke-linecap: square;
     stroke-dasharray: 1 1;
     stroke-dashoffset: 0;
-    transition: stroke-dashoffset 300ms var(--ease-quint) 120ms;
+    transition: stroke-dashoffset 320ms var(--ease-quint) 160ms;
   }
 
   .vz-t {
@@ -465,24 +573,10 @@ const needleDeg = -120 + score * 2.4;
     font-weight: 560;
     line-height: 1.4;
     color: var(--ink);
-    transition: color 240ms linear;
-  }
-
-  .vz-x {
-    grid-column: 2;
-    margin-top: 6px;
-    max-width: 46ch;
-    font-size: 0.9375rem;
-    line-height: 1.5;
-    color: var(--ink-2);
-    text-wrap: pretty;
-    transition: color 240ms linear;
-  }
-
-  .vz-tag {
-    grid-column: 2;
-    margin-top: 14px;
-    color: var(--ink-3);
+    text-wrap: balance;
+    transition:
+      color 240ms linear,
+      transform var(--t-ui) var(--ease-expo);
   }
 
   .vz-n {
@@ -491,7 +585,6 @@ const needleDeg = -120 + score * 2.4;
     align-self: start;
     margin-top: 5px;
     padding-left: 12px;
-    font-variant-numeric: tabular-nums;
     color: var(--ink-3);
     transition:
       transform var(--t-ui) var(--ease-expo),
@@ -502,13 +595,66 @@ const needleDeg = -120 + score * 2.4;
     color: var(--violet-ink);
   }
 
-  /* armed and not yet reached: hollow square, quieter copy */
+  /* explanation: grid rows 0fr → 1fr, the line rolls down in 3D */
+  .vz-xw {
+    grid-column: 2;
+    grid-row: 2;
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows 640ms var(--ease-expo);
+  }
+
+  .vz-xc {
+    min-height: 0;
+    overflow: hidden;
+    perspective: 700px;
+  }
+
+  .vz-x {
+    display: block;
+    padding-top: 8px;
+    max-width: 46ch;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    color: var(--ink-2);
+    text-wrap: pretty;
+    transform-origin: 50% 0;
+    transition:
+      opacity 420ms linear 140ms,
+      transform 760ms var(--ease-expo) 80ms,
+      visibility 0s linear 0s;
+  }
+
+  .vz-tag {
+    grid-column: 2;
+    grid-row: 3;
+    margin-top: 10px;
+    color: var(--violet-ink);
+  }
+
+  /* armed: only the current row keeps its explanation open */
+  :global(html.js:not(.motion-failed)) .vz.is-armed .vz-item:not([aria-current='step']) .vz-xw {
+    grid-template-rows: 0fr;
+  }
+
+  :global(html.js:not(.motion-failed)) .vz.is-armed .vz-item:not([aria-current='step']) .vz-x {
+    visibility: hidden;
+    opacity: 0;
+    transform: rotateX(-60deg) translate3d(0, -8px, 0);
+    transition:
+      opacity 180ms linear,
+      transform 320ms var(--ease-expo),
+      visibility 0s linear 320ms;
+  }
+
+  /* armed and not yet reached: hollow square, quieter title */
   :global(html.js:not(.motion-failed)) .vz.is-armed .vz-item.is-todo .vz-ind {
     border-color: var(--ink-3);
   }
 
   :global(html.js:not(.motion-failed)) .vz.is-armed .vz-item.is-todo .vz-ind-f {
     transform: scale(0);
+    transition: transform 240ms var(--ease-expo);
   }
 
   :global(html.js:not(.motion-failed)) .vz.is-armed .vz-item.is-todo .vz-ind path {
@@ -520,13 +666,28 @@ const needleDeg = -120 + score * 2.4;
     color: var(--ink-3);
   }
 
-  :global(html.js:not(.motion-failed)) .vz.is-armed .vz-item.is-todo .vz-x {
-    color: var(--ink-3);
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .vz.is-armed .vz-item:not(.is-todo) .vz-ind::after {
+    animation: vz-ping 760ms var(--ease-expo) 120ms both;
+  }
+
+  @keyframes vz-ping {
+    from {
+      opacity: 1;
+      transform: scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: scale(2.6);
+    }
   }
 
   @media (hover: hover) and (pointer: fine) {
+    .vz-item:hover .vz-t {
+      transform: translateX(6px);
+    }
+
     .vz-item:hover .vz-n {
-      transform: translateX(4px);
+      transform: translateX(-4px);
       color: var(--ink);
     }
 
@@ -534,8 +695,7 @@ const needleDeg = -120 + score * 2.4;
       color: var(--violet-ink);
     }
 
-    :global(html.js:not(.motion-failed)) .vz.is-armed .vz-item.is-todo:hover .vz-t,
-    :global(html.js:not(.motion-failed)) .vz.is-armed .vz-item.is-todo:hover .vz-x {
+    :global(html.js:not(.motion-failed)) .vz.is-armed .vz-item.is-todo:hover .vz-t {
       color: var(--ink);
     }
   }
@@ -544,15 +704,19 @@ const needleDeg = -120 + score * 2.4;
     outline-offset: -2px;
   }
 
+  .vz-item:active .vz-ind {
+    transform: scale(0.86);
+  }
+
   /* =====================================================================
      Controls and notes
      ===================================================================== */
 
   .vz-ctrl {
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 32px;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px 28px;
   }
 
   .vz-replay[hidden] {
@@ -562,9 +726,9 @@ const needleDeg = -120 + score * 2.4;
   .vz-replay {
     display: inline-flex;
     align-items: center;
+    gap: 10px;
     min-height: 44px;
-    padding: 0 20px;
-    border: 1px solid var(--line-light-strong);
+    padding: 0 4px;
     background-color: var(--paper);
     color: var(--ink);
     font-stretch: var(--wd-display);
@@ -572,49 +736,41 @@ const needleDeg = -120 + score * 2.4;
     font-weight: 620;
     letter-spacing: 0.06em;
     line-height: 1;
-    transition:
-      border-color var(--t-micro) linear,
-      transform 120ms var(--ease-expo);
+    transition: transform 120ms var(--ease-expo);
+  }
+
+  .vz-replay svg {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.4;
+    stroke-linecap: square;
+    transition: transform 700ms var(--ease-expo);
   }
 
   .vz-replay:active {
-    transform: scale(0.98);
+    transform: scale(0.97);
   }
 
   @media (hover: hover) and (pointer: fine) {
-    .vz-replay:hover {
-      border-color: var(--ink);
+    .vz-replay:hover svg {
+      transform: rotate(-300deg);
     }
-  }
-
-  .vz-cta {
-    color: var(--ink);
   }
 
   @media (max-width: 767px) {
     .vz-ctrl {
+      flex-direction: column;
       align-items: stretch;
-      gap: 16px;
-    }
-
-    .vz-replay {
-      align-self: flex-start;
     }
 
     .vz-cta {
       justify-content: space-between;
-      min-height: 48px;
-      padding: 0 16px;
-      border: 1px solid var(--ink);
-      transition: transform 120ms var(--ease-expo);
+      white-space: normal;
+      text-align: left;
     }
 
-    .vz-cta::after {
-      display: none;
-    }
-
-    .vz-cta:active {
-      transform: scale(0.98);
+    .vz-replay {
+      align-self: flex-start;
     }
   }
 
@@ -623,12 +779,16 @@ const needleDeg = -120 + score * 2.4;
     color: var(--ink-3);
   }
 
-  .vz-honest {
+  .vz .vz-honest {
+    font-size: var(--t-lead);
+    line-height: 1.4;
     color: var(--ink);
+    max-width: 38ch;
+    text-wrap: pretty;
   }
 
-  .vz-src {
-    margin-top: 20px;
+  .vz .vz-src {
+    margin-top: 18px;
     max-width: 58ch;
     color: var(--ink-2);
   }
@@ -657,6 +817,19 @@ const needleDeg = -120 + score * 2.4;
     .vz-src a:hover {
       text-decoration-color: var(--ink);
     }
+  }
+
+  /* bold 3D arrival for the panel (armed only; final state is flat) */
+  .vz-fig {
+    transform-origin: 50% 100%;
+    transition:
+      opacity 900ms var(--ease-expo),
+      transform 1500ms var(--ease-expo);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .vz-fig:not(.is-in) {
+    opacity: 0;
+    transform: perspective(1400px) translate3d(0, 64px, 0) rotateX(16deg) scale(0.96);
   }
 
   /* =====================================================================
@@ -689,12 +862,31 @@ const needleDeg = -120 + score * 2.4;
   }
 
   .pz-count {
+    display: inline-block;
     font-stretch: var(--wd-display);
     font-size: 0.75rem;
     font-weight: 600;
     letter-spacing: 0.08em;
     font-variant-numeric: tabular-nums;
     color: var(--ink-2);
+    transform-origin: 50% 100%;
+    transition: opacity 200ms linear;
+  }
+
+  /* the counter flips over in 3D on every step */
+  .pz-count.is-flip {
+    animation: pz-flip 560ms var(--ease-expo) both;
+  }
+
+  @keyframes pz-flip {
+    from {
+      opacity: 0;
+      transform: perspective(200px) rotateX(-90deg);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
   }
 
   .pz-prog {
@@ -706,7 +898,7 @@ const needleDeg = -120 + score * 2.4;
     background-color: var(--violet);
     transform-origin: left center;
     transform: scaleX(calc(var(--k) / 6));
-    transition: transform 700ms var(--ease-quint) var(--lead);
+    transition: transform 900ms var(--ease-expo) var(--lead);
   }
 
   .pz-q {
@@ -732,9 +924,63 @@ const needleDeg = -120 + score * 2.4;
     align-items: center;
     min-width: 0;
     padding: 0 14px;
+    overflow: clip;
     font-size: 0.9375rem;
     line-height: 1.3;
     color: var(--ink);
+  }
+
+  .pz-q-s {
+    position: relative;
+    display: inline-block;
+    white-space: nowrap;
+  }
+
+  /* typing: a white cover steps off the query, one character at a time,
+     a violet caret riding its leading edge. Armed only. */
+  .pz-cov {
+    display: none;
+    position: absolute;
+    top: -2px;
+    bottom: -2px;
+    left: -1px;
+    width: calc(100% + 2px);
+    background-color: var(--white);
+    pointer-events: none;
+  }
+
+  .pz-caret {
+    position: absolute;
+    left: 1px;
+    top: 50%;
+    width: 1.5px;
+    height: 1.15em;
+    margin-top: -0.575em;
+    background-color: var(--violet);
+  }
+
+  :global(html.js:not(.motion-failed)) .pz.is-armed .pz-cov {
+    display: block;
+    transform: translate3d(0, 0, 0);
+    transition: transform 360ms var(--ease-expo);
+  }
+
+  :global(html.js:not(.motion-failed)) .pz.is-armed.q-on .pz-cov {
+    transform: translate3d(calc(100% - 2px), 0, 0);
+    transition: transform calc(var(--qn) * 52ms) steps(var(--qn), end);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .pz.is-armed.is-vis .pz-caret {
+    animation: pz-caret 1060ms steps(1, end) infinite;
+  }
+
+  @keyframes pz-caret {
+    0% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0;
+    }
   }
 
   .nw {
@@ -786,6 +1032,9 @@ const needleDeg = -120 + score * 2.4;
     display: block;
     height: 1px;
     background-color: var(--line-light-strong);
+    transform-origin: left center;
+    /* after the query has typed itself (q-on), the neighbours load in */
+    transition: transform 900ms var(--ease-expo) calc(var(--qn, 0) * 52ms + 120ms);
   }
 
   .ph > span + span {
@@ -815,7 +1064,6 @@ const needleDeg = -120 + score * 2.4;
     margin-bottom: 22px;
   }
 
-  /* phones: one neighbour above is enough to read "a list of results" */
   @container pz (max-width: 479px) {
     .ph-2 {
       display: none;
@@ -830,49 +1078,75 @@ const needleDeg = -120 + score * 2.4;
   .slot {
     display: grid;
     grid-template-rows: 1fr;
-    transition: grid-template-rows 560ms var(--ease-mech) var(--lead);
+    transition: grid-template-rows 700ms var(--ease-expo) var(--lead);
   }
 
   .res {
     min-height: 0;
     overflow: clip;
+    perspective: 900px;
   }
 
   .res-in {
-    padding-bottom: 22px;
+    position: relative;
+    padding: 0 0 22px 16px;
+    transform-origin: 50% 0;
     transition:
-      opacity 360ms linear calc(var(--lead) + 60ms),
-      transform 620ms var(--ease-expo) calc(var(--lead) + 60ms),
+      opacity 420ms linear calc(var(--lead) + 80ms),
+      transform 1100ms var(--ease-expo) calc(var(--lead) + 80ms),
       visibility 0s linear 0s;
   }
 
-  /* before/after swap rows (state 2): the old line rolls up and out */
+  /* "this is you": a 2px violet bar draws down the result's left edge */
+  .res-in::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 3px;
+    bottom: 25px;
+    width: 2px;
+    background-color: var(--violet);
+    transform-origin: 50% 0;
+    transition: transform 900ms var(--ease-expo) calc(var(--lead) + 380ms);
+  }
+
+  /* before/after swap rows (state 2): the old line rolls up and away in 3D,
+     the new one rolls in from below */
   .sw {
     display: grid;
     grid-template-rows: 0fr 1fr;
-    transition: grid-template-rows 560ms var(--ease-mech) calc(var(--lead) + var(--sd, 0ms));
+    transition: grid-template-rows 720ms var(--ease-expo) calc(var(--lead) + var(--sd, 0ms));
   }
 
   .sw > div {
     min-height: 0;
     overflow: clip;
+    perspective: 600px;
   }
 
   .sw-t {
     display: block;
     transition:
-      transform 560ms var(--ease-mech) calc(var(--lead) + var(--sd, 0ms)),
-      opacity 280ms linear calc(var(--lead) + var(--sd, 0ms));
+      transform 820ms var(--ease-expo) calc(var(--lead) + var(--sd, 0ms)),
+      opacity 320ms linear calc(var(--lead) + var(--sd, 0ms));
+  }
+
+  .sw-a .sw-t {
+    transform-origin: 50% 0;
+  }
+
+  .sw-b .sw-t {
+    transform-origin: 50% 100%;
   }
 
   .sw-b {
     visibility: hidden;
-    transition: visibility 0s linear calc(var(--lead) + var(--sd, 0ms) + 560ms);
+    transition: visibility 0s linear calc(var(--lead) + var(--sd, 0ms) + 720ms);
   }
 
   .sw-b .sw-t {
     opacity: 0;
-    transform: translate3d(0, -70%, 0);
+    transform: translate3d(0, -60%, 0) rotateX(75deg);
   }
 
   .sw-url {
@@ -901,7 +1175,7 @@ const needleDeg = -120 + score * 2.4;
     margin: 12px 0 11px;
     background-color: var(--ink);
     transform-origin: left center;
-    transition: transform 900ms var(--ease-quint) calc(var(--lead) + 260ms);
+    transition: transform 1000ms var(--ease-expo) calc(var(--lead) + 300ms);
   }
 
   .sw-snip {
@@ -914,23 +1188,25 @@ const needleDeg = -120 + score * 2.4;
     text-wrap: pretty;
   }
 
-  /* structured data (state 3): hours + questions open out */
+  /* structured data (state 3): hours + questions unfold like flaps */
   .rich {
     display: grid;
     grid-template-rows: 1fr;
-    transition: grid-template-rows 450ms var(--ease-mech) var(--lead);
+    transition: grid-template-rows 620ms var(--ease-expo) var(--lead);
   }
 
   .rich-in {
     min-height: 0;
     overflow: clip;
+    perspective: 700px;
   }
 
   .hrs,
   .faq li {
+    transform-origin: 50% 0;
     transition:
-      opacity 300ms linear calc(var(--lead) + 120ms + var(--r) * 60ms),
-      transform 600ms var(--ease-expo) calc(var(--lead) + 120ms + var(--r) * 60ms),
+      opacity 320ms linear calc(var(--lead) + 120ms + var(--r) * 110ms),
+      transform 900ms var(--ease-expo) calc(var(--lead) + 120ms + var(--r) * 110ms),
       visibility 0s linear 0s;
   }
 
@@ -955,6 +1231,7 @@ const needleDeg = -120 + score * 2.4;
   .faq {
     margin-top: 12px;
     border-bottom: 1px solid var(--line-light);
+    perspective: 700px;
   }
 
   .faq li {
@@ -964,6 +1241,7 @@ const needleDeg = -120 + score * 2.4;
     gap: 16px;
     padding: 9px 0;
     border-top: 1px solid var(--line-light);
+    background-color: var(--white);
     font-size: 0.8125rem;
     line-height: 1.4;
     color: var(--ink);
@@ -1003,6 +1281,7 @@ const needleDeg = -120 + score * 2.4;
     display: grid;
     grid-template-columns: 112px minmax(0, 1fr);
     column-gap: 16px;
+    perspective: 900px;
     align-items: center;
     align-content: start;
   }
@@ -1015,6 +1294,8 @@ const needleDeg = -120 + score * 2.4;
     overflow: clip;
     border: 1px solid var(--line-light);
     background-color: var(--white);
+    transform-origin: 50% 100%;
+    transition: transform 1400ms var(--ease-expo) var(--lead);
   }
 
   .plot svg {
@@ -1024,7 +1305,11 @@ const needleDeg = -120 + score * 2.4;
     height: 100%;
   }
 
-  /* graticule: ≤8% ink, static, the chart the business is placed on */
+  /* graticule: ≤8% ink, the chart the business is placed on */
+  .grat {
+    transition: transform 1600ms var(--ease-expo) var(--lead);
+  }
+
   .grat path {
     fill: none;
     stroke: rgb(12 10 18 / 0.075);
@@ -1032,7 +1317,11 @@ const needleDeg = -120 + score * 2.4;
     vector-effect: non-scaling-stroke;
   }
 
-  /* streets: hairlines that draw in (state 4) */
+  /* the plan zooms in on the business as the streets draw (state 4) */
+  .streets {
+    transition: transform 1600ms var(--ease-expo) var(--lead);
+  }
+
   .st {
     fill: none;
     stroke: rgb(12 10 18 / 0.2);
@@ -1041,7 +1330,7 @@ const needleDeg = -120 + score * 2.4;
     stroke-dasharray: 1 1;
     stroke-dashoffset: 0;
     transition:
-      stroke-dashoffset 900ms var(--ease-quint) calc(var(--lead) + var(--i) * 60ms),
+      stroke-dashoffset 1000ms var(--ease-quint) calc(var(--lead) + var(--i) * 70ms),
       visibility 0s linear 0s;
   }
 
@@ -1050,17 +1339,24 @@ const needleDeg = -120 + score * 2.4;
     stroke-width: 1.25;
   }
 
-  /* the pin: a violet dot inside the site's orbit mark (the section-label
-     glyph at map scale: a 9:4 ellipse tilted -24deg, one planet on its rim).
-     The orbit traces from the planet's position and closes on it. */
+  /* the orbit mark at map scale (9:4 ellipse at −24°) around the pin; a
+     planet runs it once the orbit has drawn. The planet's path is two
+     sine sweeps a quarter-turn apart inside a −24° frame: transform only. */
   .orb {
     position: absolute;
     left: 50%;
     top: 50%;
-    width: min(120px, 54%);
+    width: min(120px, 58%);
     aspect-ratio: 12 / 7;
     transform: translate(-50%, -50%);
     pointer-events: none;
+  }
+
+  .orb svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
   }
 
   .orb-e {
@@ -1071,24 +1367,74 @@ const needleDeg = -120 + score * 2.4;
     stroke-dasharray: 1 1;
     stroke-dashoffset: 0;
     transition:
-      stroke-dashoffset 900ms var(--ease-quint) calc(var(--lead) + 520ms),
+      stroke-dashoffset 1000ms var(--ease-quint) calc(var(--lead) + 900ms),
       visibility 0s linear 0s;
   }
 
-  /* (114, 35) rotated -24deg about (60, 35), as a share of the 120x70 box */
+  .orb-rot,
+  .orb-x,
+  .orb-y {
+    position: absolute;
+    inset: 0;
+  }
+
+  .orb-rot {
+    transform: rotate(-24deg);
+  }
+
+  .orb-x {
+    transform: translateX(45%);
+    animation: orb-x 4800ms cubic-bezier(0.37, 0, 0.63, 1) calc(var(--lead) + 1900ms) infinite alternate both;
+  }
+
+  .orb-y {
+    animation: orb-y 4800ms cubic-bezier(0.37, 0, 0.63, 1) calc(var(--lead) + 1900ms - 2400ms) infinite alternate both;
+  }
+
+  @keyframes orb-x {
+    from {
+      transform: translateX(45%);
+    }
+    to {
+      transform: translateX(-45%);
+    }
+  }
+
+  @keyframes orb-y {
+    from {
+      transform: translateY(-34.2857%);
+    }
+    to {
+      transform: translateY(34.2857%);
+    }
+  }
+
   .orb-p {
     position: absolute;
-    left: 91.11%;
-    top: 18.63%;
-    width: 5px;
-    height: 5px;
-    margin: -2.5px 0 0 -2.5px;
+    left: 50%;
+    top: 50%;
+    width: 6px;
+    height: 6px;
+    margin: -3px 0 0 -3px;
     border-radius: 50%;
     background-color: var(--violet);
     transition:
-      transform 480ms var(--ease-expo) calc(var(--lead) + 1260ms),
-      opacity 160ms linear calc(var(--lead) + 1260ms),
+      transform 480ms var(--ease-settle) calc(var(--lead) + 1900ms),
+      opacity 160ms linear calc(var(--lead) + 1900ms),
       visibility 0s linear 0s;
+  }
+
+  /* the loop rests while the panel is offscreen, and never runs with motion off */
+  .pz.is-armed:not(.is-vis) .orb-x,
+  .pz.is-armed:not(.is-vis) .orb-y {
+    animation-play-state: paused;
+  }
+
+  :global(html.motion-reduced) .orb-x,
+  :global(html.motion-reduced) .orb-y,
+  :global(html.motion-failed) .orb-x,
+  :global(html.motion-failed) .orb-y {
+    animation-name: none !important;
   }
 
   .pin {
@@ -1102,29 +1448,42 @@ const needleDeg = -120 + score * 2.4;
     border-radius: 50%;
     background-color: var(--violet);
     transition:
-      transform 500ms var(--ease-mech) calc(var(--lead) + 300ms),
-      opacity 160ms linear calc(var(--lead) + 300ms),
+      transform 760ms var(--ease-settle) calc(var(--lead) + 380ms),
+      opacity 160ms linear calc(var(--lead) + 380ms),
       visibility 0s linear 0s;
   }
 
-  .coords {
+  /* landing ping: two hairline rings open out of the pin, once */
+  .ring {
     position: absolute;
-    left: 8px;
-    bottom: 8px;
-    display: none;
-    padding: 2px 4px;
-    background-color: var(--white);
-    font-stretch: var(--wd-display);
-    font-size: 0.75rem;
-    font-weight: 500;
-    line-height: 1.2;
-    letter-spacing: 0.02em;
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-    color: var(--ink-3);
-    transition:
-      opacity 300ms linear calc(var(--lead) + 700ms),
-      visibility 0s linear 0s;
+    left: 50%;
+    top: 50%;
+    width: 13px;
+    height: 13px;
+    margin: -6.5px 0 0 -6.5px;
+    border: 1px solid var(--violet);
+    border-radius: 50%;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .pz.is-armed.s4 .ring {
+    animation: pz-ring 1300ms var(--ease-expo) calc(var(--lead) + 820ms) both;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .pz.is-armed.s4 .ring-2 {
+    animation-delay: calc(var(--lead) + 1040ms);
+  }
+
+  @keyframes pz-ring {
+    from {
+      opacity: 0.9;
+      transform: scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: scale(5.2);
+    }
   }
 
   .pl-head {
@@ -1133,10 +1492,11 @@ const needleDeg = -120 + score * 2.4;
   }
 
   .pl-head,
-  .acts {
+  .act {
+    transform-origin: 0 50%;
     transition:
-      transform 640ms var(--ease-expo) calc(var(--lead) + 140ms),
-      opacity 320ms linear calc(var(--lead) + 140ms),
+      transform 900ms var(--ease-expo) calc(var(--lead) + 160ms + var(--r, 0) * 70ms),
+      opacity 360ms linear calc(var(--lead) + 160ms + var(--r, 0) * 70ms),
       visibility 0s linear 0s;
   }
 
@@ -1168,6 +1528,7 @@ const needleDeg = -120 + score * 2.4;
     display: flex;
     margin-top: 16px;
     margin-bottom: 34px;
+    perspective: 700px;
   }
 
   .act {
@@ -1220,7 +1581,7 @@ const needleDeg = -120 + score * 2.4;
     margin-left: -0.5px;
     transform-origin: 50% 0;
     transition:
-      transform 360ms var(--ease-quint) calc(var(--lead) + 120ms),
+      transform 380ms var(--ease-quint) calc(var(--lead) + 120ms),
       visibility 0s linear 0s;
   }
 
@@ -1232,7 +1593,7 @@ const needleDeg = -120 + score * 2.4;
     margin-right: 0.5px;
     transform-origin: 100% 50%;
     transition:
-      transform 360ms var(--ease-quint) calc(var(--lead) + 420ms),
+      transform 380ms var(--ease-quint) calc(var(--lead) + 440ms),
       visibility 0s linear 0s;
   }
 
@@ -1244,19 +1605,23 @@ const needleDeg = -120 + score * 2.4;
     white-space: nowrap;
     color: var(--ink);
     transition:
-      transform 620ms var(--ease-expo) calc(var(--lead) + 560ms),
-      opacity 280ms linear calc(var(--lead) + 560ms),
+      transform 700ms var(--ease-expo) calc(var(--lead) + 580ms),
+      opacity 280ms linear calc(var(--lead) + 580ms),
       visibility 0s linear 0s;
   }
 
-  /* gauge (state 5): this page's measured score */
-  .gz-row {
+  /* gauge (state 5): this page's measured score, shown only at 90+ */
+  .gz-row,
+  .vt-row {
     grid-column: 1 / -1;
+    padding-top: 16px;
+    border-top: 1px solid var(--line-light);
+  }
+
+  .gz-row {
     display: flex;
     align-items: center;
     gap: 16px;
-    padding-top: 16px;
-    border-top: 1px solid var(--line-light);
   }
 
   .gz {
@@ -1277,7 +1642,6 @@ const needleDeg = -120 + score * 2.4;
     fill: none;
   }
 
-  /* dial: fine ticks every 5, majors every 25, the 90–100 band in violet */
   .tk {
     stroke: var(--line-light-strong);
     stroke-width: 0.75;
@@ -1303,15 +1667,15 @@ const needleDeg = -120 + score * 2.4;
     stroke-width: 2;
     stroke-dasharray: 100 100;
     stroke-dashoffset: var(--off);
-    transition: stroke-dashoffset 1100ms var(--ease-expo) calc(var(--lead) + 100ms);
+    transition: stroke-dashoffset 1200ms var(--ease-expo) calc(var(--lead) + 100ms);
   }
 
-  /* index needle: a violet hairline that sweeps to the value */
+  /* index needle: sweeps past the value and settles back onto it */
   .gz-ndl {
     transform-box: view-box;
     transform-origin: 50% 50%;
     transform: rotate(var(--deg));
-    transition: transform 1100ms var(--ease-expo) calc(var(--lead) + 100ms);
+    transition: transform 1400ms cubic-bezier(0.3, 1.45, 0.5, 1) calc(var(--lead) + 100ms);
   }
 
   .gz-ndl path {
@@ -1358,8 +1722,112 @@ const needleDeg = -120 + score * 2.4;
     display: block;
   }
 
+  /* vitals (state 5 when the gauge is not shown): three instrument tracks,
+     each marker slides out of the red end into the good band. No number. */
+  .vt-h {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 12px;
+  }
+
+  .vt-l {
+    color: var(--ink);
+  }
+
+  .vt-note {
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    color: var(--ink-3);
+  }
+
+  .vt {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 12px;
+  }
+
+  .vt li {
+    display: grid;
+    gap: 7px;
+    min-width: 0;
+  }
+
+  .vt-m {
+    font-stretch: var(--wd-display);
+    font-size: 0.75rem;
+    font-weight: 620;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    color: var(--ink-2);
+  }
+
+  .vt-tr {
+    position: relative;
+    display: block;
+    height: 9px;
+  }
+
+  /* the track: a hairline; the good band (first third) set in ink */
+  .vt-tr::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 4px;
+    height: 1px;
+    background-color: var(--line-light-strong);
+  }
+
+  .vt-good {
+    position: absolute;
+    left: 0;
+    top: 3.5px;
+    width: 33.33%;
+    height: 2px;
+    background-color: var(--ink);
+    transform-origin: left center;
+    transition: transform 700ms var(--ease-expo) calc(var(--lead) + var(--r) * 90ms);
+  }
+
+  .vt-tk {
+    position: absolute;
+    left: 33.33%;
+    top: 1px;
+    width: 1px;
+    height: 7px;
+    background-color: var(--line-light-strong);
+  }
+
+  .vt-tk-2 {
+    left: 66.66%;
+  }
+
+  /* the marker layer spans the track, so its travel is a share of it */
+  .vt-mk {
+    position: absolute;
+    inset: 0;
+    transition:
+      transform 1300ms cubic-bezier(0.3, 1.3, 0.5, 1) calc(var(--lead) + 160ms + var(--r) * 110ms),
+      opacity 200ms linear calc(var(--lead) + 160ms + var(--r) * 110ms),
+      visibility 0s linear 0s;
+  }
+
+  .vt-mk::before {
+    content: '';
+    position: absolute;
+    left: 14%;
+    top: 1.5px;
+    width: 6px;
+    height: 6px;
+    margin-left: -3px;
+    background-color: var(--violet);
+  }
+
   @container pz (max-width: 479px) {
-    .pin {
+    .pin,
+    .ring {
       width: 11px;
       height: 11px;
       margin: -5.5px 0 0 -5.5px;
@@ -1382,10 +1850,6 @@ const needleDeg = -120 + score * 2.4;
       aspect-ratio: 16 / 10;
     }
 
-    .coords {
-      display: block;
-    }
-
     .pl-head {
       grid-column: 1;
       grid-row: auto;
@@ -1403,28 +1867,43 @@ const needleDeg = -120 + score * 2.4;
      Rules on results content are scoped to .pz-live so the sizer stays final.
      ===================================================================== */
 
-  /* state 1: the result slides into the list; placeholders make room */
+  /* state 1: the result lifts into the list with depth; placeholders part */
   :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s1) .pz-live .slot {
     grid-template-rows: 0fr;
+    transition-duration: 400ms;
+    transition-delay: 0ms;
   }
 
   :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s1) .pz-live .res-in {
     visibility: hidden;
     opacity: 0;
-    transform: translate3d(0, 16px, 0);
+    transform: translate3d(0, 34px, -90px) rotateX(-24deg);
     transition:
       opacity 200ms linear,
       transform 300ms var(--ease-expo),
       visibility 0s linear 300ms;
   }
 
-  /* state 2: title, address and description swap; the underline sweeps */
+  :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s1) .pz-live .res-in::before {
+    transform: scaleY(0);
+    transition-duration: 200ms;
+    transition-delay: 0ms;
+  }
+
+  /* before the result arrives the neighbours read as loading lines */
+  :global(html.js:not(.motion-failed)) .pz.is-armed:not(.q-on) .pz-live .ph > span {
+    transform: scaleX(0.2);
+    transition-duration: 300ms;
+    transition-delay: 0ms;
+  }
+
+  /* state 2: title, address and description roll over; the underline sweeps */
   :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s2) .pz-live .sw {
     grid-template-rows: 1fr 0fr;
   }
 
   /* inherit, never visible: inside a hidden result (state 0) it must stay
-     hidden with it, or it would render at the result's .02 opacity */
+     hidden with it */
   :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s2) .pz-live .sw-b {
     visibility: inherit;
     transition: visibility 0s linear 0s;
@@ -1437,12 +1916,12 @@ const needleDeg = -120 + score * 2.4;
 
   :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s2) .pz-live .sw-a {
     visibility: hidden;
-    transition: visibility 0s linear calc(var(--lead) + var(--sd, 0ms) + 560ms);
+    transition: visibility 0s linear calc(var(--lead) + var(--sd, 0ms) + 720ms);
   }
 
   :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s2) .pz-live .sw-a .sw-t {
     opacity: 0;
-    transform: translate3d(0, 70%, 0);
+    transform: translate3d(0, 60%, 0) rotateX(-75deg);
   }
 
   :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s2) .pz-live .res-rule {
@@ -1451,7 +1930,7 @@ const needleDeg = -120 + score * 2.4;
     transition-delay: 0ms;
   }
 
-  /* state 3: hours and questions open out */
+  /* state 3: hours and questions unfold */
   :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s3) .pz-live .rich {
     grid-template-rows: 0fr;
   }
@@ -1460,14 +1939,34 @@ const needleDeg = -120 + score * 2.4;
   :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s3) .pz-live .faq li {
     visibility: hidden;
     opacity: 0;
-    transform: translate3d(0, 10px, 0);
+    transform: rotateX(-88deg);
     transition:
       opacity 160ms linear,
       transform 300ms var(--ease-expo),
       visibility 0s linear 300ms;
   }
 
-  /* state 4: the map card arrives; streets draw, the pin drops into orbit */
+  /* state 4: the map zooms in, streets draw, the pin drops, pings, orbits */
+  :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s4) .streets {
+    transform: scale(1.45) rotate(8deg);
+    transition-duration: 400ms;
+    transition-delay: 0ms;
+  }
+
+  /* the map plate lies back like a chart on a table, then swings up to face
+     the viewer as the pin lands */
+  :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s4) .plot {
+    transform: rotateX(46deg) scale(0.92);
+    transition-duration: 450ms;
+    transition-delay: 0ms;
+  }
+
+  :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s4) .grat {
+    transform: scale(1.18) rotate(-6deg);
+    transition-duration: 400ms;
+    transition-delay: 0ms;
+  }
+
   :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s4) .st {
     visibility: hidden;
     stroke-dashoffset: 1;
@@ -1494,29 +1993,26 @@ const needleDeg = -120 + score * 2.4;
       visibility 0s linear 200ms;
   }
 
+  :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s4) .orb-x,
+  :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s4) .orb-y {
+    animation-name: none;
+  }
+
   :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s4) .pin {
     visibility: hidden;
     opacity: 0;
-    transform: translate3d(0, -40px, 0);
+    transform: translate3d(0, -64px, 0) scale(0.7);
     transition:
-      transform 300ms var(--ease-mech),
+      transform 300ms var(--ease-expo),
       opacity 160ms linear,
       visibility 0s linear 300ms;
   }
 
-  :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s4) .coords {
-    visibility: hidden;
-    opacity: 0;
-    transition:
-      opacity 160ms linear,
-      visibility 0s linear 160ms;
-  }
-
   :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s4) .pl-head,
-  :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s4) .acts {
+  :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s4) .act {
     visibility: hidden;
     opacity: 0;
-    transform: translate3d(24px, 0, 0);
+    transform: translate3d(28px, 0, 0) rotateY(-38deg);
     transition:
       transform 300ms var(--ease-expo),
       opacity 200ms linear,
@@ -1540,6 +2036,23 @@ const needleDeg = -120 + score * 2.4;
     transition:
       opacity 160ms linear,
       visibility 0s linear 160ms;
+  }
+
+  /* state 5, vitals: markers wait at the slow end, the good band undrawn */
+  :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s5) .vt-mk {
+    visibility: hidden;
+    opacity: 0;
+    transform: translate3d(74%, 0, 0);
+    transition:
+      transform 300ms var(--ease-expo),
+      opacity 160ms linear,
+      visibility 0s linear 300ms;
+  }
+
+  :global(html.js:not(.motion-failed)) .pz.is-armed:not(.s5) .vt-good {
+    transform: scaleX(0);
+    transition-duration: 300ms;
+    transition-delay: 0ms;
   }
 
   /* state 6: calls tracked */

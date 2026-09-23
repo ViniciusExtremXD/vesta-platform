@@ -1,0 +1,391 @@
+---
+/**
+ * Concept 03 BEFORE — Trattoria Ombra (fictional) on a plausible 2016
+ * restaurant template. Dated, not a parody: a dark "photo" background, a
+ * script logo, a flag-coloured stripe and a red nav bar with a green active
+ * tab, a slideshow with a black caption box and a "Download menu (PDF)"
+ * button, three identical boxes with placeholder photos, and the hours and
+ * phone number in 7-px type in the footer. Every text pair passes AA on its
+ * own opaque fill. Contract: ../README.md. Sizes in --u (one reference px
+ * of the 760 × 475 drawing).
+ */
+import { restaurant, ombra } from '../../../data/concepts/restaurant';
+
+export interface Props {
+  class?: string;
+}
+const { class: cls = '' } = Astro.props;
+
+const B = restaurant.before;
+---
+
+<div class:list={['b-site', cls]} aria-hidden="true">
+  <div class="b-top">
+    <span class="b-mail">{B.topBar}</span>
+    <span class="b-social"><i></i><i></i><i></i></span>
+  </div>
+  <div class="b-head">
+    <span class="b-logo">{B.logo}</span>
+    <span class="b-tag">{ombra.beforeTagline}</span>
+  </div>
+  <div class="b-nav">
+    {B.nav.map((l, i) => <span class:list={['b-navl', i === 0 && 'is-on']}>{l}</span>)}
+  </div>
+  <div class="b-hero">
+    <svg class="b-photo" viewBox="0 0 760 202" preserveAspectRatio="none" aria-hidden="true">
+      <rect width="760" height="202" fill="#2A1F19"></rect>
+      <path d="M0 0h96v150H0zM214 0h112v150H214zM444 0h112v150H444zM664 0h96v150H664z" fill="#241A15"></path>
+      <path d="M96 58h118M326 58h118M556 58h108" stroke="#3A2C23" stroke-width="3"></path>
+      <path
+        d="M112 58V38h6v-8h4v8h6v20M140 58V34h5v-9h4v9h5v24M232 58V40h6v-8h4v8h6v18M360 58V36h5v-9h4v9h5v22M386 58V42h6v-7h4v7h6v16M582 58V37h6v-8h4v8h6v21M612 58V41h5v-8h4v8h5v17"
+        fill="#1A1310"></path>
+      <path d="M170 0v54" stroke="#4B3A2E" stroke-width="1.5"></path>
+      <path d="M159 68l5-14h12l5 14z" fill="#3A2C23"></path>
+      <ellipse cx="170" cy="76" rx="30" ry="16" fill="#7A5230" fill-opacity=".28"></ellipse>
+      <ellipse cx="170" cy="70" rx="7" ry="3" fill="#C08A52" fill-opacity=".6"></ellipse>
+      <path d="M402 0v44" stroke="#4B3A2E" stroke-width="1.5"></path>
+      <path d="M391 58l5-14h12l5 14z" fill="#3A2C23"></path>
+      <ellipse cx="402" cy="66" rx="30" ry="16" fill="#7A5230" fill-opacity=".28"></ellipse>
+      <ellipse cx="402" cy="60" rx="7" ry="3" fill="#C08A52" fill-opacity=".6"></ellipse>
+      <path d="M610 0v58" stroke="#4B3A2E" stroke-width="1.5"></path>
+      <path d="M599 72l5-14h12l5 14z" fill="#3A2C23"></path>
+      <ellipse cx="610" cy="80" rx="30" ry="16" fill="#7A5230" fill-opacity=".28"></ellipse>
+      <ellipse cx="610" cy="74" rx="7" ry="3" fill="#C08A52" fill-opacity=".6"></ellipse>
+      <path d="M0 150h760v52H0z" fill="#17110E"></path>
+      <path d="M40 150h680" stroke="#3A2C23" stroke-width="2"></path>
+      <path d="M150 150v-16h8v16M168 150v-22h6v22M548 150v-18h8v18M566 150v-12h8v12" fill="none" stroke="#4B3A2E" stroke-width="2"></path>
+    </svg>
+    <svg class="b-arrow b-arrow--l" viewBox="0 0 10 16" aria-hidden="true"><path d="M7 2 2 8l5 6" fill="none" stroke="#FFFFFF" stroke-width="1.6"></path></svg>
+    <svg class="b-arrow b-arrow--r" viewBox="0 0 10 16" aria-hidden="true"><path d="m3 2 5 6-5 6" fill="none" stroke="#FFFFFF" stroke-width="1.6"></path></svg>
+    <div class="b-copy">
+      <span class="b-welcome">{B.welcome}</span>
+      <span class="b-sub">{B.heroSub}</span>
+      <span class="b-pdf">
+        <svg viewBox="0 0 12 14" aria-hidden="true">
+          <path d="M1.5 1h6l3 3v9h-9z M7.5 1v3h3" fill="none" stroke="#FFFFFF" stroke-width="1.1"></path>
+        </svg>
+        {B.heroButton}
+      </span>
+    </div>
+    <span class="b-flag"><i></i><i></i><i></i></span>
+    <span class="b-dots"><i class="is-on"></i><i></i><i></i><i></i><i></i></span>
+  </div>
+  <div class="b-boxes">
+    {
+      B.boxes.map((t) => (
+        <div class="b-box">
+          <span class="b-ph">
+            <svg viewBox="0 0 24 18" aria-hidden="true">
+              <path d="M2 16 9 8l5 5 3-3 5 6z" fill="#5A4A3F" />
+              <circle cx="17" cy="5" r="2.2" fill="#5A4A3F" />
+            </svg>
+          </span>
+          <span class="b-title">{t}</span>
+          <span class="b-text">{B.boxText}</span>
+          <span class="b-link">{B.boxLink}</span>
+        </div>
+      ))
+    }
+  </div>
+  <div class="b-foot">{B.footer}</div>
+</div>
+
+<style>
+  .b-site {
+    --u: calc(100cqi / 760);
+    --b-bg: #1b1512;
+    --b-text: #ede6da;
+    --b-red: #9e1b22;
+    --b-green: #1e6b3a;
+    --b-panel: #231b17;
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    background-color: var(--b-bg);
+    color: var(--b-text);
+    font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
+    font-stretch: 100%;
+    font-weight: 400;
+    line-height: 1.25;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  /* ---------- top bar ---------- */
+  .b-top {
+    position: absolute;
+    inset: 0 0 auto;
+    height: calc(18 * var(--u));
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-inline: calc(16 * var(--u));
+    background-color: #0f0b09;
+  }
+
+  .b-mail {
+    color: #bdb2a4;
+    font-size: calc(7 * var(--u));
+  }
+
+  .b-social {
+    display: flex;
+    gap: calc(4 * var(--u));
+  }
+
+  .b-social i {
+    width: calc(9 * var(--u));
+    height: calc(9 * var(--u));
+    background-color: #4b3a2e;
+  }
+
+  /* ---------- script logo, centred ---------- */
+  .b-head {
+    position: absolute;
+    top: calc(18 * var(--u));
+    left: 0;
+    right: 0;
+    height: calc(68 * var(--u));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: calc(2 * var(--u));
+    background-color: var(--b-bg);
+  }
+
+  .b-logo {
+    color: #f4ecdf;
+    font-family: 'Brush Script MT', 'Segoe Script', 'Snell Roundhand', 'Apple Chancery', cursive;
+    font-size: calc(33 * var(--u));
+    font-weight: 400;
+    line-height: 1;
+  }
+
+  .b-tag {
+    color: #cfc4b6;
+    font-size: calc(7 * var(--u));
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+  }
+
+  /* the flag stripe: green / white / red */
+  .b-flag {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: calc(4 * var(--u));
+    display: flex;
+  }
+
+  .b-flag i {
+    flex: 1;
+    background-color: var(--b-green);
+  }
+
+  .b-flag i:nth-child(2) {
+    background-color: #f4f1ea;
+  }
+
+  .b-flag i:nth-child(3) {
+    background-color: var(--b-red);
+  }
+
+  /* ---------- red nav, green active tab ---------- */
+  .b-nav {
+    position: absolute;
+    top: calc(86 * var(--u));
+    left: 0;
+    right: 0;
+    height: calc(30 * var(--u));
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    background-color: var(--b-red);
+  }
+
+  .b-navl {
+    display: flex;
+    align-items: center;
+    padding-inline: calc(12 * var(--u));
+    color: #ffffff;
+    font-size: calc(8 * var(--u));
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .b-navl.is-on {
+    background-color: var(--b-green);
+  }
+
+  /* ---------- slideshow ---------- */
+  .b-hero {
+    position: absolute;
+    top: calc(116 * var(--u));
+    left: 0;
+    right: 0;
+    height: calc(202 * var(--u));
+    background-color: #2a1f19;
+  }
+
+  .b-photo {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .b-arrow {
+    position: absolute;
+    top: calc(80 * var(--u));
+    width: calc(22 * var(--u));
+    height: calc(38 * var(--u));
+    padding: calc(10 * var(--u)) calc(6 * var(--u));
+    background-color: #0f0b09;
+  }
+
+  .b-arrow--l {
+    left: calc(14 * var(--u));
+  }
+
+  .b-arrow--r {
+    right: calc(16 * var(--u));
+  }
+
+  .b-copy {
+    position: absolute;
+    inset: calc(34 * var(--u)) calc(196 * var(--u)) auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: calc(7 * var(--u));
+    padding: calc(16 * var(--u)) calc(12 * var(--u)) calc(18 * var(--u));
+    background-color: #120d0b;
+    text-align: center;
+  }
+
+  .b-welcome {
+    color: #ffffff;
+    font-size: calc(21 * var(--u));
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .b-sub {
+    color: var(--b-text);
+    font-size: calc(9.5 * var(--u));
+  }
+
+  .b-pdf {
+    display: flex;
+    align-items: center;
+    gap: calc(6 * var(--u));
+    margin-top: calc(6 * var(--u));
+    padding: calc(7 * var(--u)) calc(14 * var(--u));
+    background-color: var(--b-red);
+    color: #ffffff;
+    font-size: calc(8.5 * var(--u));
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .b-pdf svg {
+    width: calc(9 * var(--u));
+    height: calc(11 * var(--u));
+  }
+
+  .b-dots {
+    position: absolute;
+    left: 50%;
+    bottom: calc(14 * var(--u));
+    display: flex;
+    gap: calc(5 * var(--u));
+    transform: translateX(-50%);
+  }
+
+  .b-dots i {
+    width: calc(6 * var(--u));
+    height: calc(6 * var(--u));
+    border-radius: 50%;
+    background-color: #6b5e54;
+  }
+
+  .b-dots i.is-on {
+    background-color: #ffffff;
+  }
+
+  /* ---------- three identical boxes ---------- */
+  .b-boxes {
+    position: absolute;
+    top: calc(318 * var(--u));
+    left: 0;
+    right: 0;
+    height: calc(126 * var(--u));
+    display: flex;
+    justify-content: center;
+    gap: calc(18 * var(--u));
+    padding-top: calc(12 * var(--u));
+    background-color: var(--b-bg);
+  }
+
+  .b-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: calc(4 * var(--u));
+    width: calc(204 * var(--u));
+    height: calc(104 * var(--u));
+    padding-bottom: calc(8 * var(--u));
+    border: 1px solid #4a3b32;
+    background-color: var(--b-panel);
+    text-align: center;
+  }
+
+  .b-ph {
+    display: grid;
+    place-items: center;
+    align-self: stretch;
+    height: calc(40 * var(--u));
+    margin-bottom: calc(3 * var(--u));
+    background-color: #3a2e27;
+  }
+
+  .b-ph svg {
+    width: calc(20 * var(--u));
+    height: calc(15 * var(--u));
+  }
+
+  .b-title {
+    color: #f4ecdf;
+    font-family: 'Brush Script MT', 'Segoe Script', 'Snell Roundhand', 'Apple Chancery', cursive;
+    font-size: calc(15 * var(--u));
+    line-height: 1;
+  }
+
+  .b-text {
+    color: #cfc4b6;
+    font-size: calc(7.5 * var(--u));
+  }
+
+  .b-link {
+    color: #e0b862;
+    font-size: calc(7.5 * var(--u));
+    text-decoration: underline;
+  }
+
+  /* ---------- the hours, buried ---------- */
+  .b-foot {
+    position: absolute;
+    inset: auto 0 0;
+    height: calc(31 * var(--u));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #0f0b09;
+    color: #bdb2a4;
+    font-size: calc(7 * var(--u));
+  }
+</style>

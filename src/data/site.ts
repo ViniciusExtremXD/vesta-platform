@@ -246,6 +246,8 @@ export interface ConfigSelection {
   currentUrl: string;
   care: boolean;
   business: string;
+  /** Optional industry (a concept niche, or 'Other'); '' = not given. */
+  industry?: string;
 }
 
 export type FinaleIntentId = 'new' | 'rebuild' | 'google' | 'question';
@@ -336,6 +338,7 @@ function configuratorMessage(sel: ConfigSelection): string {
     `– Starting point: ${start}`,
     `– Options: ${sel.care ? 'Care plan' : 'none'}`,
     `– Business: ${business || 'not given'}`,
+    ...(sel.industry?.trim() ? [`– Industry: ${sel.industry.trim()}`] : []),
     'Sent from the Vesta website configurator.',
   ].join('\n');
 }
@@ -522,9 +525,16 @@ export const hero = {
     caption: concept.caption,
     aria: concept.aria.hero,
     tags: { before: 'Before', after: 'Rebuilt by Vesta' },
+    /** Narrow plates (phones): the tags ride the URL bar, so they stay short. */
+    tagsShort: { before: 'Before', after: 'After' },
     handleAria: 'Compare the old and rebuilt website. Use the arrow keys.',
     /** No-JS thumbnail caption. */
     insetCaption: 'Before',
+  },
+  /** The five-niche switcher under the hero plate (order = concepts 01–05). */
+  showcase: {
+    label: 'Concept studies by niche',
+    tabs: { halden: 'Roofing', dental: 'Dental', restaurant: 'Restaurant', law: 'Law', fitness: 'Fitness' },
   },
 };
 
@@ -581,16 +591,20 @@ export const problem = {
       index: '01',
       title: 'It looks older than the business is.',
       body: 'Customers judge the company by its site before they ever call. A dated layout and stock photos say the wrong thing about good work.',
+      /** Round 2: visible keywords; the body sits in the Expand box. */
+      keywords: ['Dated layout', 'Stock photos', 'Lost trust'],
     },
     {
       index: '02',
       title: "Google can't tell what you do, or where.",
       body: 'No page titles written for search, no structured data, no Business Profile linked. The people searching for exactly what you sell never see it.',
+      keywords: ['No search titles', 'No structured data', 'No Business Profile'],
     },
     {
       index: '03',
       title: 'It makes people work to reach you.',
       body: 'The phone number hides in the footer, the form asks for nine things, and on a phone the menu covers everything.',
+      keywords: ['Hidden phone', 'Nine-field form', 'Broken mobile menu'],
     },
   ],
   closing: 'Vesta fixes all three in one project.',
@@ -608,6 +622,13 @@ export const services = {
     /** One `.ln` span per entry. */
     desktop: ['Ads rent attention.', 'A great website', 'owns it.'],
     mobile: ['Ads rent', 'attention.', 'A great', 'website', 'owns it.'],
+  },
+  /** Round 2: the one visible line after the stage (bodyA/bodyB/follow move into `detail`). */
+  lead: 'Vesta builds the website people judge your business by, and sets it up so Google can find it.',
+  /** Round 2: the Expand box under the lead (holds bodyB + notOurWork.follow). */
+  detail: {
+    title: 'With ads or without',
+    keywords: ['Landing pages', 'Google and Maps', 'Tracking'],
   },
   /** Lead, bone. */
   bodyA:
@@ -726,7 +747,7 @@ export const visibility = {
   id: 'visibility',
   label: { index: '04', name: 'Google visibility' } satisfies SectionLabel,
   h2: 'Show up when they search for what you do.',
-  lead: "Depending on the package, Vesta sets up the technical and local SEO that lets Google understand your business: what you do, where, and when you're open.",
+  lead: "The technical and local SEO that tells Google what you do, where, and when you're open.",
   /** Six `<button>` rows; each drives one panel state. */
   items: [
     {
@@ -797,6 +818,8 @@ export const visibility = {
     },
     /** State 5: 56px gauge showing this site's measured performance. */
     gaugeLabel: 'Speed',
+    /** State 5 when this page's own score is under 90: an illustrated vitals check, no number claimed. */
+    vitals: { metrics: ['LCP', 'INP', 'CLS'], note: 'Core Web Vitals, checked before launch' },
     /** State 6. */
     tracked: 'Calls tracked',
   },
@@ -809,6 +832,10 @@ export const visibility = {
     accessed: 'September 2026',
   },
   replay: 'Replay',
+  /** One line over the checklist; rows outside every package carry their own tag. */
+  listHead: 'In every package, unless marked',
+  /** Expand box holding the honesty line and the source. */
+  more: { title: 'No ranking promises', keywords: ['Every item checkable', 'How Google ranks local results'] },
   cta: { label: 'Get my business found on Google →', text: waMessages.visibility } satisfies WaCta,
 };
 
@@ -1033,6 +1060,16 @@ export const pricing = {
   },
   /** Business days that fill a full column on the dimension line (2–3 weeks). */
   dayScaleMax: 15,
+  /** Round 2: keyword chips on each package and the visible keywords of the detail boxes (CSS uppercases). */
+  keys: {
+    landing: ['One page', 'Custom code', 'Tracking'],
+    google: ['Google Business Profile', 'Schema', 'Indexing'],
+    complete: ['Multi-page', 'Redirects', 'Local SEO'],
+    compare: ['Pages', 'Google setup', 'Redirects', 'Ownership'],
+    care: ['Hosting', 'Monitoring', 'Updates', 'Monthly report'],
+    founding: ['Reduced price', 'Published case study'],
+    paperwork: ['50/50', 'Contract in English', 'W-8BEN-E', 'USD'],
+  } satisfies Record<PackageId | 'compare' | 'care' | 'founding' | 'paperwork', string[]>,
 };
 
 export type CompareCell = boolean | string;
@@ -1172,17 +1209,24 @@ export const configure = {
   id: 'configure',
   label: { index: '07', name: 'Configure' } satisfies SectionLabel,
   h2: 'Put your name on it.',
-  lead: "Choose a package, say where you're starting from and type your business name. Then send the build sheet on WhatsApp. It arrives filled in.",
+  lead: 'Pick, name it, send. The build sheet arrives filled in.',
   /** No-JS state: Landing Page + Google preselected. */
   defaults: configDefaults,
   steps: {
-    package: {
+    /** Round 2: optional first step. Options = the five concept niches + other. */
+    industry: {
       index: '01',
+      legend: 'Industry (optional)',
+      other: 'Other',
+      sheetLabel: 'Industry',
+    },
+    package: {
+      index: '02',
       legend: 'Package',
       options: packages.map((p) => ({ id: p.id, label: p.optionLabel })),
     },
     start: {
-      index: '02',
+      index: '03',
       legend: 'Starting point',
       options: [
         { id: 'new', label: 'New website' },
@@ -1192,14 +1236,14 @@ export const configure = {
       currentUrl: { label: 'Current website (optional)', placeholder: 'yourbusiness.com' },
     },
     options: {
-      index: '03',
+      index: '04',
       legend: 'Options',
       care: 'Care plan after launch · priced with your project',
       /** Fixed row for packages with `googleIncluded`. */
       googleIncluded: 'Google setup · included',
     },
     name: {
-      index: '04',
+      index: '05',
       legend: 'Your name on it',
       business: { label: 'Business name (optional)', placeholder: 'Halden Roofing', maxLength: 48 },
     },
@@ -1212,6 +1256,16 @@ export const configure = {
     fanPages: ['Home', 'Services', 'About', 'Contact', 'Locations'],
     /** Rebuild slides out a hairline ghost plate with this tag. */
     ghostLabel: 'Before',
+    /** Round 2: the clickable page deck (Complete Website). */
+    pages: {
+      navLabel: 'Pages',
+      navAria: 'Bring a page of the preview to the front',
+      paths: ['', '/services', '/about', '/contact', '/locations'],
+      services: { title: 'Services', sub: 'Free estimates. Clear prices.', cta: 'Get a quote' },
+      about: { title: 'About', sub: 'Local, licensed, family-run.', years: ['2009', '2016', 'Today'] },
+      contact: { title: 'Contact', fields: ['Name', 'Phone', 'Message'], send: 'Send', pin: 'Visit' },
+      locations: { title: 'Locations', places: ['Downtown', 'North side', 'East side'], hours: 'Open today' },
+    },
   },
   listing: {
     defaultUrl: concept.domain,
@@ -1234,7 +1288,10 @@ export const configure = {
     rows: buildSheetRows,
   },
   cta: 'Send build sheet on WhatsApp',
-  note: 'Opens WhatsApp with this message ready. Nothing is stored or sent until you press send there.',
+  /** Round 2: secondary CTA, mailto with the build sheet as the body. */
+  ctaEmail: 'Send by email',
+  emailSubject: 'Build sheet · Vesta',
+  note: 'Nothing is stored or sent until you press send.',
   message: configuratorMessage,
   /** Prefill for the no-JS CTA: the message for the default selection. */
   noJsText: configuratorMessage(configDefaults),
@@ -1354,6 +1411,8 @@ export const process = {
       'Access to analytics and ad accounts, if you have them',
     ],
     closing: 'Everything else is on Vesta.',
+    /** Visible on the closed Expand box. */
+    keywords: ['Logo', 'Offer and prices', 'Photos', 'Domain access'],
   },
   /** SMALL, ink-3. */
   note: 'The clock starts when the first payment and your materials arrive.',
@@ -1378,7 +1437,11 @@ export const builder = {
     { label: 'Hours', value: contact.hours.label },
   ] satisfies Fact[],
   cta: { label: 'Message Vinícius on WhatsApp', text: waMessages.builder } satisfies WaCta,
+  /** Round 2: second channel next to WhatsApp (mailto via mail()). */
+  email: { label: 'Email Vinícius', subject: 'A website for my business' },
   linkedin: { label: contact.linkedin.label, href: contact.linkedin.url } satisfies Link,
+  /** Round 2: paragraphs 2–3 live in this Expand box; the lead stays visible. */
+  more: { title: 'More about Vinícius', keywords: ['No hand-offs', 'No outsourcing', 'US business hours'] },
 };
 
 /* ------------------------------------------------------------- 5.11 #faq */
@@ -1396,6 +1459,8 @@ export const faqSection = {
   label: { index: '10', name: 'Questions' } satisfies SectionLabel,
   h2: 'Straight answers.',
   side: { label: 'Ask anything on WhatsApp →', text: waMessages.question } satisfies WaCta,
+  /** Round 2: the same question by email (mailto via mail()). */
+  email: { label: 'Or send it by email', subject: 'A question about Vesta' },
 };
 
 /** Render `confirmedOnly(faq)`. FAQPage JSON-LD uses the same filtered list. */
@@ -1451,8 +1516,8 @@ export const faq: FaqItem[] = [
     confirmed: true,
   },
   {
-    q: 'Is Concept 01 a real client?',
-    a: 'No. It is a study by Vesta for a fictional roofing company, labeled everywhere it appears. Client work will be published only with permission and measured results.',
+    q: 'Are the concept studies real clients?',
+    a: 'No. They are five studies by Vesta for fictional businesses in five different niches, labeled everywhere they appear. Client work will be published only with permission and measured results.',
     confirmed: true,
   },
   /* Hidden until the owner writes or approves the answers (§10 item 11). */
@@ -1484,7 +1549,7 @@ export interface FinaleIntent {
 export const finale = {
   id: 'finale',
   h2: 'Send your current website. Get a free price analysis.',
-  body: 'Tell Vinícius what the business does and paste the link. No website yet? Send the business name. You\'ll get a straight answer from the person who would build it.',
+  body: 'Paste the link, or the business name if there is no site yet. The answer comes from the person who would build it.',
   /** Radio group label for the chips. */
   intentsLabel: 'What do you need?',
   intents: [
@@ -1500,6 +1565,9 @@ export const finale = {
     /** Label after a chip is chosen: "Open WhatsApp: {intent}". */
     withIntent: (intentLabel: string): string => `Open WhatsApp: ${intentLabel}`,
   },
+  /** Round 2: email next to WhatsApp. Subject = the chosen chip's label
+      (before a choice: contact.email.subject); body = the same prefill. */
+  email: { label: 'Email', address: contact.email.address, aria: 'Email Vinícius at' },
   number: {
     display: contact.whatsapp.display,
     copy: 'Copy number',
@@ -1510,7 +1578,7 @@ export const finale = {
   reassurance: 'A Brazilian number. WhatsApp messages are free from any country.',
   secondary: [
     { label: contact.linkedin.label, href: contact.linkedin.url },
-    { label: 'See prices again', href: '/#pricing' },
+    { label: 'See the packages', href: '/#pricing' },
   ] satisfies Link[],
 };
 
@@ -1518,7 +1586,7 @@ export const finale = {
 
 export const footer = {
   brand: {
-    blurb: 'Website design and build studio. Built in São Paulo for businesses in the US and worldwide.',
+    blurb: 'Website design and build studio in São Paulo.',
     tagline: brand.tagline,
   },
   columns: {
@@ -1592,14 +1660,14 @@ export const about = {
   lead: 'Vinícius Magno designs, builds and launches every Vesta website personally.',
   /** Portrait section (same `founder.portrait.confirmed` gate). */
   bio: [
-    'Most small-business sites are built from templates by people the owner never meets. Vesta is the opposite: one builder, custom code, prices on the page.',
+    'Most small-business sites are built from templates by people the owner never meets. Vesta is the opposite: one builder, custom code, a fixed price in writing.',
     'Vinícius holds a B.S. in Computer Science from Mackenzie Presbyterian University in São Paulo.',
     'One builder means nothing gets lost between the first message and the code. The person who hears the brief is the person who builds the site.',
   ],
   howVestaWorks: {
     title: 'How Vesta works',
     items: [
-      'Prices on the page.',
+      'A free price analysis, then a fixed price.',
       'The person you talk to builds the site.',
       'You own everything at launch.',
       'Measured, not claimed: every launch ships with its Lighthouse report.',
@@ -1638,6 +1706,22 @@ export const about = {
     },
   },
   /** Closing: render the finale module in compact form (reuse `finale`). */
+  /** Round 2: the detail lives in expandable boxes; titles + keywords stay visible. */
+  more: {
+    builder: { title: 'One builder', keywords: ['Custom code', 'No hand-offs'] },
+    background: { title: 'Background', keywords: ['B.S. Computer Science', 'Mackenzie'] },
+    entity: { title: 'Legal entity', keywords: ['Vesta Consultoria', 'CNPJ'] },
+    paperwork: { title: 'Contracts and invoicing', keywords: ['In English', 'USD', 'W-8BEN-E'] },
+    overlap: { keywords: ['1–2 hours ahead of New York'] },
+    story: { title: 'The story', keywords: ['Found in 1807', '3.63-year orbit', 'Goddess of the hearth'] },
+    orbit: { title: 'The orbit, to scale', keywords: ['2.36 AU', '3.63 years', 'Mars to Jupiter'] },
+  },
+  /** Round 3: the 3D asteroid in "The name" (NASA Dawn shape figures). */
+  asteroid: { name: '4 Vesta', dims: '572 × 557 × 446 km', mean: '≈ 525 km', hint: 'Drag to turn it' },
+  /** Label beside the Sun in the orbit diagram. */
+  sun: 'Sun',
+  /** Closing: the email companion to the WhatsApp button. */
+  emailButton: 'Send an email',
 };
 
 /* ---------------------------------------------------------------- contact */
@@ -1652,13 +1736,16 @@ export const contactPage = {
   seo: {
     title: 'Contact · Vesta',
     description:
-      'Message Vinícius Magno on WhatsApp for a free price analysis on a new or rebuilt website. Replies Mon–Fri, 9:00–18:00 São Paulo time.',
+      'Message Vinícius Magno on WhatsApp or by email for a free price analysis on a new or rebuilt website. Replies Mon–Fri, 9:00–18:00 São Paulo time.',
   } satisfies Seo,
   label: { index: null, name: 'Contact' } satisfies SectionLabel,
   h1: 'Talk to the person who builds it.',
-  lead: 'WhatsApp is the fastest way to reach Vinícius. Replies Mon–Fri, 9:00–18:00 São Paulo time (UTC−3).',
-  /** Chamfered rosso panel: the number at N2, then three bone quick-starts. */
+  lead: 'WhatsApp or email, straight to Vinícius. Replies Mon–Fri, 9:00–18:00 São Paulo time (UTC−3).',
+  /** The email line under the lead: the address set large, copyable. */
+  email: { label: 'Email', write: 'Write an email', copy: 'Copy address', copied: 'Copied' },
+  /** Faceted violet panel: the number at N2, then three starlight quick-starts. */
   panel: {
+    label: 'WhatsApp',
     number: contact.whatsapp.display,
     quickStarts: [
       { id: 'newSite', label: 'I need a new website', text: waMessages.contact.newSite },
@@ -1689,7 +1776,9 @@ export const contactPage = {
       extra: { label: 'Anything else' },
     },
     button: 'Open in WhatsApp',
-    note: 'Nothing is sent to Vesta or stored. The button opens WhatsApp with your message ready; you choose whether to send it.',
+    emailButton: 'Send by email',
+    preview: 'Your message',
+    note: 'Nothing is sent to Vesta or stored. Each button opens your app with the message ready; you choose whether to send it.',
     message: contactHelperMessage,
   },
   include: {
@@ -1713,6 +1802,11 @@ export const contactPage = {
     ] satisfies Fact[],
   },
   configureLink: { label: 'Or configure a build →', href: '/#configure' } satisfies Link,
+  /** Round 2: keywords for the expandable boxes on /contact/. */
+  more: {
+    include: { keywords: ['The business', 'Current site', 'Goal', 'Deadline'] },
+    company: { keywords: ['CNPJ', 'São Paulo, Brazil'] },
+  },
 };
 
 /* ------------------------------------------------------------------- work */
@@ -1737,6 +1831,15 @@ export const work = {
     label: 'Concept · Fictional business',
     text: 'A fictional roofing company in Austin, TX, and its website before and after a rebuild. Not client work.',
     link: { label: 'Open the study →', href: '/work/concept-01/' } satisfies Link,
+  },
+  /** Round 2: the five-study gallery on /work/ (data: src/data/concepts). */
+  studies: {
+    label: 'Concept studies · Fictional businesses',
+    title: 'Five niches, five rebuilds.',
+    lead: 'Fictional businesses, common problems. Each study shows the old site, the rebuild and how it is built.',
+    open: 'Open the study',
+    before: 'Before',
+    foundingMore: { title: 'How a founding place works', keys: ['Reduced price', 'Published case study'] },
   },
 };
 
@@ -1766,6 +1869,28 @@ export const conceptPage = {
     title: 'How it would be priced',
     text: 'This scope would be a Complete Website, priced after a free analysis.',
     cta: { label: 'Ask for a quote on WhatsApp →', text: waMessages.pricing.complete } satisfies WaCta,
+  },
+  /** Round 2: the study template (/work/concept-NN/), shared by all five concepts. */
+  study: {
+    banner: (name: string) => `Concept study. ${name} is a fictional business. This is not client work.`,
+    seoTitle: (n: string) => `Concept ${n}, a study · Vesta`,
+    seoDescription: (niche: string, city: string) =>
+      `A study by Vesta: a fictional ${niche.toLowerCase()} in ${city} and its website, before and after a rebuild. Not client work.`,
+    facts: { niche: 'Niche', city: 'City', domain: 'Domain', phone: 'Phone', status: 'Status' },
+    status: 'Fictional',
+    before: { kicker: 'The 2016 template', title: 'Before' },
+    after: { kicker: 'Rebuilt by Vesta', title: 'After' },
+    findings: 'Findings',
+    layers: { kicker: 'How it is built', title: 'The six layers', more: 'What each layer does' },
+    pricing: {
+      kicker: 'Price',
+      title: 'How it would be priced',
+      line: 'Priced after a free analysis.',
+      text: 'This scope would be a Complete Website. The price comes from a free analysis, fixed in writing before work starts.',
+      cta: 'Request a price analysis',
+      mail: 'Or write by email',
+    },
+    next: { label: 'Next study', all: 'All five studies' },
   },
 };
 

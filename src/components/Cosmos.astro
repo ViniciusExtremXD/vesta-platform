@@ -15,8 +15,22 @@
  *   --cosmos-x / --cosmos-y  galaxy centre as a fraction of width / height
  *   --cosmos-r               disc radius as a fraction of width
  *   --cosmos-mask            "ax ay bx by": text-safe gradient, dark at A → full at B
- * The left half (landscape) / upper half (portrait) is always masked dark
- * so the H1 and lead sit on near-black.
+ *   --cosmos-meteor          "x0 y0 x1 y1": box where shooting stars may start
+ * Behind the masked text column the field thins out (fewer, dimmer stars,
+ * no glints) so the H1 and lead sit on near-black.
+ *
+ * The dive (galaxy): as the hero scrolls away the galaxy swells, swings
+ * toward face-on and the star field opens outward from its core. It runs by
+ * itself from the section's scroll position; a parent can take over by
+ * writing an inline `--dive` (0 → 1) with style.setProperty, or a
+ * `data-dive` attribute, on the cosmos root or any ancestor — read each frame.
+ *
+ * Alive: three star layers (scroll parallax, drift, pointer parallax),
+ * scintillation, breathing 4-point glints on the brightest stars, a violet
+ * haze that breathes and flows, a shooting star every ~5–12 s away from the
+ * text. Each sky is built on idle when it nears the viewport, pauses
+ * offscreen / in hidden tabs, runs at 30 fps when nothing moves fast (always
+ * on low-power devices) and falls back to the CSS sky on software GL.
  */
 export interface Props {
   variant?: 'galaxy' | 'stars';

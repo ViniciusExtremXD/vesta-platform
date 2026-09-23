@@ -1,51 +1,65 @@
 ---
 /**
- * Spec band (§5.1) — continuous void, rendered inside #hero.
- * Four cells: value / unit / caption. Verticals draw, $500 and 100% count,
- * 5–7 rises, captions rise 200ms after their value. Final values are in the
- * HTML, so no-JS and motion-off read complete.
+ * Spec band (§5.1, ROUND2/3) — continuous void, rendered inside #hero.
+ * Four cells: value / unit / caption. The band rises out of depth as the
+ * hero dives away (data-scene). Hairlines draw; each value flips up on a
+ * 3D hinge at its baseline like a split-flap, then counts (100%, and both
+ * ends of a "5–7" range); the unit slides in after it; captions rise.
+ * Cells tilt toward the pointer. Final values are in the HTML, so no-JS and
+ * motion-off read complete.
  */
 import { specBand } from '../../data/site';
+
+/* "5–7" → two counters around the dash */
+const range = (v: string) => {
+  const m = /^(\d+)–(\d+)$/.exec(v);
+  return m ? [Number(m[1]), Number(m[2])] : null;
+};
 ---
 
-<div class="sb wrap">
+<div class="sb wrap" data-scene>
   <span class="sb-rule" data-reveal="draw" aria-hidden="true"></span>
   <ul class="sb-cells">
     {
-      specBand.cells.map((c, k) => (
-        <li class:list={['sb-cell', !c.unit && 'sb-cell--text']} style={`--k:${k}`}>
-          <span class="sb-v" data-reveal="draw-y" style={`--d:${120 + k * 90}ms`} aria-hidden="true" />
-          <span class="sb-h" data-reveal="draw" style={`--d:${120 + k * 90}ms`} aria-hidden="true" />
-          {c.unit ? (
-            <p class="sb-value" data-reveal style={`--d:${200 + k * 90}ms`}>
-              {c.count ? (
-                <span
-                  class="sb-num n1"
-                  data-count={c.count.to}
-                  data-count-prefix={c.count.prefix || undefined}
-                  data-count-suffix={c.count.suffix || undefined}
-                  data-count-delay={200 + k * 90}
-                >
-                  {c.value}
-                </span>
-              ) : (
-                <span class="sb-num n1">{c.value}</span>
-              )}
-              <span class="sb-unit label">{c.unit}</span>
+      specBand.cells.map((c, k) => {
+        const r = c.unit && !c.count ? range(c.value) : null;
+        return (
+          <li class:list={['sb-cell', !c.unit && 'sb-cell--text']} style={`--k:${k}`} data-tilt="4">
+            <span class="sb-v" data-reveal="draw-y" style={`--d:${120 + k * 90}ms`} aria-hidden="true" />
+            <span class="sb-h" data-reveal="draw" style={`--d:${120 + k * 90}ms`} aria-hidden="true" />
+            {c.unit ? (
+              <p class="sb-value" data-reveal style={`--d:${200 + k * 110}ms`}>
+                {c.count ? (
+                  <span
+                    class="sb-num n1"
+                    data-count={c.count.to}
+                    data-count-prefix={c.count.prefix || undefined}
+                    data-count-suffix={c.count.suffix || undefined}
+                    data-count-delay={260 + k * 110}
+                  >
+                    {c.value}
+                  </span>
+                ) : r ? (
+                  <span class="sb-num n1"><span data-count={r[0]} data-count-from="1" data-count-dur="900" data-count-delay={260 + k * 110}>{r[0]}</span>–<span data-count={r[1]} data-count-from="1" data-count-dur="1200" data-count-delay={260 + k * 110}>{r[1]}</span></span>
+                ) : (
+                  <span class="sb-num n1">{c.value}</span>
+                )}
+                <span class="sb-unit label">{c.unit}</span>
+              </p>
+            ) : (
+              <p class="sb-value sb-value--text d3" data-reveal style={`--d:${200 + k * 110}ms`}>
+                {c.value}
+              </p>
+            )}
+            <p class="sb-cap" data-reveal style={`--d:${420 + k * 110}ms`}>
+              {c.caption}
             </p>
-          ) : (
-            <p class="sb-value sb-value--text d3" data-reveal style={`--d:${200 + k * 90}ms`}>
-              {c.value}
-            </p>
-          )}
-          <p class="sb-cap" data-reveal style={`--d:${400 + k * 90}ms`}>
-            {c.caption}
-          </p>
-        </li>
-      ))
+          </li>
+        );
+      })
     }
   </ul>
-  <p class="sb-foot small" data-reveal style="--d:600ms">{specBand.footnote}</p>
+  <p class="sb-foot small" data-reveal style="--d:700ms">{specBand.footnote}</p>
 </div>
 
 <style>
@@ -57,6 +71,10 @@ import { specBand } from '../../data/site';
     grid-column: 1;
     background-color: var(--void);
     padding-bottom: clamp(4rem, 2.5rem + 5vw, 7.5rem);
+    /* a deeper swing than the default scene: the band surfaces from space */
+    --scene-tilt: 22deg;
+    --scene-rise: 110px;
+    --scene-depth: -260px;
   }
 
   .sb-rule {
@@ -121,6 +139,16 @@ import { specBand } from '../../data/site';
     flex-wrap: wrap;
     gap: 4px 10px;
     color: var(--starlight);
+    /* the split-flap: a hinge at the baseline */
+    transform-origin: 50% 100%;
+    transition:
+      opacity 420ms linear,
+      transform 1400ms var(--ease-expo);
+    transition-delay: var(--d, 0ms);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .sb-value:not(.is-in) {
+    transform: perspective(700px) translate3d(0, 34%, 0) rotateX(-84deg);
   }
 
   .sb-num {
@@ -128,10 +156,20 @@ import { specBand } from '../../data/site';
     white-space: nowrap;
   }
 
+  .sb-num [data-count] {
+    font-variant-numeric: tabular-nums;
+  }
+
   .sb-unit {
     color: var(--haze);
     font-size: 0.6875rem;
     letter-spacing: 0.14em;
+    transition: transform 900ms var(--ease-expo);
+    transition-delay: calc(var(--d, 0ms) + 380ms);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .sb-value:not(.is-in) .sb-unit {
+    transform: translate3d(-14px, 0, 0);
   }
 
   .sb-value--text {

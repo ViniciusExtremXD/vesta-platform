@@ -47,7 +47,7 @@ const organization = {
   areaServed: [{ '@type': 'Country', name: 'United States' }, { '@type': 'Place', name: 'Worldwide' }],
   founder: { '@id': `${siteUrl}/#founder` },
   sameAs,
-  priceRange: '$500–$750+',
+  priceRange: brand.schema.priceRange,
 };
 
 const person = {
@@ -83,7 +83,7 @@ const extraLd = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
       Before first paint:
       1. mark html.js — the armed (hidden) reveal states only exist under it,
          so with JavaScript off the page renders complete;
-      2. apply the saved motion preference;
+      2. clear any old motion opt-out (motion is always on);
       3. if the engine hasn't reported in within 4 s, html.motion-failed
          reveals everything. Invisible content is the one unacceptable defect.
     */}
@@ -91,8 +91,9 @@ const extraLd = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
       (function () {
         var h = document.documentElement;
         h.classList.add('js');
+        // Motion is always on (owner's decision); drop any old saved opt-out.
         try {
-          if (localStorage.getItem('vesta-motion') === 'reduced') h.classList.add('motion-reduced');
+          localStorage.removeItem('vesta-motion');
         } catch (e) {}
         window.setTimeout(function () {
           if (!window.__vestaMotionReady) h.classList.add('motion-failed');
@@ -119,8 +120,9 @@ const extraLd = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImageUrl} />
 
-    <meta name="theme-color" content="#0b0b0c" />
-    <link rel="icon" href={url('/favicon.svg')} type="image/svg+xml" />
+    <meta name="theme-color" content="#08070d" />
+    <link rel="icon" href={url('/favicon-48.png')} type="image/png" sizes="48x48" />
+    <link rel="apple-touch-icon" href={url('/apple-touch-icon.png')} sizes="180x180" />
     <link rel="sitemap" href={url('/sitemap-index.xml')} />
 
     <Font cssVariable="--font-sans" preload />

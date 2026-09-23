@@ -1,42 +1,96 @@
 ---
 /**
- * #services — SPEC §5.3 + §6.2.
+ * #services — SPEC §5.3 + §6.2, round 2 ("bolder, cleaner").
  *
- * A. Stance (void): a sticky stage over a quiet star field where the
- *    statement widens and gains weight on the Mona Sans wdth/wght axes as the
- *    section scrolls. Then the two paragraphs and the struck-through
- *    "Not Vesta's work" phrases.
- * B. Stations (paper sub-block): one rail, three nodes, three blocks of
- *    different lengths hanging below them. No boxes, no icons.
+ * A. Stance (void): a pinned stage. As the section scrolls, each line of the
+ *    statement stands up out of the page on a baseline hinge (3D), widening
+ *    and gaining weight on the Mona Sans wdth/wght axes, from dim to
+ *    starlight. Around it the scene moves on separate planes: the star field
+ *    dollies in, a monumental orbit (the brand mark at scale) turns while its
+ *    planet travels, the label drifts up faster than the statement.
+ * B. After the stage: one line, one Expand box for the detail, and the
+ *    struck-through "Not Vesta's work" list — each phrase flips in, is
+ *    crossed out, then dims.
+ * C. Stations (paper): a rail with three hanging stations, each an Expand
+ *    box (title + deliverables visible, the explanation inside). The rail
+ *    draws, the nodes pop, the drops fall, the titles flip up; then a planet
+ *    rides the rail with the scroll and lights each node as it passes.
  *
  * Fail-open: without JS, with motion off or a failed engine, the statement
- * renders at full width and weight in starlight with its violet line drawn, the
- * stage drops its pinned height, and every node is filled.
+ * renders at full width and weight in starlight with its violet line drawn,
+ * the stage drops its pinned height, every node is filled and the planet is
+ * not shown.
  */
 import SectionLabel from '../ui/SectionLabel.astro';
+import SplitText from '../ui/SplitText.astro';
+import Expand from '../ui/Expand.astro';
 import Cosmos from '../Cosmos.astro';
 import { services } from '../../data/site';
 
 const { stance, bodyA, bodyB, notOurWork, stations, modernize, label } = services;
+/* round-2 keys (site.ts); fall back to round-1 copy if they are ever absent */
+const s2 = services as typeof services & { lead?: string; detail?: { title: string; keywords: string[] } };
+const lead = s2.lead ?? bodyA;
+const detail = s2.detail ?? { title: notOurWork.label, keywords: [] };
+
 const lastD = stance.desktop.length - 1;
 const lastM = stance.mobile.length - 1;
+
+/* The lines of the first sentence ("Ads rent attention.") are the rented
+   ones: once the second sentence has landed they recede into the stage. */
+const rentCount = (lines: string[]) => {
+  const k = lines.findIndex((l) => /[.!?]$/.test(l.trim()));
+  return k < 0 || k === lines.length - 1 ? 0 : k + 1;
+};
+const rentD = rentCount(stance.desktop);
+const rentM = rentCount(stance.mobile);
+
+/* "Already have a website?" set apart from the rest of the line */
+const modParts = modernize.match(/^(.*?\?)\s+(.*)$/);
+const modQ = modParts ? modParts[1] : '';
+const modRest = modParts ? modParts[2] : modernize;
+
+/* the monumental orbit (user units; the SVG scales to the stage) */
+const ORX = 560;
+const ORY = 132;
+const P0 = 200; // planet start angle, degrees — the far left, behind the text
 ---
 
 <section id={services.id} class="services s-void section" data-nav-theme="dark" aria-labelledby="services-h">
   {/* ---------------------------------------------------------- A. Stance */}
   <div class="stance" data-stance data-nav-theme="dark">
     <div class="stage">
-      <Cosmos variant="stars" class="stage-sky" />
+      <div class="sky-rig" aria-hidden="true">
+        <Cosmos variant="stars" class="stage-sky" />
+      </div>
+      <svg class="orbit-art" viewBox="-600 -300 1200 600" aria-hidden="true" focusable="false">
+        <g class="orb-far">
+          <ellipse rx="760" ry="214" />
+        </g>
+        <g class="orb">
+          <ellipse rx={ORX} ry={ORY} />
+          <circle
+            class="orb-planet"
+            r="6.5"
+            data-orx={ORX}
+            data-ory={ORY}
+            data-p0={P0}
+            style={`transform: translate(${(ORX * Math.cos((P0 * Math.PI) / 180)).toFixed(1)}px, ${(ORY * Math.sin((P0 * Math.PI) / 180)).toFixed(1)}px)`}
+          />
+        </g>
+      </svg>
       <div class="wrap stage-inner">
-        <SectionLabel n={label.index ?? undefined} name={label.name} class="stage-label" />
+        <div class="label-rig">
+          <SectionLabel n={label.index ?? undefined} name={label.name} class="stage-label" />
+        </div>
         <div class="fit">
           <h2 class="statement" id="services-h">
             <span class="visually-hidden">{stance.text}</span>
             <span class="set set-d" aria-hidden="true">
-              {stance.desktop.map((l, i) => <span class:list={['ln', { 'ln-last': i === lastD }]} style={`--i:${i}`}>{l}</span>)}
+              {stance.desktop.map((l, i) => <span class:list={['ln', { 'ln-last': i === lastD, 'ln-rent': i < rentD }]} style={`--i:${i}`}>{l}</span>)}
             </span>
             <span class="set set-m" aria-hidden="true">
-              {stance.mobile.map((l, i) => <span class:list={['ln', { 'ln-last': i === lastM }]} style={`--i:${i}`}>{l}</span>)}
+              {stance.mobile.map((l, i) => <span class:list={['ln', { 'ln-last': i === lastM, 'ln-rent': i < rentM }]} style={`--i:${i}`}>{l}</span>)}
             </span>
           </h2>
         </div>
@@ -44,21 +98,26 @@ const lastM = stance.mobile.length - 1;
     </div>
   </div>
 
-  {/* -------------------------------------------------- A. after the stage */}
+  {/* -------------------------------------------------- B. after the stage */}
   <div class="after" data-nav-theme="dark">
-    <div class="wrap">
-      <div class="g after-copy">
-        <p class="lead after-a" data-reveal>{bodyA}</p>
-        <p class="body after-b fg-2" data-reveal style="--i:1">{bodyB}</p>
+    <div class="wrap" data-scene="soft">
+      <div class="g after-top">
+        <SplitText as="p" class="after-lead" text={lead} />
+        <div class="after-xp" data-tilt="3" data-sv-light>
+          <Expand title={detail.title} keywords={detail.keywords} i={2} class="sv-xp">
+            <p class="body">{bodyB}</p>
+            <p class="body">{notOurWork.follow}</p>
+          </Expand>
+        </div>
       </div>
 
       <div class="g nvw">
         <span class="rule nvw-rule" data-reveal="draw" aria-hidden="true"></span>
-        <p class="label nvw-label fg-3" data-reveal>{notOurWork.label}</p>
+        <p class="label nvw-label" data-reveal>{notOurWork.label}</p>
         <ul class="strikes" role="list">
           {
             notOurWork.items.map((item, k) => (
-              <li class="strike-item" data-reveal style={`--i:${k};--k:${k}`}>
+              <li class="strike-item" data-inview style={`--k:${k}`}>
                 <s class="strike">
                   {item.split(' ').map((word, w, all) => (
                     <Fragment>
@@ -71,37 +130,36 @@ const lastM = stance.mobile.length - 1;
             ))
           }
         </ul>
-        <p class="body nvw-follow fg-2" data-reveal style="--i:2">{notOurWork.follow}</p>
       </div>
     </div>
   </div>
 
-  {/* --------------------------------------------------- B. the stations */}
+  {/* --------------------------------------------------- C. the stations */}
   <div class="stations s-paper" data-nav-theme="light">
-    <div class="wrap">
-      <ol class="st-list g" data-inview>
-        {
-          stations.map((s, k) => (
-            <li class="st" data-inview style={`--k:${k}`}>
-              <span class="node st-node" aria-hidden="true" />
-              <span class="st-seg" aria-hidden="true" />
-              <div class="st-head st-anim" style="--j:0">
-                <span class="st-i d3" aria-hidden="true">{s.index}</span>
-                <h3 class="d3 st-t">
-                  <span class="visually-hidden">{s.index} </span>
-                  {s.title}
-                </h3>
-              </div>
-              <p class="body st-b st-anim" style="--j:1">{s.body}</p>
-              <ul class="st-d st-anim" role="list" style="--j:2">
-                {s.deliverables.map((d) => <li class="label">{d}</li>)}
-              </ul>
-            </li>
-          ))
-        }
-      </ol>
+    <div class="wrap" data-scene="soft">
+      <div class="st-track" data-inview data-st-track>
+        <span class="st-rail" aria-hidden="true"><span class="st-fill"></span></span>
+        <span class="st-planet" aria-hidden="true"></span>
+        <ol class="st-list g" role="list">
+          {
+            stations.map((s, k) => (
+              <li class="st" data-inview style={`--k:${k}`}>
+                <span class="st-node" aria-hidden="true" />
+                <span class="st-drop" aria-hidden="true" />
+                <div class="st-box" data-tilt="3">
+                  <Expand title={s.title} keywords={s.deliverables} index={s.index} size="l" reveal={false} class="st-xp">
+                    <p class="body">{s.body}</p>
+                  </Expand>
+                </div>
+              </li>
+            ))
+          }
+        </ol>
+      </div>
       <div class="g st-foot">
-        <p class="st-mod" data-reveal>{modernize}</p>
+        <p class="st-mod" data-reveal>
+          {modQ && <span class="st-mod-q">{modQ}</span>} {modRest}
+        </p>
       </div>
     </div>
   </div>
@@ -125,22 +183,73 @@ const lastM = stance.mobile.length - 1;
     align-items: center;
     background-color: var(--void);
     padding-block: var(--section-y);
+    overflow: clip;
   }
 
-  /* the star field (its own nebula haze is the section's light) fades out
-     toward the stage's bottom edge, so when the pin releases the sky doesn't
-     end on a hard line above the paragraphs */
-  .stage :global(.stage-sky) {
-    -webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent);
-    mask-image: linear-gradient(to bottom, #000 62%, transparent);
+  /* the star field on its own plane; it fades out toward the stage's bottom
+     edge so the sky doesn't end on a hard line above the next block */
+  .sky-rig {
+    position: absolute;
+    inset: 0;
+    transform-origin: 62% 42%;
+  }
+
+  .sky-rig :global(.stage-sky) {
+    /* the fade ends well inside the stage, so the dolly (scale ≤1.34 about
+       42% height) never pushes it past the clipped bottom edge */
+    -webkit-mask-image: linear-gradient(to bottom, #000 46%, transparent 80%);
+    mask-image: linear-gradient(to bottom, #000 46%, transparent 80%);
+  }
+
+  /* the monumental orbit: two hairline ellipses and one planet, behind the
+     statement. Decorative imagery (lilac at low alpha), never text. */
+  .orbit-art {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  .orbit-art ellipse {
+    fill: none;
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .orb ellipse {
+    stroke: rgb(185 162 255 / 0.34);
+  }
+
+  .orb-far ellipse {
+    stroke: rgb(185 162 255 / 0.13);
+  }
+
+  .orb,
+  .orb-far {
+    transform-box: view-box;
+    transform-origin: 50% 50%;
+    transform: rotate(-24deg);
+  }
+
+  .orb-far {
+    transform: rotate(-14deg);
+  }
+
+  .orb-planet {
+    fill: var(--lilac);
   }
 
   .stage-inner {
+    --fy: 44px;
     position: relative;
     z-index: 1;
     display: flex;
     flex-direction: column;
     gap: clamp(28px, 1rem + 2vw, 48px);
+    /* the camera the statement swings toward */
+    perspective: 1500px;
+    perspective-origin: 20% 55%;
   }
 
   /* the statement measures itself against the content column */
@@ -160,23 +269,27 @@ const lastM = stance.mobile.length - 1;
 
   .set {
     display: block;
+    /* where the rented lines start to recede (--p) */
+    --rec0: 0.68;
     /* The step/span pair is read by the script too, so the class change to
        .is-lit lands exactly where --pi crosses .5. */
     --step: 0.14;
     --span: 0.36;
+    perspective: 1200px;
+    perspective-origin: 0% 60%;
   }
 
   .set-m {
     display: none;
+    --rec0: 0.76;
     --step: 0.09;
     --span: 0.36;
   }
 
-  /* The widest line, "Ads rent attention.", measures 9.5em at wdth 125 /
-     wght 700, so 9.4cqi keeps it at ~89% of the column at the axis maximum
-     and it can never overflow. */
+  /* The widest line, "Ads rent attention.", at the axis maximum (wdth 125 /
+     wght 820) measures ~9.9em, so 9cqi keeps it inside the column. */
   .set-d .ln {
-    font-size: min(8.6vw, 8.25rem, 9.4cqi);
+    font-size: min(8.6vw, 8.25rem, 9cqi);
   }
 
   .ln {
@@ -187,11 +300,12 @@ const lastM = stance.mobile.length - 1;
     white-space: nowrap;
     font-family: var(--font-sans);
     font-stretch: calc((75 + 50 * var(--pi)) * 1%);
-    font-weight: calc(300 + 400 * var(--pi));
+    font-weight: calc(200 + 620 * var(--pi));
     line-height: 0.92;
     letter-spacing: -0.03em;
     color: var(--starlight);
-    transition: color 240ms linear;
+    transform-origin: 0% 100%;
+    transition: color 320ms linear;
   }
 
   /* the line under the last line: 2px violet, drawn once lit */
@@ -204,7 +318,7 @@ const lastM = stance.mobile.length - 1;
     height: 2px;
     background-color: var(--violet);
     transform-origin: left center;
-    transition: transform 700ms var(--ease-quint);
+    transition: transform 900ms var(--ease-quint);
   }
 
   @media (max-width: 767px) {
@@ -216,11 +330,10 @@ const lastM = stance.mobile.length - 1;
       display: block;
     }
 
-    /* 15vw (spec: 12vw — too timid once the real width axis loads):
-       "attention." measures 4.96em at the axis maximum, so it fills ~83% of
-       the column at 390 and the cqi cap guarantees it can never overflow */
+    /* "attention." measures ~5.2em at the axis maximum, so the cqi cap
+       guarantees it can never overflow */
     .set-m .ln {
-      font-size: min(15vw, 18.6cqi);
+      font-size: min(15vw, 17.6cqi);
     }
 
     .ln-last::after {
@@ -230,7 +343,7 @@ const lastM = stance.mobile.length - 1;
 
   /* ---- armed: the pinned, scrubbed stage (JS on, motion on) ---------- */
   :global(html.js:not(.motion-reduced):not(.motion-failed)) .stance {
-    height: 170vh;
+    height: 190vh;
   }
 
   :global(html.js:not(.motion-reduced):not(.motion-failed)) .stage {
@@ -239,44 +352,171 @@ const lastM = stance.mobile.length - 1;
     height: 100vh;
     height: 100svh;
     padding-block: 0;
-    overflow: clip;
     contain: layout paint;
   }
 
   :global(html.js:not(.motion-reduced):not(.motion-failed)) .ln {
     --pi: clamp(0, (var(--p, 0) - var(--i) * var(--step)) / var(--span), 1);
+    /* each line stands up out of the page on its baseline */
+    transform: translate3d(0, calc((1 - var(--pi)) * 0.24em), 0) rotateX(calc((1 - var(--pi)) * 64deg));
   }
 
   :global(html.js:not(.motion-reduced):not(.motion-failed)) .ln:not(.is-lit) {
-    color: var(--haze);
+    color: var(--dim);
   }
 
   :global(html.js:not(.motion-reduced):not(.motion-failed)) .ln-last:not(.is-done)::after {
     transform: scaleX(0);
   }
 
+  /* "Ads rent attention." — once the second sentence has landed, the rented
+     line thins on both axes and falls back into the stage, while the owned
+     one holds the front. */
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .ln-rent {
+    --rec: clamp(0, (var(--p, 0) - var(--rec0)) / 0.2, 1);
+    font-stretch: calc((75 + 50 * var(--pi) - 20 * var(--rec)) * 1%);
+    font-weight: calc(200 + 620 * var(--pi) - 340 * var(--rec));
+    transform: translate3d(0, calc((1 - var(--pi)) * 0.24em - var(--rec) * 0.14em), calc(var(--rec) * -220px))
+      rotateX(calc((1 - var(--pi)) * 64deg + var(--rec) * 12deg));
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .ln-rent.is-rented {
+    color: var(--haze);
+    transition-duration: 700ms;
+  }
+
+  /* the planes: stars dolly in, the orbit turns, the label outruns the
+     statement. All from the one --p the script writes on the track. */
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .sky-rig {
+    transform: scale(calc(1 + var(--p, 0) * 0.34));
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .orb {
+    transform: rotate(calc(-40deg + var(--p, 0) * 22deg)) scale(calc(0.84 + var(--p, 0) * 0.22));
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .orb-far {
+    transform: rotate(calc(2deg - var(--p, 0) * 20deg)) scale(calc(1.14 - var(--p, 0) * 0.16));
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .label-rig {
+    transform: translate3d(0, calc((0.5 - var(--p, 0)) * 120px), 0);
+  }
+
+  /* The camera: the statement starts on a far plane, turned away and laid
+     back; it swings square to the viewer as its lines stand up (eased,
+     done by --p .62), then dollies in a touch while the rented line falls
+     away. */
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .fit {
+    --q: clamp(0, var(--p, 0) / 0.62, 1);
+    --u: calc((1 - var(--q)) * (1 - var(--q)));
+    --push: clamp(0, (var(--p, 0) - 0.72) / 0.28, 1);
+    transform-origin: 0% 60%;
+    transform: translate3d(0, calc((0.5 - var(--p, 0)) * var(--fy)), calc(var(--u) * -360px + var(--push) * 70px))
+      rotateX(calc(var(--u) * 20deg)) rotateY(calc(var(--u) * -16deg));
+  }
+
   @media (max-width: 767px) {
+    .stage-inner {
+      --fy: 24px;
+      perspective: 900px;
+    }
+
     :global(html.js:not(.motion-reduced):not(.motion-failed)) .stance {
-      height: 140vh;
+      height: 170vh;
+    }
+
+    :global(html.js:not(.motion-reduced):not(.motion-failed)) .label-rig {
+      transform: translate3d(0, calc((0.5 - var(--p, 0)) * 72px), 0);
     }
   }
 
   /* ========================================================= after-stage */
   .after {
+    overflow-x: clip;
     background-color: var(--void);
     padding-block: clamp(24px, 2vw, 48px) var(--section-y);
   }
 
-  .after-copy {
-    row-gap: var(--s-24);
+  .after-top {
+    row-gap: var(--s-32);
+    align-items: start;
   }
 
-  .after-a {
+  .after-top :global(.after-lead) {
+    max-width: 26ch;
+    font-stretch: var(--wd-display);
+    font-size: clamp(1.375rem, 1rem + 1.5vw, 2.375rem);
+    font-weight: 560;
+    line-height: 1.16;
+    letter-spacing: -0.015em;
     color: var(--starlight);
+    text-wrap: balance;
+  }
+
+  /* the detail box as a raised plate: it tilts toward the pointer and a
+     soft light (≤9% lilac, inside the surface, under the text) follows it */
+  .after-xp {
+    --pl: clamp(18px, 1rem + 1vw, 32px);
+    position: relative;
+    isolation: isolate;
+    padding-inline: var(--pl);
+    background-color: var(--night);
+  }
+
+  .after-xp::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-image: radial-gradient(340px circle at var(--lx, 70%) var(--ly, 0%), rgb(185 162 255 / 0.09), rgb(185 162 255 / 0) 70%);
+    opacity: 0;
+    transition: opacity 500ms linear;
+    pointer-events: none;
+  }
+
+  .after-xp.is-lit::before {
+    opacity: 1;
+  }
+
+  .after-xp {
+    border-top: 1px solid var(--line-dark-strong);
+  }
+
+  .after-xp :global(.xp) {
+    border-top-color: transparent;
+  }
+
+  /* no index numeral here: title column + the plus at the far edge */
+  .after-xp :global(.xp-sum) {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  /* the opening hairline runs the plate's full top edge */
+  .after-xp :global(.xp::before) {
+    left: calc(-1 * var(--pl));
+    right: calc(-1 * var(--pl));
+  }
+
+  .after-xp :global(.xp-inner) {
+    display: grid;
+    gap: var(--s-12);
+  }
+
+  @media (max-width: 767px) {
+    .after-xp :global(.xp-keys) {
+      display: grid;
+      gap: 5px;
+    }
+
+    .after-xp :global(.xp-key + .xp-key::before) {
+      content: none;
+    }
   }
 
   .nvw {
     margin-top: clamp(64px, 3rem + 5vw, 128px);
+    row-gap: var(--s-24);
   }
 
   .nvw-rule {
@@ -285,30 +525,32 @@ const lastM = stance.mobile.length - 1;
   }
 
   .nvw-label {
-    margin-top: var(--s-24);
+    color: var(--dim);
   }
 
   .strikes {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: var(--s-8);
-    margin-top: var(--s-24);
+    gap: clamp(4px, 0.4vw, 10px);
   }
 
   .strike {
     display: block;
-    color: var(--haze);
+    color: var(--dim);
     text-decoration: none;
     font-family: var(--font-sans);
     font-stretch: var(--wd-display);
-    /* 28px per spec, eased down on narrow phones so each phrase stays on one
-       line and the stroke reads as a single crossing-out */
-    font-size: min(1.75rem, 6.3vw);
-    font-weight: 560;
-    line-height: 1.15;
+    /* one line per phrase at every width, so the stroke reads as a single
+       crossing-out */
+    font-size: min(clamp(1.5rem, 0.9rem + 3vw, 3.75rem), 6.2vw);
+    font-weight: 600;
+    line-height: 1.12;
     white-space: nowrap;
-    letter-spacing: -0.015em;
+    letter-spacing: -0.02em;
+    perspective: 700px;
+    transition: color 700ms linear;
+    transition-delay: calc(1000ms + var(--k, 0) * 200ms);
   }
 
   /* The crossing-out: a 2px lilac line per word, each reaching across the
@@ -317,6 +559,7 @@ const lastM = stance.mobile.length - 1;
   .sw {
     position: relative;
     display: inline-block;
+    transform-origin: 50% 100%;
   }
 
   .sw::after {
@@ -328,12 +571,40 @@ const lastM = stance.mobile.length - 1;
     height: 2px;
     background-color: var(--lilac);
     transform-origin: left center;
-    transition: transform 420ms var(--ease-quint);
-    transition-delay: calc(400ms + var(--k, 0) * 180ms + var(--w, 0) * 110ms);
+    transition: transform 380ms var(--ease-quint);
+    transition-delay: calc(560ms + var(--k, 0) * 200ms + var(--w, 0) * 100ms);
   }
 
   .sw:last-child::after {
     right: -0.04em;
+  }
+
+  @keyframes sv-flip {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 50%, 0) rotateX(-80deg);
+    }
+    35% {
+      opacity: 1;
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .strike-item.is-in .sw {
+    animation: sv-flip 1100ms var(--ease-expo) backwards;
+    animation-delay: calc(var(--k, 0) * 200ms + var(--w, 0) * 70ms);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .strike-item:not(.is-in) .sw {
+    opacity: 0;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .strike-item:not(.is-in) .strike {
+    color: var(--starlight);
+    transition-delay: 0ms;
   }
 
   :global(html.js:not(.motion-reduced):not(.motion-failed)) .strike-item:not(.is-in) .sw::after {
@@ -341,70 +612,62 @@ const lastM = stance.mobile.length - 1;
     transition-delay: 0ms;
   }
 
-  .nvw-follow {
-    margin-top: var(--s-32);
-  }
-
   @media (min-width: 768px) {
-    .after-a {
-      grid-column: 1 / 5;
+    .after-top :global(.after-lead) {
+      grid-column: 1 / 6;
     }
 
-    .after-b {
-      grid-column: 5 / 9;
-      padding-top: 0.3em;
+    .after-xp {
+      grid-column: 6 / -1;
+      padding-top: 0.35em;
     }
 
-    .nvw-follow {
-      grid-column: 5 / 9;
+    .nvw-label {
+      grid-column: 1 / 3;
+      padding-top: 1.2em;
     }
 
     .strikes {
-      grid-column: 1 / -1;
-      flex-direction: row;
-      flex-wrap: wrap;
-      column-gap: var(--s-48);
-      row-gap: var(--s-12);
-    }
-
-    .strike {
-      font-size: var(--t-d3);
-      font-weight: 620;
-      letter-spacing: -0.01em;
+      grid-column: 3 / -1;
     }
   }
 
   @media (min-width: 1100px) {
-    .after-a {
-      grid-column: 1 / 6;
+    .after-top :global(.after-lead) {
+      grid-column: 1 / 7;
     }
 
-    .after-b {
-      grid-column: 7 / 12;
+    .after-xp {
+      grid-column: 8 / -1;
     }
 
-    .nvw-follow {
-      grid-column: 7 / 12;
+    .nvw-label {
+      grid-column: 1 / 4;
+    }
+
+    .strikes {
+      grid-column: 4 / -1;
     }
   }
 
   /* ============================================================ stations */
   .stations {
+    overflow-x: clip;
     background-color: var(--paper);
     padding-block: var(--section-y);
   }
 
-  .st-list {
+  .st-track {
+    --sp: 1;
+    --spx: 0px;
     position: relative;
-    row-gap: 40px;
   }
 
-  /* the rail (mobile/tablet: vertical, left edge) */
-  .st-list::before {
-    content: '';
+  /* the rail (phone/tablet: vertical, at the left edge) */
+  .st-rail {
     position: absolute;
-    left: 4px;
-    top: 12px;
+    left: 5px;
+    top: 10px;
     bottom: 0;
     width: 1px;
     background-color: var(--line-light-strong);
@@ -412,102 +675,106 @@ const lastM = stance.mobile.length - 1;
     transition: transform var(--t-line) var(--ease-quint);
   }
 
+  /* the lit part of the rail, behind the planet */
+  .st-fill {
+    position: absolute;
+    left: -0.5px;
+    top: 0;
+    width: 2px;
+    height: 100%;
+    background-color: var(--violet);
+    transform-origin: center top;
+    transform: scaleY(var(--sp));
+  }
+
+  .st-planet {
+    display: none;
+  }
+
+  .st-list {
+    row-gap: 8px;
+  }
+
   .st {
-    /* stacked (phone/tablet): each station plays as it enters; on the
-       desktop rail the three chain at 450ms steps (below) */
+    /* stacked: each station plays as it enters; on the desktop rail the
+       three chain at 300ms steps (below) */
     --kd: 0ms;
     position: relative;
-    padding-left: 25px;
+    padding-left: 30px;
   }
 
   .st-node {
     position: absolute;
     left: 0;
-    top: 8px;
-    color: var(--ink);
+    top: 34px;
+    width: 11px;
+    height: 11px;
+    border: 1px solid var(--violet);
     background-color: var(--violet);
-    border-color: var(--violet);
     transition:
-      background-color 240ms var(--ease-expo),
-      border-color 240ms var(--ease-expo);
-    transition-delay: var(--kd);
+      background-color 220ms linear,
+      border-color 220ms linear;
   }
 
-  .st-seg {
+  /* the ping when the planet reaches a node */
+  .st-node::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border: 1px solid var(--violet);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .st-drop {
     display: none;
   }
 
-  .st-head {
-    display: flex;
-    align-items: baseline;
-    gap: 0.5em;
+  .st :global(.xp-sum) {
+    perspective: 700px;
   }
 
-  .st-i {
+  .st :global(.xp-idx) {
     color: var(--violet-ink);
-    font-variant-numeric: tabular-nums;
-    transition: transform var(--t-ui) var(--ease-expo);
+    padding-top: 0.55em;
   }
 
-  .st-t {
-    color: var(--ink);
+  .st :global(.xp-title) {
+    font-size: clamp(1.75rem, 1rem + 2.2vw, 3.25rem);
+    font-weight: 640;
+    line-height: 1;
+    letter-spacing: -0.025em;
+    transform-origin: 0 100%;
   }
 
-  .st-b {
-    margin-top: var(--s-16);
-    color: var(--ink-2);
-  }
-
-  .st-d {
+  /* deliverables as a short stacked list, not a run-on line */
+  .st :global(.xp-keys) {
     display: grid;
-    gap: 2px;
-    line-height: 1.5;
-    margin-top: var(--s-24);
-    padding-top: var(--s-16);
-    border-top: 1px solid var(--line-light);
-    color: var(--ink-3);
+    gap: 5px;
+    margin-top: 6px;
   }
 
-  /* one leading for wrapped and stacked items, so a two-line deliverable
-     keeps the same rhythm as the list */
-  .st-d .label {
-    line-height: 1.5;
+  .st :global(.xp-key) {
+    color: var(--ink-2);
+    letter-spacing: 0.12em;
+    line-height: 1.35;
   }
 
-  .st-anim {
-    transition:
-      opacity var(--t-reveal) var(--ease-expo),
-      transform var(--t-reveal) var(--ease-expo);
-    transition-delay: calc(var(--kd) + 120ms + var(--j, 0) * 60ms);
+  .st :global(.xp-key + .xp-key::before) {
+    content: none;
   }
 
-  /* armed hidden states — keyed off the list's .is-in so the rail, the
-     nodes and the text play as one sequence */
-  :global(html.js:not(.motion-reduced):not(.motion-failed)) .st-list:not(.is-in)::before {
-    transform: scaleY(0);
-  }
-
-  :global(html.js:not(.motion-reduced):not(.motion-failed)) .st-list:not(.is-in) .st-node,
-  :global(html.js:not(.motion-reduced):not(.motion-failed)) .st:not(.is-in) .st-node {
-    background-color: var(--paper);
-    border-color: var(--ink);
-    transition-delay: 0ms;
-  }
-
-  :global(html.js:not(.motion-reduced):not(.motion-failed)) .st-list:not(.is-in) .st-anim,
-  :global(html.js:not(.motion-reduced):not(.motion-failed)) .st:not(.is-in) .st-anim {
-    opacity: 0;
-    transform: translate3d(0, var(--rise), 0);
-    transition-delay: 0ms;
+  .st :global(.xp-inner) {
+    max-width: 44ch;
   }
 
   .st-foot {
-    margin-top: clamp(64px, 3rem + 5vw, 128px);
+    margin-top: clamp(56px, 3rem + 4vw, 112px);
   }
 
   .st-mod {
-    max-width: 44ch;
-    color: var(--ink);
+    max-width: 46ch;
+    color: var(--ink-2);
     font-size: 1.0625rem;
     line-height: 1.55;
     text-wrap: pretty;
@@ -515,83 +782,101 @@ const lastM = stance.mobile.length - 1;
     border-top: 1px solid var(--line-light-strong);
   }
 
-  @media (min-width: 768px) {
-    .st-b,
-    .st-d {
-      max-width: 52ch;
-    }
+  .st-mod-q {
+    color: var(--ink);
+    font-weight: 620;
+  }
 
+  @media (min-width: 768px) {
     .st-mod {
       grid-column: 1 / 7;
       max-width: none;
     }
   }
 
-  /* desktop: one horizontal rail across columns 1–12, nodes at 1, 5, 9 */
+  /* desktop: one horizontal rail; three stations hang from it at 1, 5, 9,
+     each one lower than the last */
   @media (min-width: 1100px) {
-    .st-list {
-      row-gap: 0;
-    }
-
-    .st-list::before {
-      position: static;
-      grid-column: 1 / -1;
-      grid-row: 1;
-      align-self: start;
+    .st-rail {
+      left: 0;
+      right: 0;
+      top: 0;
+      bottom: auto;
       width: auto;
       height: 1px;
       transform-origin: left center;
     }
 
-    :global(html.js:not(.motion-reduced):not(.motion-failed)) .st-list:not(.is-in)::before {
-      transform: scaleX(0);
+    .st-fill {
+      left: 0;
+      top: -0.5px;
+      width: 100%;
+      height: 2px;
+      transform-origin: left center;
+      transform: scaleX(var(--sp));
+    }
+
+    .st-list {
+      row-gap: 0;
+      align-items: start;
     }
 
     .st {
-      --kd: calc(var(--k) * 450ms);
+      --kd: calc(var(--k) * 240ms);
+      --drop: calc(56px + var(--k) * 72px);
       grid-row: 1;
       padding-left: 0;
-      padding-top: 40px;
+      padding-top: var(--drop);
     }
 
     .st:nth-child(1) {
-      grid-column: 1 / 4;
+      grid-column: 1 / 5;
     }
 
     .st:nth-child(2) {
-      grid-column: 5 / 8;
+      grid-column: 5 / 9;
     }
 
     .st:nth-child(3) {
-      grid-column: 9 / 12;
+      grid-column: 9 / -1;
     }
 
     .st-node {
-      top: -4px;
+      top: -5px;
     }
 
-    /* the rail segment to the next node, lit on hover */
-    .st-seg {
+    /* the drop from the rail to the station's own top line */
+    .st-drop {
       display: block;
       position: absolute;
-      left: 9px;
-      top: -1px;
-      height: 2px;
-      width: calc((100% + var(--gap)) * 4 / 3 - 9px);
-      background-color: var(--violet);
-      transform: scaleX(0);
-      transform-origin: left center;
-      transition: transform var(--t-ui) var(--ease-expo);
-      pointer-events: none;
+      left: 5px;
+      top: 6px;
+      width: 1px;
+      height: calc(var(--drop) - 6px);
+      background-color: var(--line-light-strong);
+      transform-origin: center top;
     }
 
-    .st:last-child .st-seg {
-      width: calc((100% + var(--gap)) * 4 / 3 - var(--gap) - 9px);
+    .st :global(.xp-sum) {
+      padding-block: 26px 22px;
     }
 
-    .st-b,
-    .st-d {
-      max-width: none;
+    /* the hanging planes: the box rides --sy (unitless px from the script)
+       and the string above it stretches to meet it */
+    .st {
+      --dropn: calc(50 + var(--k) * 72);
+    }
+
+    .st-box {
+      translate: 0 calc(var(--sy, 0) * 1px);
+    }
+
+    .st-drop {
+      scale: 1 calc(1 + var(--sy, 0) / var(--dropn));
+    }
+
+    .st-node {
+      z-index: 1;
     }
 
     .st-mod {
@@ -599,17 +884,172 @@ const lastM = stance.mobile.length - 1;
     }
   }
 
-  @media (min-width: 1100px) and (hover: hover) and (pointer: fine) {
-    .st:hover .st-i {
-      transform: translateX(6px);
-    }
+  /* ---- armed: the choreography ------------------------------------- */
 
-    .st:hover .st-seg {
-      transform: scaleX(1);
+  @keyframes st-flip {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 55%, 0) rotateX(-86deg);
+    }
+    30% {
+      opacity: 1;
+    }
+    to {
+      opacity: 1;
+      transform: none;
     }
   }
 
-  :global(html.motion-reduced) .st-seg {
+  @keyframes st-rise {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 12px, 0);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes st-spin {
+    from {
+      opacity: 0;
+      transform: scale(0.2) rotate(-180deg);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes st-pop {
+    from {
+      transform: scale(0) rotate(45deg);
+    }
+    55% {
+      transform: scale(1.6) rotate(0deg);
+    }
+    to {
+      transform: none;
+    }
+  }
+
+  @keyframes st-ping {
+    from {
+      opacity: 0.9;
+      transform: scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: scale(3.2);
+    }
+  }
+
+  .st-drop {
+    transition:
+      opacity 150ms linear,
+      transform 700ms var(--ease-expo);
+    transition-delay: calc(var(--kd) + 380ms);
+  }
+
+  .st-track.is-in .st.is-in .st-node {
+    animation: st-pop 700ms var(--ease-expo) backwards;
+    animation-delay: calc(var(--kd) + 240ms);
+  }
+
+  .st-track.is-in .st.is-in :global(.xp-idx) {
+    animation: st-rise 800ms var(--ease-expo) backwards;
+    animation-delay: calc(var(--kd) + 480ms);
+  }
+
+  .st-track.is-in .st.is-in :global(.xp-title) {
+    animation: st-flip 1300ms var(--ease-expo) backwards;
+    animation-delay: calc(var(--kd) + 520ms);
+  }
+
+  .st-track.is-in .st.is-in :global(.xp-key) {
+    animation: st-rise 800ms var(--ease-expo) backwards;
+    animation-delay: calc(var(--kd) + 700ms);
+  }
+
+  .st-track.is-in .st.is-in :global(.xp-key:nth-child(2)) {
+    animation-delay: calc(var(--kd) + 780ms);
+  }
+
+  .st-track.is-in .st.is-in :global(.xp-key:nth-child(3)) {
+    animation-delay: calc(var(--kd) + 860ms);
+  }
+
+  .st-track.is-in .st.is-in :global(.xp-icon) {
+    animation: st-spin 1000ms var(--ease-expo) backwards;
+    animation-delay: calc(var(--kd) + 760ms);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .st-track:not(.is-in) .st-rail {
+    transform: scaleY(0);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) :is(.st-track:not(.is-in), .st:not(.is-in)) .st-drop {
+    opacity: 0;
+    transform: scaleY(0);
+    transition-delay: 0ms;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) :is(.st-track:not(.is-in), .st:not(.is-in)) .st-node {
+    opacity: 0;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) :is(.st-track:not(.is-in), .st:not(.is-in)) :global(:is(.xp-idx, .xp-title, .xp-key, .xp-icon)) {
+    opacity: 0;
+  }
+
+  /* the planet rides the rail with the scroll (armed only); a node is
+     hollow until the planet reaches it */
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .st-node:not(.is-on) {
+    background-color: var(--paper);
+    border-color: var(--ink);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .st-node.is-on::after {
+    animation: st-ping 900ms var(--ease-expo) both;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .st-planet {
+    display: block;
+    position: absolute;
+    z-index: 1;
+    left: 0;
+    top: 10px;
+    width: 11px;
+    height: 11px;
+    margin-top: -5px;
+    border-radius: 50%;
+    background-color: var(--violet);
+    transform: translate3d(0, var(--spx), 0);
+    transition: opacity 400ms linear 600ms;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .st-track:not(.is-in) .st-planet {
+    opacity: 0;
+    transition-delay: 0ms;
+  }
+
+  @media (min-width: 1100px) {
+    :global(html.js:not(.motion-reduced):not(.motion-failed)) .st-track:not(.is-in) .st-rail {
+      transform: scaleX(0);
+    }
+
+    :global(html.js:not(.motion-reduced):not(.motion-failed)) .st-planet {
+      top: 0;
+      margin-top: -5px;
+      margin-left: -5px;
+      transform: translate3d(var(--spx), 0, 0);
+    }
+  }
+
+  :global(html.motion-reduced) .stations *,
+  :global(html.motion-reduced) .strike,
+  :global(html.motion-reduced) .sw::after {
     transition: none;
   }
 </style>
@@ -617,15 +1057,22 @@ const lastM = stance.mobile.length - 1;
 <script>
   import { addFrame, requestFrame, vestibular } from '../../scripts/motion';
 
-  /* Stance: one --p write per frame on the track, only while it is near the
-     viewport. CSS turns --p into each line's --pi; the script mirrors that
-     maths only to flip the discrete .is-lit / .is-done classes. */
+  /* ---- Stance: one --p write per frame on the track, only while it is
+     near the viewport. CSS turns --p into each line's --pi and into the
+     planes; the script mirrors that maths only to flip the discrete
+     .is-lit / .is-done classes and to place the orbit's planet. */
   const track = document.querySelector<HTMLElement>('[data-stance]');
   if (track) {
     const sets = Array.from(track.querySelectorAll<HTMLElement>('.set'));
+    const planet = track.querySelector<SVGCircleElement>('.orb-planet');
+    const orx = Number(planet?.dataset.orx || 560);
+    const ory = Number(planet?.dataset.ory || 132);
+    const p0 = Number(planet?.dataset.p0 || 200);
     let lines: HTMLElement[] = [];
+    let rent: HTMLElement[] = [];
     let step = 0.14;
     let span = 0.36;
+    let rec0 = 0.68;
     let near = false;
     let target = 0;
     let p = -1;
@@ -636,9 +1083,11 @@ const lastM = stance.mobile.length - 1;
       const set = sets.find((s) => getComputedStyle(s).display !== 'none') ?? sets[0];
       if (!set) return;
       lines = Array.from(set.querySelectorAll<HTMLElement>('.ln'));
+      rent = lines.filter((l) => l.classList.contains('ln-rent'));
       const cs = getComputedStyle(set);
       step = parseFloat(cs.getPropertyValue('--step')) || step;
       span = parseFloat(cs.getPropertyValue('--span')) || span;
+      rec0 = parseFloat(cs.getPropertyValue('--rec0')) || rec0;
       p = -1; // force a full write
     };
     pick();
@@ -660,6 +1109,12 @@ const lastM = stance.mobile.length - 1;
     }
 
     const pi = (v: number, i: number) => Math.min(1, Math.max(0, (v - i * step) / span));
+    const place = (v: number) => {
+      if (!planet) return;
+      // the planet sweeps ~250° of its orbit across the pin, easing out
+      const a = ((p0 + 250 * (1 - Math.pow(1 - v, 2))) * Math.PI) / 180;
+      planet.style.transform = `translate(${(orx * Math.cos(a)).toFixed(1)}px, ${(ory * Math.sin(a)).toFixed(1)}px)`;
+    };
 
     addFrame({
       read(_y, vh) {
@@ -681,6 +1136,7 @@ const lastM = stance.mobile.length - 1;
         if (v === p) return;
         p = v;
         track.style.setProperty('--p', p.toFixed(4));
+        place(p);
         lines.forEach((ln, i) => ln.classList.toggle('is-lit', pi(p, i) > 0.5));
         const last = lines[lines.length - 1];
         if (last) {
@@ -689,13 +1145,97 @@ const lastM = stance.mobile.length - 1;
           else if (done && lp < 0.6) done = false;
           last.classList.toggle('is-done', done);
         }
+        const rented = (p - rec0) / 0.2 > 0.3;
+        rent.forEach((ln) => ln.classList.toggle('is-rented', rented));
         if (!settled) requestFrame();
       },
     });
 
     document.addEventListener('vesta:motion', () => {
       p = -1;
+      if (vestibular()) place(1);
       requestFrame();
+    });
+  }
+
+  /* ---- the after-stage plate: a soft light inside its surface follows the
+     pointer (fine pointers only; writes two custom properties) */
+  const plate = document.querySelector<HTMLElement>('#services [data-sv-light]');
+  if (plate && window.matchMedia('(pointer: fine)').matches) {
+    plate.addEventListener('pointermove', (e) => {
+      const b = plate.getBoundingClientRect();
+      plate.style.setProperty('--lx', `${(((e.clientX - b.left) / b.width) * 100).toFixed(1)}%`);
+      plate.style.setProperty('--ly', `${(((e.clientY - b.top) / b.height) * 100).toFixed(1)}%`);
+      plate.classList.add('is-lit');
+    });
+    plate.addEventListener('pointerleave', () => plate.classList.remove('is-lit'));
+  }
+
+  /* ---- Stations: the planet on the rail. Phones/tablets: the rail is
+     vertical and the planet holds ~62% down the viewport, a reading cursor.
+     Desktop: it crosses the horizontal rail over half a viewport of scroll.
+     Each node lights (and pings) as the planet reaches it. */
+  const st = document.querySelector<HTMLElement>('[data-st-track]');
+  if (st) {
+    const rail = st.querySelector<HTMLElement>('.st-rail');
+    const nodes = Array.from(st.querySelectorAll<HTMLElement>('.st-node'));
+    const items = Array.from(st.querySelectorAll<HTMLElement>('.st'));
+    const sway: number[] = items.map(() => 0);
+    let swaying = false;
+    const mqDesk = window.matchMedia('(min-width: 1100px)');
+    let near = false;
+    let sp = 0;
+    let spx = 0;
+    let lit: boolean[] = nodes.map(() => false);
+
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(
+        ([e]) => {
+          near = e.isIntersecting;
+          if (near) requestFrame();
+        },
+        { rootMargin: '15% 0px 15% 0px' }
+      ).observe(st);
+    } else {
+      near = true;
+    }
+
+    addFrame({
+      read(_y, vh) {
+        if (!near || !rail) return;
+        if (vestibular()) {
+          sp = 1;
+          lit = nodes.map(() => true);
+          return;
+        }
+        const t = st.getBoundingClientRect();
+        const r = rail.getBoundingClientRect();
+        const desk = mqDesk.matches;
+        // desktop: each station hangs on its own plane — the deeper it hangs,
+        // the more it lags the scroll, so the strings stretch and shorten
+        swaying = desk;
+        if (desk) {
+          const c = t.top + t.height / 2 - vh / 2;
+          items.forEach((_it, i) => (sway[i] = Math.max(-44, Math.min(44, c * -(0.035 + i * 0.03)))));
+        }
+        const len = desk ? r.width : r.height;
+        sp = desk
+          ? Math.min(1, Math.max(0, (vh * 0.86 - t.top) / (vh * 0.5)))
+          : Math.min(1, Math.max(0, (vh * 0.62 - r.top) / Math.max(1, len)));
+        spx = sp * len;
+        lit = nodes.map((n) => {
+          const b = n.getBoundingClientRect();
+          const at = desk ? b.left + b.width / 2 - r.left : b.top + b.height / 2 - r.top;
+          return spx >= at - 1;
+        });
+      },
+      write() {
+        if (!near) return;
+        st.style.setProperty('--sp', sp.toFixed(4));
+        st.style.setProperty('--spx', `${spx.toFixed(1)}px`);
+        nodes.forEach((n, i) => n.classList.toggle('is-on', lit[i]));
+        items.forEach((it, i) => it.style.setProperty('--sy', swaying && !vestibular() ? sway[i].toFixed(1) : '0'));
+      },
     });
   }
 </script>

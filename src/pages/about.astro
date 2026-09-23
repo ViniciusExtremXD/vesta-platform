@@ -1,45 +1,42 @@
 ---
 /**
- * /about/ (SPEC §7 /about/, SPEC_COSMOS §4).
+ * /about/ (SPEC §7 /about/, SPEC_COSMOS §4, ROUND2 points 5, 8, 10).
  *
- * 1. Intro (void, a quiet star field): label, H1 (word mask on load), haze
- *    lead; the founder portrait holds the right-hand columns from the first
- *    screen (wipe reveal, 2px violet bar on its right edge); the bio follows
- *    under the lead.
- * 2. How Vesta works (paper): five numbered lines, hairline rows whose nodes
- *    fill as they arrive.
- * 3. Company facts (paper-2): the hairline table, and the working hours set
- *    as one large static numeral (no clocks, owner decision).
- * 4. The name (night, stars): the 4 Vesta story from site.ts with its NASA
- *    source, beside a to-scale, face-on diagram of the orbits of Mars,
- *    4 Vesta and Jupiter. On reveal the orbits draw once and Vesta's planet
- *    rides the head of its own line for one lap, then rests.
- * 5. Closing (violet): the finale module, compact.
- *
- * Portrait gate: founder.portrait.confirmed. Without it the bio takes the
- * full measure and nothing else changes.
+ * 1. Intro (void, living star field): label, H1 (3D word flip on load), one
+ *    line of lead. The founder portrait, in colour, swings in from the right
+ *    and is revealed by a wipe; a hairline orbit is drawn around it — the
+ *    back half passes behind the photo, the front half across it — and one
+ *    planet rides the orbit (transform-only, paused offscreen). Pointer tilt
+ *    on fine pointers separates the two halves in depth. The bio lives in two
+ *    expandable boxes under the lead (keywords visible, detail on demand).
+ * 2. How Vesta works (paper): five statements set large. A violet rail fills
+ *    as the list scrolls and each statement lights up as it crosses the
+ *    reading line (scroll-linked, discrete classes; static when motion is
+ *    off).
+ * 3. Company facts (paper-2): the facts in two expandable boxes; the working
+ *    hours as a numeral whose figures roll like drums, one full turn each.
+ * 4. The name (night, stars): the 4 Vesta story — the first sentence set
+ *    large, the rest in a box — beside a to-scale, face-on diagram of the
+ *    orbits of Mars, 4 Vesta and Jupiter. The diagram swings up to face the
+ *    reader as it scrolls in, draws once, then the three bodies keep moving
+ *    at their true relative periods (Kepler timing), paused offscreen.
+ * 5. Closing (violet): the finale, compact — WhatsApp and email side by side.
  */
 import { Picture } from 'astro:assets';
-import type { ImageMetadata } from 'astro';
 import Base from '../layouts/Base.astro';
 import Cosmos from '../components/Cosmos.astro';
 import SectionLabel from '../components/ui/SectionLabel.astro';
 import SplitText from '../components/ui/SplitText.astro';
+import Expand from '../components/ui/Expand.astro';
 import Arrow from '../components/ui/Arrow.astro';
 import WaGlyph from '../components/ui/WaGlyph.astro';
-import { about, brand, contact, finale, footer, founder, wa } from '../data/site';
+import MailGlyph from '../components/ui/MailGlyph.astro';
+import Asteroid from '../components/Asteroid.astro';
+import portrait from '../assets/vinicius-magno.jpg';
+import { about, brand, contact, contactPage, finale, footer, founder, mail, wa } from '../data/site';
 import { absolute } from '../lib/url';
 
-/* Strings the page needs that site.ts does not carry yet (reported). */
-const TODO_SITE = {
-  /** Label beside the Sun in the orbit diagram. */
-  sun: 'Sun',
-};
-
-/* ---- portrait: the grayscale master if the builder unit produced it ---- */
-const portraits = import.meta.glob<{ default: ImageMetadata }>('../assets/vinicius-magno*.jpg', { eager: true });
-const portrait = (portraits['../assets/vinicius-magno-mono.jpg'] ?? portraits['../assets/vinicius-magno.jpg'])?.default;
-const showPortrait = founder.portrait.confirmed && Boolean(portrait);
+const showPortrait = founder.portrait.confirmed;
 
 /* ---- typesetting helpers (the words are unchanged) --------------------- */
 const WJ = String.fromCharCode(0x2060);
@@ -56,13 +53,23 @@ const tie = (t: string) =>
 
 /* H1: one sentence per line block, each balanced on its own */
 const h1Lines = about.h1.split(/(?<=\.)\s+/);
-const [bioLead, ...bioBody] = about.bio;
-const linkedinText = contact.linkedin.name;
 const role = `${founder.role}, ${brand.name}`;
+const linkedinText = contact.linkedin.name;
 
 /* Hours as a numeral: "Mon–Fri, 9:00–18:00" → days + range */
 const [hoursDays, hoursRange] = contact.hours.short.split(/,\s*/);
 const hoursMeta = [hoursDays, `${brand.city} time`, contact.hours.utcOffset];
+/* the numeral as drums: digits roll one full turn, right to left */
+const hoursChars = [...hoursRange].map((ch) => (/\d/.test(ch) ? { d: Number(ch) } : { s: ch }));
+const digitCount = hoursChars.filter((c) => 'd' in c).length;
+let seen = 0;
+const hoursDrums = hoursChars.map((c) => ('d' in c ? { ...c, k: digitCount - 1 - seen++ } : c));
+const strip = Array.from({ length: 20 }, (_, i) => i % 10);
+
+/* Company facts: split into the entity and the paperwork */
+const factRows = about.companyFacts.rows;
+const entityRows = factRows.slice(0, 3);
+const paperRows = factRows.slice(3);
 
 /* The name: the first sentence carries the story, the rest follows */
 const [nameFirst, ...nameRest] = about.theName.text.split(/(?<=\.)\s+(?=[A-Z])/);
@@ -78,13 +85,16 @@ const source = about.theName.source;
    ====================================================================== */
 const VB = { w: 600, h: 560 };
 const PAD = 16;
-const ELEMENTS: Record<string, { peri: number; at: number }> = {
+const ELEMENTS: Record<string, { peri: number; at: number; period: number }> = {
   /* peri: longitude of perihelion ϖ (deg). at: where the planet rests in
-     the drawing, as a heliocentric longitude (deg) — composition only. */
-  Mars: { peri: 336.0, at: 146 },
-  '4 Vesta': { peri: 255.0, at: 18 },
-  Jupiter: { peri: 14.7, at: 232 },
+     the drawing, as a heliocentric longitude (deg) — composition only.
+     period: sidereal period in years (NASA fact sheets). */
+  Mars: { peri: 336.0, at: 146, period: 1.88 },
+  '4 Vesta': { peri: 255.0, at: 18, period: 3.63 },
+  Jupiter: { peri: 14.7, at: 232, period: 11.86 },
 };
+/** one lap of 4 Vesta on screen, in ms; the others keep true ratios */
+const VESTA_LAP_MS = 36000;
 const rad = (d: number) => (d * Math.PI) / 180;
 const deg = (r: number) => (r * 180) / Math.PI;
 
@@ -131,8 +141,24 @@ const anomalyAt = (a: number, e: number, peri: number, lon: number) => {
   return best;
 };
 
+/** one lap sampled at equal TIME (uniform mean anomaly, Kepler's equation
+    solved per sample), so the planet speeds up near perihelion */
+const keplerLap = (a: number, e: number, peri: number, E0: number, n = 144) => {
+  const M0 = E0 - e * Math.sin(E0);
+  const pts: string[] = [];
+  for (let k = 0; k <= n; k++) {
+    const M = M0 + (k / n) * Math.PI * 2;
+    let E = M;
+    for (let it = 0; it < 8; it++) E -= (E - e * Math.sin(E) - M) / (1 - e * Math.cos(E));
+    const [x, y] = toScreen(planePos(a, e, peri, E));
+    pts.push(`${x.toFixed(2)},${y.toFixed(2)}`);
+  }
+  return pts.join(' ');
+};
+
+const vestaPeriod = ELEMENTS['4 Vesta'].period;
 const orbits = footer.orbit.bodies.map((body, k) => {
-  const el = ELEMENTS[body.name] ?? { peri: 0, at: 0 };
+  const el = ELEMENTS[body.name] ?? { peri: 0, at: 0, period: vestaPeriod };
   const { a, e } = body;
   const b = a * Math.sqrt(1 - e * e);
   const E0 = anomalyAt(a, e, el.peri, el.at);
@@ -149,14 +175,28 @@ const orbits = footer.orbit.bodies.map((body, k) => {
       .map(([x, y]) => `A${rx} ${ry} ${rot} 0 0 ${f2(x)} ${f2(y)}`)
       .join('');
   const [px, py] = pts[0];
-  return { name: body.name, a, e, k, d, px: f2(px), py: f2(py), vesta: body.name === '4 Vesta', peri: el.peri, E0, b };
+  return {
+    name: body.name,
+    a,
+    e,
+    k,
+    d,
+    px: f2(px),
+    py: f2(py),
+    vesta: body.name === '4 Vesta',
+    peri: el.peri,
+    E0,
+    b,
+    lap: keplerLap(a, e, el.peri, E0),
+    lapMs: Math.round((VESTA_LAP_MS * el.period) / vestaPeriod),
+  };
 });
 
 const vesta = orbits.find((o) => o.vesta)!;
 
-/* Vesta's lap: the planet sampled at equal ARC LENGTH along the same path,
-   so with the same easing it sits exactly on the head of the stroke being
-   drawn (the dash is measured in arc length too). */
+/* Vesta's first lap: the planet sampled at equal ARC LENGTH along the same
+   path, so with the same easing it sits exactly on the head of the stroke
+   being drawn (the dash is measured in arc length too). */
 const DENSE = 1440;
 const dense: [number, number][] = [];
 for (let i = 0; i <= DENSE; i++) dense.push(toScreen(planePos(vesta.a, vesta.e, vesta.peri, vesta.E0 + (i / DENSE) * Math.PI * 2)));
@@ -187,7 +227,6 @@ const dim = {
     `M${f2(C[0])} ${f2(C[1])}L${f2(A[0])} ${f2(A[1])}` +
     `M${f2(C[0] - n[0] * TICK)} ${f2(C[1] - n[1] * TICK)}L${f2(C[0] + n[0] * TICK)} ${f2(C[1] + n[1] * TICK)}` +
     `M${f2(A[0] - n[0] * TICK)} ${f2(A[1] - n[1] * TICK)}L${f2(A[0] + n[0] * TICK)} ${f2(A[1] + n[1] * TICK)}`,
-  /* label anchor: two thirds of the way out, on the side facing away from the Sun's column */
   lx: f2(C[0] + (A[0] - C[0]) * 0.62),
   ly: f2(C[1] + (A[1] - C[1]) * 0.62),
   text: `a ${vesta.a} AU`,
@@ -196,7 +235,7 @@ const dim = {
 const pct = (v: number, of: number) => `${((v / of) * 100).toFixed(3)}%`;
 /* HTML labels (fixed type size at every width): anchor + which side */
 const labels = [
-  { text: TODO_SITE.sun, x: SUN.x, y: SUN.y, side: 'below', cls: 'is-sun' },
+  { text: about.sun, x: SUN.x, y: SUN.y, side: 'below', cls: 'is-sun' },
   ...orbits.map((o) => ({
     text: o.name,
     x: o.px,
@@ -208,8 +247,15 @@ const labels = [
   { text: dim.text, x: dim.lx, y: dim.ly, side: 'right', cls: 'is-dim' },
 ];
 
-/* the closing: "Send your current website." / "Get a fixed price." */
+/* ---- the portrait orbit: one ellipse, tilted like the orbit mark ------- */
+const RING = { rx: 96, ry: 27, tilt: -24 };
+
+/* the closing: "Send your current website." / "Get a free price analysis." */
 const closeLines = finale.h2.split(/(?<=\.)\s+/);
+/* first and last sentence of the finale body: the ask and the promise */
+const closeSentences = finale.body.split(/(?<=[.?])\s+/);
+const closeBody = closeSentences.length > 2 ? `${closeSentences[0]} ${closeSentences[closeSentences.length - 1]}` : finale.body;
+const mailHref = mail(contact.email.subject);
 
 const jsonLd = {
   '@context': 'https://schema.org',
@@ -232,31 +278,67 @@ const jsonLd = {
           <SectionLabel name={about.label.name} reveal={false} />
         </div>
         <SplitText as="h1" id="about-title" class="h1" lines={h1Lines} load delay={80} />
-        <p class="lead intro-lead" data-load style="--d:400ms">{about.lead}</p>
+        <p class="lead intro-lead" data-load style="--d:420ms">{about.lead}</p>
       </header>
 
       {
-        showPortrait && portrait && (
-          <figure class="portrait">
-            <div class="plate">
-              <div class="frame" data-reveal="wipe" style="--d:160ms">
-                <Picture
-                  src={portrait}
-                  alt={founder.portrait.alt}
-                  formats={['avif', 'webp']}
-                  widths={[560, 1120]}
-                  sizes="(min-width: 1440px) 546px, (min-width: 1100px) calc((100vw - 96px - 264px) * 5 / 12 + 96px), (min-width: 768px) calc((100vw - 64px - 140px) / 2 + 60px), calc(100vw - 40px)"
-                  width={560}
-                  height={700}
-                  quality={70}
-                  loading="eager"
-                  decoding="async"
-                  class="photo"
-                />
+        showPortrait && (
+          <figure class="portrait" data-parallax="0.05">
+            <div class="enter" data-inview data-ringed>
+              <div class="tilt" data-tilt="6" data-light>
+                <div class="ring ring-back" aria-hidden="true">
+                  <svg class="ring-svg" viewBox="-100 -100 200 200" focusable="false">
+                    <g transform={`rotate(${RING.tilt})`}>
+                      <ellipse class="ring-path" rx={RING.rx} ry={RING.ry} pathLength="100" />
+                      <g class="orb-x">
+                        <g class="orb-y">
+                          <circle class="orb" r="2" />
+                        </g>
+                      </g>
+                    </g>
+                  </svg>
+                </div>
+
+                <div class="frame" data-reveal="wipe" style="--d:180ms">
+                  <Picture
+                    src={portrait}
+                    alt={founder.portrait.alt}
+                    formats={['avif', 'webp']}
+                    widths={[560, 1120]}
+                    sizes="(min-width: 1440px) 546px, (min-width: 1100px) calc((100vw - 96px - 264px) * 5 / 12 + 96px), (min-width: 768px) calc((100vw - 64px - 140px) / 2 + 60px), calc(100vw - 40px)"
+                    width={560}
+                    height={700}
+                    quality={74}
+                    loading="eager"
+                    decoding="async"
+                    class="photo"
+                  />
+                  <span class="light" aria-hidden="true"></span>
+                </div>
+                <span class="bar" aria-hidden="true" />
+
+                <div class="ring ring-front" aria-hidden="true">
+                  <svg class="ring-svg" viewBox="-100 -100 200 200" focusable="false">
+                    <defs>
+                      <clipPath id="ring-front-half">
+                        <rect x="-110" y="0" width="220" height="60" />
+                      </clipPath>
+                    </defs>
+                    <g transform={`rotate(${RING.tilt})`}>
+                      <g clip-path="url(#ring-front-half)">
+                        <ellipse class="ring-path" rx={RING.rx} ry={RING.ry} pathLength="100" />
+                        <g class="orb-x">
+                          <g class="orb-y">
+                            <circle class="orb" r="2" />
+                          </g>
+                        </g>
+                      </g>
+                    </g>
+                  </svg>
+                </div>
               </div>
-              <span class="bar" aria-hidden="true" />
             </div>
-            <figcaption class="cap" data-reveal style="--d:520ms">
+            <figcaption class="cap" data-reveal style="--d:640ms">
               <span class="cap-name">{founder.name}</span>
               <span class="cap-role label">{role}</span>
               <span class="cap-loc small">{founder.location}</span>
@@ -265,26 +347,24 @@ const jsonLd = {
         )
       }
 
-      <div class="bio">
-        <SectionLabel name={founder.name} />
-        <SplitText as="h2" class="bio-title" text={tie(bioLead)} />
-        {
-          bioBody.map((p, i) => (
-            <p class="body bio-p" data-reveal style={`--i:${i + 1}`}>
-              {tie(p)}
-            </p>
-          ))
-        }
-        {
-          contact.linkedin.confirmed && (
-            <p class="bio-link" data-reveal style="--i:3">
-              <a class="tlink" href={contact.linkedin.url} target="_blank" rel="noopener">
-                <span>{linkedinText}</span>
-                <Arrow dir="up-right" />
-              </a>
-            </p>
-          )
-        }
+      <div class="intro-more">
+        <Expand title={about.more.builder.title} keywords={about.more.builder.keywords} index="01" i={0}>
+          {about.bio[0] && <p class="body">{tie(about.bio[0])}</p>}
+          {about.bio[2] && <p class="body">{tie(about.bio[2])}</p>}
+        </Expand>
+        <Expand title={about.more.background.title} keywords={about.more.background.keywords} index="02" i={1}>
+          {about.bio[1] && <p class="body">{tie(about.bio[1])}</p>}
+          {
+            contact.linkedin.confirmed && (
+              <p>
+                <a class="tlink" href={contact.linkedin.url} target="_blank" rel="noopener">
+                  <span>{linkedinText}</span>
+                  <Arrow dir="up-right" />
+                </a>
+              </p>
+            )
+          }
+        </Expand>
       </div>
     </div>
   </section>
@@ -295,13 +375,15 @@ const jsonLd = {
       <header class="how-head">
         <SplitText as="h2" id="how-title" class="d2 how-title" text={about.howVestaWorks.title} />
       </header>
-      <ol class="how-list">
+      <div class="how-list" data-how>
+        <span class="how-rail" aria-hidden="true"><span class="how-rail-fill"></span></span>
+        <ol>
         {
           about.howVestaWorks.items.map((item, r) => (
             <li class="how-row" data-inview style={`--r:${r}`}>
               <span class="how-line" aria-hidden="true" />
               <span class="how-idx" aria-hidden="true">
-                <span class="node how-node" />
+                <span class="how-node" />
                 <span class="label how-n">{String(r + 1).padStart(2, '0')}</span>
               </span>
               <p class="how-text">{tie(item)}</p>
@@ -309,30 +391,69 @@ const jsonLd = {
             </li>
           ))
         }
-      </ol>
+        </ol>
+      </div>
     </div>
   </section>
 
   {/* ------------------------------------------------ company facts + hours */}
   <section class="facts s-paper-2 section" data-nav-theme="light" aria-labelledby="facts-title">
-    <div class="wrap g">
+    <div class="wrap g" data-scene>
       <div class="facts-main">
         <SplitText as="h2" id="facts-title" class="d2 facts-title" text={about.companyFacts.title} />
-        <dl class="table">
-          {
-            about.companyFacts.rows.map((row, r) => (
-              <div class="t-row" data-inview style={`--r:${r}`}>
-                <dt class="label">{row.label}</dt>
-                <dd>{keepRange(row.value)}</dd>
-              </div>
-            ))
-          }
-        </dl>
+        <div class="facts-boxes">
+          <Expand title={about.more.entity.title} keywords={about.more.entity.keywords} index="01" i={0}>
+            <dl class="table">
+              {
+                entityRows.map((row) => (
+                  <div class="t-row">
+                    <dt class="label">{row.label}</dt>
+                    <dd>{keepRange(row.value)}</dd>
+                  </div>
+                ))
+              }
+            </dl>
+          </Expand>
+          <Expand title={about.more.paperwork.title} keywords={about.more.paperwork.keywords} index="02" i={1}>
+            <dl class="table">
+              {
+                paperRows.map((row) => (
+                  <div class="t-row">
+                    <dt class="label">{row.label}</dt>
+                    <dd>{keepRange(row.value)}</dd>
+                  </div>
+                ))
+              }
+            </dl>
+          </Expand>
+        </div>
       </div>
 
       <aside class="hours" aria-labelledby="hours-title">
-        <h3 class="d3 hours-title" id="hours-title" data-reveal>{about.hours.title}</h3>
-        <p class="n1 hours-n" data-reveal style="--i:1">{keepRange(hoursRange)}</p>
+        <h3 class="label hours-title" id="hours-title" data-reveal>{contactPage.hours.title}</h3>
+        <p class="n1 hours-n" data-inview>
+          <span class="visually-hidden">{hoursRange}</span>
+          <span class="drums" aria-hidden="true">
+            {
+              hoursDrums.map((c) =>
+                'd' in c ? (
+                  <span class="drum" style={`--v:${c.d};--k:${c.k}`}>
+                    <span class="strip">
+                      {strip.map((s, i) => (
+                        <Fragment>
+                          {i > 0 && <br />}
+                          {s}
+                        </Fragment>
+                      ))}
+                    </span>
+                  </span>
+                ) : (
+                  <span class:list={['glyph', { dash: c.s === '–' }]}>{c.s}</span>
+                )
+              )
+            }
+          </span>
+        </p>
         <p class="label hours-meta" data-reveal style="--i:2">
           {
             hoursMeta.map((m, k) => (
@@ -343,8 +464,11 @@ const jsonLd = {
             ))
           }
         </p>
-        <span class="rule hours-rule" data-reveal="draw" style="--d:200ms" aria-hidden="true" />
-        <p class="body hours-body" data-reveal style="--i:3">{about.hours.body}</p>
+        <div class="hours-box">
+          <Expand title={about.hours.title} keywords={about.more.overlap.keywords} i={3}>
+            <p class="body">{about.hours.body}</p>
+          </Expand>
+        </div>
       </aside>
     </div>
   </section>
@@ -352,90 +476,182 @@ const jsonLd = {
   {/* ------------------------------------------------------------ the name */}
   <section class="name s-night section" data-nav-theme="dark" aria-labelledby="name-title">
     <Cosmos variant="stars" />
-    <div class="wrap g name-grid">
-      <div class="name-copy">
+    <div class="wrap g name-grid" data-scene>
+      <div class="name-head">
         <h2 class="sec-label label name-label" id="name-title" data-reveal>
           <span class="stripe" aria-hidden="true"></span>
           <span>{about.theName.title}</span>
         </h2>
         <SplitText as="p" class="name-first" text={tie(nameFirst)} />
-        {
-          nameRest.length > 0 && (
-            <p class="lead name-rest" data-reveal style="--i:1">
-              {tie(nameRest.join(' '))}
-            </p>
-          )
-        }
-        {
-          about.theName.closing.confirmed && (
-            <p class="body name-closing" data-reveal style="--i:2">
-              {tie(about.theName.closing.text)}
-            </p>
-          )
-        }
-        <p class="small name-source" data-reveal style="--i:3">
-          <a class="src" href={source.url} target="_blank" rel="noopener">{source.citation}<Arrow dir="up-right" size={12} /></a>
-        </p>
       </div>
 
-      <figure class="orbit-fig">
-        <div class="orbit-stage" data-inview data-name-orbit data-trace={trace.join(' ')}>
-          <svg class="orbit-svg" viewBox={`0 0 ${VB.w} ${VB.h}`} aria-hidden="true" focusable="false">
-            <path class="o-dim" d={dim.d} />
-            {
-              orbits.map((o) => (
-                <path class:list={['o-path', { 'is-vesta': o.vesta }]} d={o.d} pathLength="100" style={`--k:${o.k}`} />
-              ))
-            }
-            <circle class="o-sun-ring" cx={f2(SUN.x)} cy={f2(SUN.y)} r="9" />
-            <circle class="o-sun" cx={f2(SUN.x)} cy={f2(SUN.y)} r="3.6" />
-            {
-              orbits
-                .filter((o) => !o.vesta)
-                .map((o) => <circle class="o-planet" cx={o.px} cy={o.py} r="3.2" style={`--k:${o.k}`} />)
-            }
-            <circle class="o-vesta" cx="0" cy="0" r="4.6" style={`transform: translate(${vesta.px}px, ${vesta.py}px)`} data-vesta-planet />
-          </svg>
-          {
-            labels.map((l, k) => (
-              <span
-                class:list={['o-label', 'label', `to-${l.side}`, l.cls]}
-                style={`left:${pct(l.x, VB.w)};top:${pct(l.y, VB.h)};--k:${k}`}
-                aria-hidden="true"
-              >
-                {l.text}
-              </span>
-            ))
-          }
+      <figure class="vesta-fig">
+        <div class="vesta-body" data-inview data-ringed>
+          <div class="ring ring-back" aria-hidden="true">
+            <svg class="ring-svg" viewBox="-100 -100 200 200" focusable="false">
+              <g transform={`rotate(${RING.tilt})`}>
+                <ellipse class="ring-path" rx={RING.rx} ry={RING.ry} pathLength="100" />
+                <g class="orb-x">
+                  <g class="orb-y">
+                    <circle class="orb" r="1.6" />
+                  </g>
+                </g>
+              </g>
+            </svg>
+          </div>
+          <div class="vesta-rock">
+            <Asteroid size={420} drag />
+          </div>
+          <div class="ring ring-front" aria-hidden="true">
+            <svg class="ring-svg" viewBox="-100 -100 200 200" focusable="false">
+              <defs>
+                <clipPath id="vesta-front-half">
+                  <rect x="-110" y="0" width="220" height="60" />
+                </clipPath>
+              </defs>
+              <g transform={`rotate(${RING.tilt})`}>
+                <g clip-path="url(#vesta-front-half)">
+                  <ellipse class="ring-path" rx={RING.rx} ry={RING.ry} pathLength="100" />
+                  <g class="orb-x">
+                    <g class="orb-y">
+                      <circle class="orb" r="1.6" />
+                    </g>
+                  </g>
+                </g>
+              </g>
+            </svg>
+          </div>
+          <span class="vesta-dim" aria-hidden="true">
+            <span class="vesta-dim-line"></span>
+            <span class="label vesta-dim-label">{about.asteroid.mean}</span>
+          </span>
         </div>
-        <figcaption class="orbit-cap small" data-reveal style="--d:300ms">
-          <span class="stripe" aria-hidden="true"></span>
-          <span>{footer.orbit.caption}</span>
+        <figcaption class="vesta-cap" data-reveal style="--d:200ms">
+          <span class="vesta-name">{about.asteroid.name}</span>
+          <span class="label vesta-dims">{about.asteroid.dims}</span>
+          <span class="small vesta-hint" aria-hidden="true">{about.asteroid.hint}</span>
+          <a class="small src vesta-src" href={source.url} target="_blank" rel="noopener">{source.citation}<Arrow dir="up-right" size={12} /></a>
         </figcaption>
       </figure>
+
+      <div class="name-boxes">
+        <Expand title={about.more.story.title} keywords={about.more.story.keywords} index="01" i={1}>
+          {nameRest.length > 0 && <p class="body">{tie(nameRest.join(' '))}</p>}
+          {about.theName.closing.confirmed && <p class="body">{tie(about.theName.closing.text)}</p>}
+        </Expand>
+        <Expand title={about.more.orbit.title} keywords={about.more.orbit.keywords} index="02" i={2}>
+          <figure class="orbit-fig">
+            <div class="orbit-tilt" data-inview>
+              <div class="orbit-stage" data-inview data-name-orbit data-trace={trace.join(' ')}>
+                <svg class="orbit-svg" viewBox={`0 0 ${VB.w} ${VB.h}`} aria-hidden="true" focusable="false">
+                  <path class="o-dim" d={dim.d} />
+                  {
+                    orbits.map((o) => (
+                      <path class:list={['o-path', { 'is-vesta': o.vesta }]} d={o.d} pathLength="100" style={`--k:${o.k}`} />
+                    ))
+                  }
+                  <circle class="o-sun-ring" cx={f2(SUN.x)} cy={f2(SUN.y)} r="9" />
+                  <circle class="o-sun" cx={f2(SUN.x)} cy={f2(SUN.y)} r="3.6" />
+                  {
+                    orbits
+                      .filter((o) => !o.vesta)
+                      .map((o) => (
+                        <circle
+                          class="o-planet"
+                          cx="0"
+                          cy="0"
+                          r="3.2"
+                          style={`--k:${o.k};transform:translate(${o.px}px, ${o.py}px)`}
+                          data-kepler={o.lap}
+                          data-kepler-ms={o.lapMs}
+                        />
+                      ))
+                  }
+                  <circle
+                    class="o-vesta"
+                    cx="0"
+                    cy="0"
+                    r="4.6"
+                    style={`transform: translate(${vesta.px}px, ${vesta.py}px)`}
+                    data-vesta-planet
+                    data-kepler={vesta.lap}
+                    data-kepler-ms={vesta.lapMs}
+                  />
+                </svg>
+                {
+                  labels.map((l, k) => (
+                    <span
+                      class:list={['o-label', 'label', `to-${l.side}`, l.cls]}
+                      style={`left:${pct(l.x, VB.w)};top:${pct(l.y, VB.h)};--k:${k}`}
+                      aria-hidden="true"
+                    >
+                      {l.text}
+                    </span>
+                  ))
+                }
+              </div>
+            </div>
+            <figcaption class="orbit-cap small">
+              <span class="stripe" aria-hidden="true"></span>
+              <span>{footer.orbit.caption}</span>
+            </figcaption>
+          </figure>
+        </Expand>
+      </div>
     </div>
   </section>
 
   {/* ------------------------------------------------------------- closing */}
   <section class="close s-violet section" data-nav-theme="dark" data-sticky-hide aria-labelledby="close-title">
-    <div class="wrap g close-grid">
+    <div class="wrap g close-grid" data-scene="soft">
       <SplitText as="h2" id="close-title" class="d2 close-title" lines={closeLines} />
-      <p class="lead close-body" data-reveal style="--i:1">{tie(finale.body)}</p>
+      <p class="lead close-body" data-reveal style="--i:1">{tie(closeBody)}</p>
       <div class="close-act">
-        <div data-reveal style="--i:2">
-          <a class="btn btn-star btn-lg close-btn" href={wa(finale.button.text)} target="_blank" rel="noopener" data-wa-intent="about-close">
-            <WaGlyph size={18} />
-            <span class="b-lbl">{finale.button.label}</span>
-            <Arrow />
-          </a>
+        <div class="close-btns">
+          <div class="close-cell" data-reveal style="--i:2">
+            <a
+              class="btn btn-star btn-lg close-btn"
+              href={wa(finale.button.text)}
+              target="_blank"
+              rel="noopener"
+              data-wa-intent="about-close"
+              data-magnetic=".22"
+            >
+              <WaGlyph size={18} />
+              <span class="b-lbl">{finale.button.label}</span>
+              <Arrow />
+            </a>
+          </div>
+          {
+            contact.email.confirmed && (
+              <div class="close-cell" data-reveal style="--i:3">
+                <a class="btn btn-line btn-lg close-mail" href={mailHref} data-mail-intent="about-close" data-magnetic=".22">
+                  <MailGlyph size={18} />
+                  <span>{about.emailButton}</span>
+                  <Arrow />
+                </a>
+              </div>
+            )
+          }
         </div>
-        <p class="close-num" data-reveal style="--i:3">
-          <a class="close-num-v" href={contact.whatsapp.url} target="_blank" rel="noopener">{contact.whatsapp.display}</a>
-          <span class="small close-reassure">{finale.reassurance}</span>
-        </p>
+        <ul class="close-lines" data-reveal style="--i:4">
+          <li>
+            <span class="label close-k">{contactPage.panel.label}</span>
+            <a class="close-v" href={contact.whatsapp.url} target="_blank" rel="noopener">{contact.whatsapp.display}</a>
+          </li>
+          {
+            contact.email.confirmed && (
+              <li>
+                <span class="label close-k">{contact.email.label}</span>
+                <a class="close-v" href={mailHref}>{contact.email.address}</a>
+              </li>
+            )
+          }
+        </ul>
+        <p class="small close-reassure" data-reveal style="--i:5">{finale.reassurance}</p>
         {
           contact.linkedin.confirmed && (
-            <p class="close-links" data-reveal style="--i:4">
+            <p class="close-links" data-reveal style="--i:6">
               <a class="tlink" href={contact.linkedin.url} target="_blank" rel="noopener">
                 <span>{contact.linkedin.label.replace(/\s*↗\s*$/, '')}</span>
                 <Arrow dir="up-right" />
@@ -455,17 +671,16 @@ const jsonLd = {
   .intro {
     position: relative;
     overflow: clip;
-    padding-block: calc(var(--nav-h) + clamp(3rem, 1.6rem + 5.4vw, 7.5rem)) clamp(5rem, 3.2rem + 6vw, 9.5rem);
+    padding-block: calc(var(--nav-h) + clamp(3rem, 1.6rem + 5.4vw, 7rem)) clamp(5rem, 3.2rem + 6vw, 9rem);
   }
 
-  /* the star field covers the first screen only; the bio sits on plain void */
+  /* the star field covers the first screen and thins out under the boxes */
   .sky {
     position: absolute;
     inset: 0 0 auto;
-    height: min(100%, max(100svh, 760px));
-    /* the field thins out into the plain void under the bio: no seam */
-    -webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent);
-    mask-image: linear-gradient(to bottom, #000 62%, transparent);
+    height: min(100%, max(100svh, 820px));
+    -webkit-mask-image: linear-gradient(to bottom, #000 70%, transparent);
+    mask-image: linear-gradient(to bottom, #000 70%, transparent);
   }
 
   .intro-grid {
@@ -487,12 +702,38 @@ const jsonLd = {
     color: var(--haze);
   }
 
-  /* ---- portrait ---- */
-  .portrait {
-    margin: 56px 0 0;
+  .intro-more {
+    margin-top: 64px;
   }
 
-  .plate {
+  .intro-more :global(.xp:last-child) {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .intro-more :global(.xp-inner) > :global(p + p) {
+    margin-top: 14px;
+  }
+
+  /* ---- portrait ---- */
+  .portrait {
+    position: relative;
+    margin: 72px 0 0;
+  }
+
+  /* the whole plate swings in from the right, hinged on its right edge */
+  .enter {
+    transform-origin: 100% 50%;
+    transition:
+      transform 1800ms var(--ease-expo),
+      opacity 700ms linear;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .enter:not(.is-in) {
+    opacity: 0;
+    transform: perspective(1400px) rotateY(-26deg) translate3d(72px, 0, 0) scale(0.94);
+  }
+
+  .tilt {
     position: relative;
   }
 
@@ -515,8 +756,147 @@ const jsonLd = {
     object-position: 50% 30%;
   }
 
+  /* a soft light inside the photo that follows the pointer (fine pointers;
+     transform + opacity only, the gradient itself never moves) */
+  .light {
+    position: absolute;
+    inset: -50%;
+    background: radial-gradient(circle at 50% 50%, rgb(255 255 255 / 0.14), rgb(255 255 255 / 0) 34%);
+    opacity: 0;
+    transform: translate3d(calc((var(--lx, 0.5) - 0.5) * 50%), calc((var(--ly, 0.5) - 0.5) * 50%), 0);
+    transition: opacity 600ms var(--ease-expo);
+    pointer-events: none;
+  }
+
+  .is-lit .light {
+    opacity: 1;
+  }
+
+  /* ---- the orbit around the portrait ----
+     Two copies of one ellipse share the plate's box: the back copy sits
+     behind the photo (only its ends show), the front copy is clipped to the
+     near half and sits over it. In the tilt's 3D space they are 24px apart;
+     the scale compensates the perspective so at rest they meet exactly. */
+  .ring {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .ring-back {
+    transform: translate3d(0, 0, -24px) scale(1.0218);
+  }
+
+  .ring-front {
+    transform: translate3d(0, 0, 24px) scale(0.9782);
+  }
+
+  .ring-svg {
+    position: absolute;
+    left: 50%;
+    top: var(--ring-top, 47%);
+    width: var(--ring-w, 150%);
+    aspect-ratio: 1;
+    overflow: visible;
+    transform: translate(-50%, -50%);
+  }
+
+  /* stroke widths in viewBox units (1 unit ≈ 2.2px on phones, ≈ 4px on
+     desktop): non-scaling-stroke would break the pathLength dash */
+  .ring-path {
+    fill: none;
+    stroke: var(--lilac);
+    stroke-width: 0.5;
+    stroke-dasharray: 100 100;
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset 2000ms var(--ease-quint) 700ms;
+  }
+
+  .ring-front .ring-path {
+    stroke: var(--starlight);
+    stroke-width: 0.55;
+  }
+
+  @media (min-width: 768px) {
+    .ring-path {
+      stroke-width: 0.32;
+    }
+
+    .ring-front .ring-path {
+      stroke-width: 0.36;
+    }
+  }
+
+  .orb {
+    fill: var(--starlight);
+    transition: opacity 700ms linear;
+  }
+
+  /* at rest (no JS, motion off): the planet waits on the near side */
+  .orb-x {
+    transform: translateX(48px);
+  }
+
+  .orb-y {
+    transform: translateY(23.4px);
+  }
+
+  /* one lap = 2 × --orb-t; x and y run a quarter lap apart (sine-eased), so
+     the planet traces the ellipse with transforms only */
+  .ring {
+    --orb-t: 9s;
+  }
+
+  .ring.is-live .orb-x {
+    animation: orb-x var(--orb-t) cubic-bezier(0.37, 0, 0.63, 1) infinite alternate;
+  }
+
+  .ring.is-live .orb-y {
+    animation: orb-y var(--orb-t) cubic-bezier(0.37, 0, 0.63, 1) infinite alternate;
+    animation-delay: calc(var(--orb-t) / -2);
+  }
+
+  .ring.is-paused .orb-x,
+  .ring.is-paused .orb-y {
+    animation-play-state: paused;
+  }
+
+  @keyframes orb-x {
+    from {
+      transform: translateX(96px);
+    }
+    to {
+      transform: translateX(-96px);
+    }
+  }
+
+  @keyframes orb-y {
+    from {
+      transform: translateY(-27px);
+    }
+    to {
+      transform: translateY(27px);
+    }
+  }
+
+  :global(html.motion-reduced) .orb-x,
+  :global(html.motion-reduced) .orb-y,
+  :global(html.motion-failed) .orb-x,
+  :global(html.motion-failed) .orb-y {
+    animation: none !important;
+  }
+
+  /* armed: nothing drawn, no planet, until the plate is in */
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) [data-ringed]:not(.is-in) .ring-path {
+    stroke-dashoffset: 100;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .ring:not(.is-live) .orb {
+    opacity: 0;
+  }
+
   /* 2px violet bar: bottom edge on phones (draws left → right), right edge
-     from 768px (grows bottom → top), 300ms after the wipe starts */
+     from 768px (grows bottom → top), after the wipe starts */
   .bar {
     position: absolute;
     z-index: 2;
@@ -528,8 +908,8 @@ const jsonLd = {
     transform-origin: left center;
     pointer-events: none;
     transition:
-      transform var(--t-line) var(--ease-quint) 460ms,
-      opacity 200ms linear 460ms;
+      transform var(--t-line) var(--ease-quint) 520ms,
+      opacity 200ms linear 520ms;
   }
 
   :global(html.js:not(.motion-reduced):not(.motion-failed)) .frame:not(.is-in) + .bar {
@@ -552,11 +932,13 @@ const jsonLd = {
   }
 
   .cap {
+    position: relative;
+    z-index: 3;
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: baseline;
     gap: 6px 16px;
-    padding-top: 16px;
+    padding-top: 18px;
   }
 
   .cap-name {
@@ -576,33 +958,11 @@ const jsonLd = {
     color: var(--dim);
   }
 
-  /* ---- bio ---- */
-  .bio {
-    margin-top: 72px;
-  }
-
-  .bio-title {
-    max-width: 24ch;
-    margin-top: 28px;
-    font-size: var(--t-d3);
-    font-weight: 600;
-    line-height: 1.16;
-    letter-spacing: -0.012em;
-    text-wrap: balance;
-  }
-
-  .bio-p {
-    max-width: 48ch;
-    margin-top: 24px;
-    color: var(--haze);
-  }
-
-  .bio-title + .bio-p {
-    margin-top: 32px;
-  }
-
-  .bio-link {
-    margin-top: 32px;
+  /* phones: the orbit is a little tighter so the planet stays in frame */
+  @media (max-width: 767.98px) {
+    .ring-svg {
+      width: 128%;
+    }
   }
 
   @media (min-width: 768px) {
@@ -613,17 +973,17 @@ const jsonLd = {
     .portrait {
       grid-column: 5 / 9;
       grid-row: 1 / span 2;
-      margin-top: 8px;
+      margin-top: 24px;
     }
 
-    .bio {
+    .intro-more {
       grid-column: 1 / 5;
       grid-row: 2;
-      margin-top: 88px;
+      margin-top: 72px;
     }
 
     .solo .intro-head,
-    .solo .bio {
+    .solo .intro-more {
       grid-column: 1 / -1;
     }
   }
@@ -635,25 +995,16 @@ const jsonLd = {
 
     .portrait {
       grid-column: 8 / 13;
-      margin-top: 44px;
+      margin-top: 36px;
     }
 
-    .bio {
+    .intro-more {
       grid-column: 1 / 7;
-      margin-top: 120px;
+      margin-top: 88px;
     }
 
-    .solo .bio {
+    .solo .intro-more {
       grid-column: 1 / 8;
-    }
-  }
-
-  /* The portrait holds while the bio scrolls past it, wherever the whole
-     figure (≈ 1.25 × its width + caption) fits under the nav. */
-  @media (min-width: 1100px) and (min-height: 860px), (min-width: 1100px) and (max-aspect-ratio: 16/10) {
-    .portrait {
-      position: sticky;
-      top: calc(var(--nav-h) + 40px);
     }
   }
 
@@ -665,7 +1016,30 @@ const jsonLd = {
   }
 
   .how-list {
+    position: relative;
     margin-top: 48px;
+  }
+
+  /* the rail through the nodes; the violet fill follows the reading line */
+  .how-rail {
+    position: absolute;
+    left: 4px;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background-color: var(--line);
+  }
+
+  .how-rail-fill {
+    position: absolute;
+    inset: 0 -0.5px;
+    background-color: var(--violet);
+    transform-origin: center top;
+    transform: scaleY(1);
+  }
+
+  .how-list.is-scrub .how-rail-fill {
+    transform: scaleY(var(--hp, 0));
   }
 
   .how-row {
@@ -685,9 +1059,9 @@ const jsonLd = {
     background-color: var(--line-strong);
     transform-origin: left center;
     transition:
-      transform 1000ms var(--ease-quint),
+      transform 1100ms var(--ease-quint),
       opacity 200ms linear;
-    transition-delay: calc(var(--r, 0) * 60ms);
+    transition-delay: calc(var(--r, 0) * 70ms);
   }
 
   .how-line-end {
@@ -697,27 +1071,27 @@ const jsonLd = {
   }
 
   .how-idx {
+    position: relative;
+    z-index: 1;
     display: inline-flex;
     align-items: center;
     gap: 10px;
-    color: var(--violet-ink);
     transition:
       transform var(--t-reveal) var(--ease-expo),
       opacity var(--t-reveal) var(--ease-expo);
-    transition-delay: calc(var(--r, 0) * 60ms + 100ms);
+    transition-delay: calc(var(--r, 0) * 70ms + 100ms);
   }
 
   .how-node {
-    color: var(--violet);
-    transition: background-color 360ms var(--ease-expo);
-    transition-delay: calc(var(--r, 0) * 60ms + 520ms);
-  }
-
-  .how-row.is-in .how-node,
-  :global(html:not(.js)) .how-node,
-  :global(html.motion-reduced) .how-node,
-  :global(html.motion-failed) .how-node {
+    display: inline-block;
+    flex: 0 0 auto;
+    width: 9px;
+    height: 9px;
+    border: 1px solid var(--violet);
     background-color: var(--violet);
+    transition:
+      background-color 360ms var(--ease-expo),
+      transform 600ms var(--ease-settle);
   }
 
   .how-n {
@@ -726,17 +1100,33 @@ const jsonLd = {
 
   .how-text {
     font-stretch: var(--wd-display);
-    font-size: clamp(1.25rem, 1.02rem + 0.95vw, 1.875rem);
-    font-weight: 560;
-    line-height: 1.2;
-    letter-spacing: -0.012em;
+    font-size: clamp(1.375rem, 1.02rem + 1.3vw, 2.375rem);
+    font-weight: 580;
+    line-height: 1.12;
+    letter-spacing: -0.018em;
     color: var(--ink);
-    max-width: 30ch;
+    max-width: 24ch;
     text-wrap: balance;
+    transform-origin: 0 100%;
     transition:
-      transform var(--t-reveal) var(--ease-expo),
-      opacity var(--t-reveal) var(--ease-expo);
-    transition-delay: calc(var(--r, 0) * 60ms + 160ms);
+      transform 1200ms var(--ease-expo),
+      opacity 700ms var(--ease-expo),
+      color 500ms linear;
+    transition-delay: calc(var(--r, 0) * 70ms + 160ms), calc(var(--r, 0) * 70ms + 160ms), 0ms;
+  }
+
+  /* scroll-lit: statements below the reading line wait in ink-3 (5.7:1),
+     the one on the line fills its node and scales the node up once */
+  .how-list.is-scrub .how-row:not(.is-lit) .how-text {
+    color: var(--ink-3);
+  }
+
+  .how-list.is-scrub .how-row:not(.is-lit) .how-node {
+    background-color: var(--paper);
+  }
+
+  .how-list.is-scrub .how-row.is-now .how-node {
+    transform: scale(1.45);
   }
 
   :global(html.js:not(.motion-reduced):not(.motion-failed)) .how-row:not(.is-in) .how-line {
@@ -744,28 +1134,21 @@ const jsonLd = {
     transform: scaleX(0);
   }
 
-  :global(html.js:not(.motion-reduced):not(.motion-failed)) .how-row:not(.is-in) .how-idx,
-  :global(html.js:not(.motion-reduced):not(.motion-failed)) .how-row:not(.is-in) .how-text {
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .how-row:not(.is-in) .how-idx {
     opacity: 0;
-    transform: translate3d(0, 16px, 0);
+    transform: translate3d(-12px, 0, 0);
   }
 
-  @media (hover: hover) and (pointer: fine) {
-    .how-idx {
-      transition-property: transform, opacity;
-    }
-
-    .how-row:hover .how-idx {
-      transform: translateX(4px);
-      transition-delay: 0ms;
-      transition-duration: var(--t-ui);
-    }
+  /* each statement flips up from its baseline, like the headlines */
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .how-row:not(.is-in) .how-text {
+    opacity: 0;
+    transform: perspective(700px) translate3d(0, 28px, 0) rotateX(-38deg);
   }
 
   @media (min-width: 768px) {
     .how-row {
       grid-template-columns: 88px minmax(0, 1fr);
-      padding-block: 32px 34px;
+      padding-block: 34px 36px;
     }
   }
 
@@ -778,14 +1161,14 @@ const jsonLd = {
     }
 
     .how-list {
-      grid-column: 6 / 13;
+      grid-column: 5 / 13;
       margin-top: 0;
     }
 
     .how-row {
-      grid-template-columns: repeat(7, minmax(0, 1fr));
+      grid-template-columns: repeat(8, minmax(0, 1fr));
       column-gap: var(--gap);
-      padding-block: 36px 38px;
+      padding-block: 40px 42px;
     }
 
     .how-idx {
@@ -793,7 +1176,7 @@ const jsonLd = {
     }
 
     .how-text {
-      grid-column: 2 / 8;
+      grid-column: 2 / 9;
     }
   }
 
@@ -804,48 +1187,30 @@ const jsonLd = {
     max-width: 12ch;
   }
 
+  .facts-boxes {
+    margin-top: 44px;
+  }
+
+  .facts-boxes :global(.xp:last-child),
+  .hours-box :global(.xp:last-child) {
+    border-bottom: 1px solid var(--line);
+  }
+
   .table {
-    margin-top: 40px;
+    display: grid;
   }
 
   .t-row {
-    position: relative;
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    row-gap: 6px;
-    padding-block: 16px 17px;
+    row-gap: 4px;
+    padding-block: 12px 13px;
+    border-top: 1px solid var(--line);
   }
 
-  .t-row::before,
-  .t-row:last-child::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background-color: var(--line-strong);
-    transform-origin: left center;
-    transition:
-      transform var(--t-line) var(--ease-quint),
-      opacity 200ms linear;
-    transition-delay: calc(var(--r, 0) * 60ms);
-  }
-
-  .t-row::before {
-    top: 0;
-  }
-
-  .t-row:last-child::after {
-    bottom: 0;
-    transition-delay: calc(var(--r, 0) * 60ms + 60ms);
-  }
-
-  .t-row dt,
-  .t-row dd {
-    transition:
-      opacity var(--t-reveal) var(--ease-expo),
-      transform var(--t-reveal) var(--ease-expo);
-    transition-delay: calc(var(--r, 0) * 60ms + 160ms);
+  .t-row:first-child {
+    border-top: 0;
+    padding-top: 2px;
   }
 
   .t-row dt {
@@ -862,24 +1227,11 @@ const jsonLd = {
     text-wrap: pretty;
   }
 
-  :global(html.js:not(.motion-reduced):not(.motion-failed)) .t-row:not(.is-in)::before,
-  :global(html.js:not(.motion-reduced):not(.motion-failed)) .t-row:not(.is-in):last-child::after {
-    opacity: 0;
-    transform: scaleX(0);
-  }
-
-  :global(html.js:not(.motion-reduced):not(.motion-failed)) .t-row:not(.is-in) dt,
-  :global(html.js:not(.motion-reduced):not(.motion-failed)) .t-row:not(.is-in) dd {
-    opacity: 0;
-    transform: translate3d(0, 12px, 0);
-  }
-
   @media (min-width: 768px) {
     .t-row {
       grid-template-columns: repeat(6, minmax(0, 1fr));
       column-gap: var(--gap);
       align-items: baseline;
-      padding-block: 20px 21px;
     }
 
     .t-row dt {
@@ -892,24 +1244,67 @@ const jsonLd = {
   }
 
   .hours {
-    margin-top: 80px;
+    margin-top: 88px;
   }
 
   .hours-title {
-    max-width: 16ch;
+    color: var(--ink-2);
   }
 
-  /* proportional figures: tabular zeros read as monospace at this size */
+  /* the numeral: every digit is a drum (a strip of 0–9 twice) in a window
+     exactly one figure tall. Default = the final digit on the second copy,
+     so no-JS and motion-off read the hours; armed, the strips wait on the
+     first copy and roll one full turn on .is-in, right to left. */
   .hours-n {
-    margin-top: 32px;
+    margin-top: 20px;
     color: var(--ink);
     white-space: nowrap;
     font-variant-numeric: normal;
-    letter-spacing: -0.02em;
+    letter-spacing: 0;
+  }
+
+  .drums {
+    display: inline-flex;
+    align-items: flex-start;
+    line-height: 1;
+  }
+
+  .drum {
+    display: inline-block;
+    width: 0.64em;
+    height: 1em;
+    overflow: clip;
+    text-align: center;
+  }
+
+  .strip {
+    display: block;
+    line-height: 1;
+    transform: translate3d(0, calc((var(--v) + 10) * -1em), 0);
+    transition: transform 1500ms var(--ease-expo);
+    transition-delay: calc(240ms + var(--k, 0) * 90ms);
+  }
+
+  .glyph {
+    display: inline-block;
+    height: 1em;
+    transition: opacity 700ms linear 500ms;
+  }
+
+  .glyph.dash {
+    padding-inline: 0.06em;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .hours-n:not(.is-in) .strip {
+    transform: translate3d(0, calc(var(--v) * -1em), 0);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .hours-n:not(.is-in) .glyph {
+    opacity: 0;
   }
 
   .hours-meta {
-    margin-top: 16px;
+    margin-top: 18px;
     color: var(--ink-2);
     line-height: 1.6;
   }
@@ -922,20 +1317,18 @@ const jsonLd = {
     color: var(--ink-3);
   }
 
-  .hours-rule {
-    margin-top: 28px;
-    background-color: var(--line-strong);
+  .hours-box {
+    margin-top: 36px;
   }
 
-  .hours-body {
-    max-width: 44ch;
-    margin-top: 24px;
-    color: var(--ink-2);
+  /* Expand without an index: keep the icon in the last column */
+  .hours-box :global(.xp-head:first-child) {
+    grid-column: 1 / 3;
   }
 
   @media (min-width: 768px) {
     .facts-main {
-      grid-column: 1 / 9;
+      grid-column: 1 / 8;
     }
 
     .hours {
@@ -945,26 +1338,18 @@ const jsonLd = {
 
   @media (min-width: 1100px) {
     .facts-main {
-      grid-column: 1 / 8;
+      grid-column: 1 / 7;
     }
 
-    .hours {
-      grid-column: 9 / 13;
-      grid-row: 1;
-      margin-top: 0;
-      padding-top: 12px;
-    }
-
-    .table {
+    .facts-boxes {
       margin-top: 64px;
     }
 
-    .t-row {
-      grid-template-columns: repeat(7, minmax(0, 1fr));
-    }
-
-    .t-row dd {
-      grid-column: 3 / 8;
+    .hours {
+      grid-column: 8 / 13;
+      grid-row: 1;
+      margin-top: 0;
+      padding-top: 10px;
     }
   }
 
@@ -983,7 +1368,7 @@ const jsonLd = {
   }
 
   .name-first {
-    max-width: 22ch;
+    max-width: 20ch;
     margin-top: 32px;
     font-stretch: var(--wd-display);
     font-size: var(--t-d3);
@@ -994,20 +1379,171 @@ const jsonLd = {
     text-wrap: balance;
   }
 
-  .name-rest {
-    max-width: 36ch;
+  .name-boxes {
+    margin-top: 40px;
+  }
+
+  .name-boxes :global(.xp:last-child) {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .name-boxes :global(.xp-inner) > :global(p + p) {
+    margin-top: 14px;
+  }
+
+  /* ---- 4 Vesta, the hero object ---- */
+  .vesta-fig {
+    position: relative;
+    margin: 48px 0 0;
+  }
+
+  /* the rock arrives out of depth: from far behind the plane, turned away,
+     then settles; the Dawn orbit draws around it once it is in */
+  .vesta-body {
+    --ring-w: 128%;
+    --ring-top: 50%;
+    position: relative;
+    display: grid;
+    justify-items: center;
+    width: min(420px, 100%);
+    margin-inline: auto;
+    transition:
+      transform 2000ms var(--ease-expo),
+      opacity 900ms linear;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .vesta-body:not(.is-in) {
+    opacity: 0;
+    transform: perspective(1200px) translate3d(0, 80px, -420px) rotateY(-38deg) rotateX(18deg);
+  }
+
+  .vesta-rock {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    display: grid;
+    justify-items: center;
+  }
+
+  .vesta-body .ring {
+    bottom: auto;
+    aspect-ratio: 1;
+  }
+
+  .vesta-body .ring-back {
+    z-index: 0;
+    transform: none;
+  }
+
+  .vesta-body .ring-front {
+    z-index: 2;
+    transform: none;
+  }
+
+  .vesta-body .ring-path {
+    stroke-width: 0.42;
+  }
+
+  .vesta-body .ring-front .ring-path {
+    stroke-width: 0.46;
+  }
+
+  @media (min-width: 768px) {
+    .vesta-body .ring-path {
+      stroke-width: 0.3;
+    }
+
+    .vesta-body .ring-front .ring-path {
+      stroke-width: 0.34;
+    }
+  }
+
+  /* drafting annotation under the rock: mean diameter */
+  .vesta-dim {
+    position: relative;
+    z-index: 3;
+    display: grid;
+    justify-items: center;
+    row-gap: 8px;
+    width: 76%;
+    margin-top: 6px;
+    transition: opacity 700ms linear 1500ms;
+  }
+
+  .vesta-dim-line {
+    position: relative;
+    width: 100%;
+    height: 1px;
+    background-color: var(--dim);
+    transform-origin: center;
+    transition: transform 1100ms var(--ease-quint) 1300ms;
+  }
+
+  .vesta-dim-line::before,
+  .vesta-dim-line::after {
+    content: '';
+    position: absolute;
+    top: -4px;
+    width: 1px;
+    height: 9px;
+    background-color: var(--dim);
+  }
+
+  .vesta-dim-line::before {
+    left: 0;
+  }
+
+  .vesta-dim-line::after {
+    right: 0;
+  }
+
+  .vesta-dim-label {
+    color: var(--haze);
+    background-color: var(--night);
+    padding-inline: 6px;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .vesta-body:not(.is-in) .vesta-dim {
+    opacity: 0;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .vesta-body:not(.is-in) .vesta-dim-line {
+    transform: scaleX(0);
+  }
+
+  .vesta-cap {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: baseline;
+    gap: 8px 16px;
     margin-top: 28px;
-    color: var(--haze);
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
   }
 
-  .name-closing {
-    max-width: 44ch;
-    margin-top: 20px;
-    color: var(--haze);
+  .vesta-name {
+    font-stretch: var(--wd-display);
+    font-size: 1rem;
+    font-weight: 620;
+    color: var(--starlight);
   }
 
-  .name-source {
-    margin-top: 32px;
+  .vesta-dims {
+    color: var(--haze);
+    justify-self: end;
+  }
+
+  .vesta-hint {
+    color: var(--dim);
+  }
+
+  :global(html:not(.js)) .vesta-hint {
+    display: none;
+  }
+
+  .vesta-src {
+    justify-self: end;
+    text-align: right;
   }
 
   .src {
@@ -1023,7 +1559,6 @@ const jsonLd = {
       text-decoration-color var(--t-micro) linear;
   }
 
-  /* the arrow travels with the last word when the citation wraps */
   .src :global(.arrow) {
     display: inline-block;
     margin-left: 6px;
@@ -1037,9 +1572,31 @@ const jsonLd = {
     }
   }
 
-  /* ---- the diagram ---- */
+  @media (max-width: 767.98px) {
+    .vesta-cap {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .vesta-dims,
+    .vesta-src {
+      justify-self: start;
+      text-align: left;
+    }
+  }
+
+  /* ---- the orbit diagram, inside its box ---- */
   .orbit-fig {
-    margin: 64px 0 0;
+    margin: 4px 0 8px;
+  }
+
+  /* the plane swings up to face the reader as the box opens */
+  .orbit-tilt {
+    transform-origin: 50% 60%;
+    transition: transform 1600ms var(--ease-expo);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .orbit-tilt:not(.is-in) {
+    transform: perspective(1500px) rotateX(56deg) scale(0.9);
   }
 
   .orbit-stage {
@@ -1123,7 +1680,6 @@ const jsonLd = {
     transition:
       opacity 600ms var(--ease-expo),
       transform 600ms var(--ease-expo);
-    /* text lands within ~1s of the reveal, whatever the drawing is doing */
     transition-delay: calc(480ms + var(--k, 0) * 90ms);
   }
 
@@ -1144,7 +1700,6 @@ const jsonLd = {
     transition-delay: 860ms;
   }
 
-  /* "a 2.36 AU": the orbital-element symbol stays lower case */
   .o-label.is-dim {
     color: var(--haze);
     font-size: 0.75rem;
@@ -1154,7 +1709,6 @@ const jsonLd = {
     transition-delay: 940ms;
   }
 
-  /* armed state: nothing drawn yet */
   :global(html.js:not(.motion-reduced):not(.motion-failed)) .orbit-stage:not(.is-in) .o-path {
     opacity: 0;
     stroke-dashoffset: 100;
@@ -1180,18 +1734,8 @@ const jsonLd = {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-top: 20px;
+    margin-top: 16px;
     color: var(--haze);
-  }
-
-  /* phones: the diagram runs 12% past each edge (the section clips it), so
-     the inner orbits read at a useful size; Jupiter's widest points leave
-     the frame */
-  @media (max-width: 767.98px) {
-    .orbit-stage {
-      width: 124%;
-      margin-inline: -12%;
-    }
   }
 
   @media (min-width: 768px) {
@@ -1205,45 +1749,33 @@ const jsonLd = {
       stroke-width: 1.4;
     }
 
-    .o-label {
-      font-size: 0.75rem;
-    }
-
-    .name-copy {
+    .name-head,
+    .name-boxes {
       grid-column: 1 / 7;
-    }
-
-    /* tablet: the diagram steps right and stops at a readable size */
-    .orbit-fig {
-      grid-column: 3 / 9;
-      justify-self: end;
-      width: 100%;
-      max-width: 600px;
     }
   }
 
   @media (min-width: 1100px) {
-    .o-path,
-    .o-dim,
-    .o-sun-ring {
-      stroke-width: 1;
-    }
-
-    .o-path.is-vesta {
-      stroke-width: 1.25;
-    }
-
-    .name-copy {
-      grid-column: 1 / 6;
+    .name-head {
+      grid-column: 1 / 7;
+      grid-row: 1;
       padding-top: 24px;
     }
 
-    .orbit-fig {
+    .name-boxes {
+      grid-column: 1 / 7;
+      grid-row: 2;
+      margin-top: 56px;
+    }
+
+    .vesta-fig {
       grid-column: 7 / 13;
-      grid-row: 1;
-      justify-self: stretch;
-      max-width: none;
+      grid-row: 1 / span 2;
       margin-top: 0;
+    }
+
+    .vesta-body {
+      width: 420px;
     }
   }
 
@@ -1251,7 +1783,13 @@ const jsonLd = {
      5. closing (the finale, compact)
      ===================================================================== */
   .close {
+    overflow-x: clip;
     padding-block: clamp(4.5rem, 3rem + 5vw, 8rem);
+  }
+
+  /* the 3D scene entrance must never widen the page */
+  .facts {
+    overflow-x: clip;
   }
 
   .close-title {
@@ -1263,7 +1801,7 @@ const jsonLd = {
   }
 
   .close-body {
-    max-width: 36ch;
+    max-width: 34ch;
     margin-top: 28px;
     color: var(--starlight);
   }
@@ -1272,7 +1810,13 @@ const jsonLd = {
     margin-top: 40px;
   }
 
-  .close-btn {
+  .close-btns {
+    display: grid;
+    gap: 12px;
+  }
+
+  .close-btn,
+  .close-mail {
     width: 100%;
     justify-content: flex-start;
   }
@@ -1281,6 +1825,10 @@ const jsonLd = {
     flex: 1 1 auto;
     background-color: var(--starlight);
     transition: background-color var(--t-micro) linear;
+  }
+
+  .close-mail > span {
+    flex: 1 1 auto;
   }
 
   @media (hover: hover) and (pointer: fine) {
@@ -1293,30 +1841,55 @@ const jsonLd = {
     background-color: var(--white);
   }
 
-  .close-num {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 4px 16px;
-    margin-top: 20px;
+  .close-mail:focus-visible {
+    outline-color: var(--starlight);
   }
 
-  .close-num-v {
+  .close-lines {
+    display: grid;
+    gap: 10px;
+    margin-top: 28px;
+  }
+
+  .close-lines li {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    align-items: baseline;
+    gap: 12px;
+  }
+
+  .close-k {
+    color: var(--starlight);
+  }
+
+  .close-v {
     font-stretch: var(--wd-display);
-    font-size: 1.125rem;
+    font-size: 1.0625rem;
     font-weight: 600;
     letter-spacing: 0.01em;
     color: var(--starlight);
-    text-decoration: none;
-    white-space: nowrap;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 5px;
+    text-decoration-color: rgb(243 240 250 / 0.4);
+    overflow-wrap: anywhere;
+    transition: text-decoration-color var(--t-micro) linear;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .close-v:hover {
+      text-decoration-color: currentColor;
+    }
   }
 
   .close-reassure {
+    margin-top: 18px;
+    max-width: 44ch;
     color: var(--starlight);
   }
 
   .close-links {
-    margin-top: 24px;
+    margin-top: 20px;
   }
 
   @media (min-width: 768px) {
@@ -1329,12 +1902,11 @@ const jsonLd = {
     }
 
     .close-act {
-      grid-column: 1 / 7;
+      grid-column: 1 / 8;
     }
 
-    .close-btn {
-      width: auto;
-      min-width: 320px;
+    .close-btns {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 
@@ -1358,44 +1930,154 @@ const jsonLd = {
       margin-top: 0;
     }
 
-    .close-btn {
-      width: 100%;
-      min-width: 0;
+    .close-btns {
+      grid-template-columns: minmax(0, 1fr);
     }
   }
 </style>
 
 <script>
-  /* Vesta's one lap in the orbit diagram. CSS draws the stroke (a transition
-     on stroke-dashoffset in arc-length units); this moves the planet along
-     arc-length samples of the same path with the same easing, duration and
-     delay, so it rides the head of the line. Transform only, one shot,
-     nothing to pause. Default state (no JS, motion off) = the planet at rest. */
-  import { isReduced } from '../scripts/motion';
+  import { addFrame, isReduced, vestibular } from '../scripts/motion';
 
-  const stage = document.querySelector<HTMLElement>('[data-name-orbit]');
-  const planet = stage?.querySelector<SVGCircleElement>('[data-vesta-planet]');
+  const onScreen = (el: Element, cb: (visible: boolean) => void) => {
+    if (!('IntersectionObserver' in window)) return;
+    new IntersectionObserver((entries) => entries.forEach((e) => cb(e.isIntersecting)), { rootMargin: '120px 0px' }).observe(el);
+  };
 
-  if (stage && planet && typeof planet.animate === 'function' && !stage.classList.contains('is-in')) {
-    const frames = (stage.dataset.trace || '')
-      .split(' ')
-      .filter(Boolean)
-      .map((p) => {
-        const [x, y] = p.split(',');
-        return { transform: `translate(${x}px, ${y}px)` };
+  /* ---- 1. the orbits around the portrait and around 4 Vesta ------------
+     CSS draws each ring once its host is in; the planet starts when the
+     line has closed (2.3s later), then loops. Paused offscreen and in
+     hidden tabs; motion off leaves the planet at rest on the near side. */
+  document.querySelectorAll<HTMLElement>('[data-ringed]').forEach((host) => {
+    const rings = Array.from(host.querySelectorAll<HTMLElement>('.ring'));
+    if (!rings.length) return;
+    let started = false;
+    let inView = true;
+    const sync = () => rings.forEach((r) => r.classList.toggle('is-paused', !inView || document.hidden));
+    const start = () => {
+      if (started || isReduced()) return;
+      started = true;
+      window.setTimeout(() => rings.forEach((r) => r.classList.add('is-live')), 2300);
+    };
+    if (host.classList.contains('is-in')) start();
+    else host.addEventListener('vesta:reveal', start, { once: true });
+    document.addEventListener('vesta:motion', () => {
+      if (!isReduced()) start();
+    });
+    onScreen(host, (v) => {
+      inView = v;
+      sync();
+    });
+    document.addEventListener('visibilitychange', sync);
+  });
+
+  /* ---- pointer light inside the portrait (fine pointers) ----------------- */
+  if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+    document.querySelectorAll<HTMLElement>('[data-light]').forEach((el) => {
+      el.addEventListener('pointermove', (e) => {
+        if (isReduced()) return;
+        const r = el.getBoundingClientRect();
+        el.style.setProperty('--lx', ((e.clientX - r.left) / r.width).toFixed(3));
+        el.style.setProperty('--ly', ((e.clientY - r.top) / r.height).toFixed(3));
+        el.classList.add('is-lit');
       });
+      el.addEventListener('pointerleave', () => el.classList.remove('is-lit'));
+    });
+  }
 
-    if (frames.length > 2) {
-      const run = () => {
-        if (isReduced() || document.visibilityState === 'hidden') return;
-        planet.animate(frames, {
-          duration: 2600,
-          delay: 700,
-          easing: 'cubic-bezier(0.65, 0, 0.35, 1)',
-          fill: 'backwards',
+  /* ---- 2. how vesta works: the reading line ------------------------------ */
+  const how = document.querySelector<HTMLElement>('[data-how]');
+  if (how) {
+    const rows = Array.from(how.querySelectorAll<HTMLElement>('.how-row'));
+    let scrub = false;
+    let near = false;
+    let p = 0;
+    let active = -1;
+    addFrame({
+      read(_y, vh) {
+        scrub = !vestibular();
+        const r = how.getBoundingClientRect();
+        near = r.bottom > -vh * 0.5 && r.top < vh * 1.5;
+        if (!scrub || !near) return;
+        const line = vh * 0.62;
+        p = Math.min(1, Math.max(0, (line - r.top) / r.height));
+        active = -1;
+        rows.forEach((row, i) => {
+          if (row.getBoundingClientRect().top < line) active = i;
         });
-      };
-      stage.addEventListener('vesta:reveal', run, { once: true });
-    }
+      },
+      write() {
+        how.classList.toggle('is-scrub', scrub);
+        if (!scrub || !near) return;
+        how.style.setProperty('--hp', p.toFixed(4));
+        rows.forEach((row, i) => {
+          row.classList.toggle('is-lit', i <= active);
+          row.classList.toggle('is-now', i === active);
+        });
+      },
+    });
+  }
+
+  /* ---- 4. the orbit diagram (inside "The orbit, to scale") -------------
+     On reveal (the box opening) Vesta rides the head of its own line for
+     one lap (same easing, duration and delay as the stroke), then all three
+     bodies keep moving at their true relative periods, sampled at equal
+     time (Kepler). Transform only; paused offscreen and in hidden tabs. */
+  const stage = document.querySelector<HTMLElement>('[data-name-orbit]');
+  const vestaDot = stage?.querySelector<SVGCircleElement>('[data-vesta-planet]');
+  if (stage && vestaDot && typeof vestaDot.animate === 'function') {
+    const toFrames = (s: string) =>
+      s
+        .split(' ')
+        .filter(Boolean)
+        .map((p) => {
+          const [x, y] = p.split(',');
+          return { transform: `translate(${x}px, ${y}px)` };
+        });
+    const bodies = Array.from(stage.querySelectorAll<SVGCircleElement>('[data-kepler]'));
+    const DRAW_DELAY = 700;
+    const DRAW_MS = 2600;
+    let loops: Animation[] = [];
+    let inView = true;
+    let revealed = stage.classList.contains('is-in');
+
+    const sync = () => loops.forEach((a) => (inView && !document.hidden ? a.play() : a.pause()));
+    const stopLoops = () => {
+      loops.forEach((a) => a.cancel());
+      loops = [];
+    };
+    const startLoops = (delay: number) => {
+      if (loops.length || isReduced()) return;
+      loops = bodies
+        .map((b) => {
+          const frames = toFrames(b.dataset.kepler || '');
+          const ms = Number(b.dataset.keplerMs) || 36000;
+          if (frames.length < 3) return null;
+          return b.animate(frames, { duration: ms, delay, iterations: Infinity, easing: 'linear' });
+        })
+        .filter((a): a is Animation => a !== null);
+      sync();
+    };
+    const run = () => {
+      revealed = true;
+      if (isReduced() || document.hidden) return startLoops(0);
+      const lap = toFrames(stage.dataset.trace || '');
+      if (lap.length > 2) {
+        vestaDot.animate(lap, { duration: DRAW_MS, delay: DRAW_DELAY, easing: 'cubic-bezier(0.65, 0, 0.35, 1)', fill: 'backwards' });
+      }
+      startLoops(DRAW_DELAY + DRAW_MS);
+    };
+
+    if (revealed) startLoops(0);
+    else stage.addEventListener('vesta:reveal', run, { once: true });
+    document.addEventListener('vesta:motion', () => {
+      if (isReduced()) stopLoops();
+      else if (revealed) startLoops(0);
+    });
+    onScreen(stage, (v) => {
+      inView = v;
+      sync();
+    });
+    document.addEventListener('visibilitychange', sync);
   }
 </script>

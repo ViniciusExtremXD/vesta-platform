@@ -1,0 +1,378 @@
+---
+/**
+ * Concept 04 BEFORE — Marlowe & Pike Injury Law (fictional) on a plausible
+ * 2014 law-firm template. Dated, not a parody: Arial, navy header, gold nav
+ * band, gavel clip art in a double-ruled box, a shouted slogan over a wall
+ * of justified text, a stock handshake, and the only contact form at the
+ * bottom of the page (no phone number anywhere on screen). Every text pair
+ * passes AA on its own fill.
+ * Rendered by ConceptPlate.astro through the registry (../registry.ts);
+ * sizes use --u (one reference px of the 760-wide drawing).
+ */
+import { law, lawDrawing } from '../../../data/concepts/law';
+
+export interface Props {
+  class?: string;
+}
+const { class: cls = '' } = Astro.props;
+
+const B = law.before;
+const X = lawDrawing.before;
+---
+
+<div class:list={['b-site', cls]} aria-hidden="true">
+  <div class="b-top">
+    <span>{X.topLeft}</span>
+    <span>{B.topBar}</span>
+  </div>
+  <div class="b-head">
+    <span class="b-logo">
+      <span class="b-logo-name">{B.logo}</span>
+      <span class="b-logo-sub">{B.heroSub}</span>
+    </span>
+    <span class="b-free">{X.headRight}</span>
+  </div>
+  <div class="b-nav">
+    {B.nav.map((l, i) => <span class:list={['b-navl', i === 0 && 'is-on']}>{l}</span>)}
+  </div>
+
+  <div class="b-gavel">
+    <svg viewBox="0 0 160 96" aria-hidden="true">
+      <rect x="62" y="78" width="72" height="11" fill="#5E3B20"></rect>
+      <rect x="70" y="71" width="56" height="8" fill="#855632"></rect>
+      <path d="M22 76 88 36l5 8-66 40Z" fill="#8A5A33"></path>
+      <path d="M22 76 88 36l1.6 2.6-66 40Z" fill="#B07A4B"></path>
+      <g transform="rotate(-31 100 30)">
+        <rect x="88" y="6" width="24" height="48" fill="#6B4426"></rect>
+        <rect x="88" y="11" width="24" height="5" fill="#C8B27A"></rect>
+        <rect x="88" y="44" width="24" height="5" fill="#C8B27A"></rect>
+        <rect x="91" y="6" width="3" height="48" fill="#8F6038"></rect>
+      </g>
+    </svg>
+    <span class="b-gavel-cap">{X.gavelCaption}</span>
+  </div>
+
+  <div class="b-main">
+    <span class="b-h1">{B.welcome}</span>
+    <span class="b-wall">{B.boxText}</span>
+    <span class="b-wall">{X.wall2}</span>
+    <span class="b-more">{B.heroButton}</span>
+  </div>
+
+  <div class="b-side">
+    <svg class="b-photo" viewBox="0 0 180 120" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <rect width="180" height="120" fill="#BCC6D1"></rect>
+      <rect x="8" y="6" width="50" height="62" fill="#CFD7E0"></rect>
+      <rect x="64" y="6" width="50" height="62" fill="#CFD7E0"></rect>
+      <rect x="120" y="6" width="52" height="62" fill="#CFD7E0"></rect>
+      <path d="M0 74h180" stroke="#AEB8C4" stroke-width="3"></path>
+      <path d="M0 86 58 70l9 23L0 118Z" fill="#23324D"></path>
+      <path d="M55 70 66 66l10 23-10 4Z" fill="#F2F2F2"></path>
+      <path d="M180 78 121 66l-8 23 67 22Z" fill="#5E6672"></path>
+      <path d="M124 65 114 62l-9 23 10 4Z" fill="#F2F2F2"></path>
+      <path d="M72 70c12-8 28-9 40-4l1 20c-12 7-29 9-43 4Z" fill="#D2A083"></path>
+      <path d="M85 71c6 4 9 10 9 17M93 69c6 4 9 10 9 16M101 68c4 4 6 10 6 16M76 75c6-4 14-5 20-1" fill="none" stroke="#A9765B" stroke-width="1.3"></path>
+    </svg>
+    <span class="b-photo-cap">{X.photoCaption}</span>
+  </div>
+
+  <div class="b-practice">
+    <b>{X.practiceLead}</b>
+    {X.practice.map((p, i) => <span>{i > 0 ? `| ${p}` : p}</span>)}
+  </div>
+
+  <div class="b-form">
+    <span class="b-form-title">{X.formTitle}</span>
+    <span class="b-form-lead">{X.formLead}</span>
+    <span class="b-fields">
+      {X.fields.slice(0, 3).map((f) => <span class="b-field"><span class="b-flabel">{f}</span><i></i></span>)}
+    </span>
+    <span class="b-field b-field--area"><span class="b-flabel">{X.fields[3]}</span><i></i></span>
+  </div>
+
+  <div class="b-hours">
+    <span class="b-hours-title">{X.hoursTitle}</span>
+    {X.hours.map((h) => <span>{h}</span>)}
+  </div>
+</div>
+
+<style>
+  .b-site {
+    --u: calc(100cqi / 760);
+    --b-navy: #1f3a5f;
+    --b-navy-2: #0f2340;
+    --b-gold: #c8b27a;
+    --b-text: #333333;
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    background-color: #ffffff;
+    color: var(--b-text);
+    font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
+    font-stretch: 100%;
+    font-weight: 400;
+    line-height: 1.25;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  .b-top {
+    position: absolute;
+    inset: 0 0 auto;
+    height: calc(18 * var(--u));
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-inline: calc(24 * var(--u));
+    background-color: var(--b-navy-2);
+    color: #ffffff;
+    font-size: calc(7.5 * var(--u));
+  }
+
+  .b-head {
+    position: absolute;
+    top: calc(18 * var(--u));
+    left: 0;
+    right: 0;
+    height: calc(56 * var(--u));
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-inline: calc(24 * var(--u));
+    background-color: var(--b-navy);
+    color: #ffffff;
+  }
+
+  .b-logo {
+    display: flex;
+    flex-direction: column;
+    gap: calc(3 * var(--u));
+  }
+
+  .b-logo-name {
+    font-size: calc(21 * var(--u));
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  .b-logo-sub {
+    color: var(--b-gold);
+    font-size: calc(8 * var(--u));
+    font-weight: 700;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+  }
+
+  .b-free {
+    padding: calc(6 * var(--u)) calc(12 * var(--u));
+    border: 2px solid var(--b-gold);
+    color: var(--b-gold);
+    font-size: calc(10 * var(--u));
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .b-nav {
+    position: absolute;
+    top: calc(74 * var(--u));
+    left: 0;
+    right: 0;
+    height: calc(22 * var(--u));
+    display: flex;
+    align-items: stretch;
+    padding-inline: calc(24 * var(--u));
+    background-color: var(--b-gold);
+  }
+
+  .b-navl {
+    display: flex;
+    align-items: center;
+    padding-inline: calc(11 * var(--u));
+    border-right: 1px solid #a8925a;
+    color: var(--b-navy);
+    font-size: calc(8 * var(--u));
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .b-navl.is-on {
+    background-color: var(--b-navy);
+    color: #ffffff;
+  }
+
+  /* ---------- main: gavel | slogan + wall | stock photo ---------- */
+  .b-gavel {
+    position: absolute;
+    left: calc(24 * var(--u));
+    top: calc(110 * var(--u));
+    width: calc(180 * var(--u));
+    height: calc(150 * var(--u));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: calc(8 * var(--u));
+    border: calc(4 * var(--u)) double var(--b-gold);
+    background-color: #f5efdf;
+  }
+
+  .b-gavel svg {
+    width: calc(128 * var(--u));
+    height: calc(78 * var(--u));
+  }
+
+  .b-gavel-cap {
+    color: var(--b-navy);
+    font-size: calc(10 * var(--u));
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .b-main {
+    position: absolute;
+    left: calc(222 * var(--u));
+    top: calc(108 * var(--u));
+    width: calc(316 * var(--u));
+    display: flex;
+    flex-direction: column;
+    gap: calc(6 * var(--u));
+  }
+
+  .b-h1 {
+    margin-bottom: calc(2 * var(--u));
+    color: var(--b-navy);
+    font-size: calc(19 * var(--u));
+    font-weight: 700;
+    line-height: 1.12;
+  }
+
+  .b-wall {
+    font-size: calc(7.6 * var(--u));
+    line-height: 1.45;
+    text-align: justify;
+  }
+
+  .b-more {
+    color: var(--b-navy);
+    font-size: calc(8 * var(--u));
+    font-weight: 700;
+    text-decoration: underline;
+  }
+
+  .b-side {
+    position: absolute;
+    left: calc(556 * var(--u));
+    top: calc(110 * var(--u));
+    width: calc(180 * var(--u));
+    border: 1px solid #c9ced6;
+    background-color: #ffffff;
+  }
+
+  .b-photo {
+    display: block;
+    width: 100%;
+    height: calc(120 * var(--u));
+  }
+
+  .b-photo-cap {
+    display: block;
+    padding: calc(7 * var(--u)) calc(8 * var(--u));
+    background-color: var(--b-navy);
+    color: #ffffff;
+    font-size: calc(8 * var(--u));
+    font-weight: 700;
+  }
+
+  .b-practice {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(298 * var(--u));
+    height: calc(28 * var(--u));
+    display: flex;
+    align-items: center;
+    gap: calc(6 * var(--u));
+    padding-inline: calc(24 * var(--u));
+    border-block: 1px solid #d5d9df;
+    background-color: #eef0f3;
+    color: var(--b-navy);
+    font-size: calc(8.5 * var(--u));
+    white-space: nowrap;
+  }
+
+  .b-practice b {
+    color: var(--b-text);
+  }
+
+  /* ---------- the only contact form, below the fold ---------- */
+  .b-form {
+    position: absolute;
+    left: calc(24 * var(--u));
+    top: calc(346 * var(--u));
+    width: calc(520 * var(--u));
+    display: flex;
+    flex-direction: column;
+    gap: calc(5 * var(--u));
+  }
+
+  .b-form-title {
+    color: var(--b-navy);
+    font-size: calc(14 * var(--u));
+    font-weight: 700;
+  }
+
+  .b-form-lead {
+    font-size: calc(8 * var(--u));
+  }
+
+  .b-fields {
+    display: flex;
+    gap: calc(10 * var(--u));
+    margin-top: calc(4 * var(--u));
+  }
+
+  .b-field {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: calc(3 * var(--u));
+  }
+
+  .b-flabel {
+    font-size: calc(7.5 * var(--u));
+    font-weight: 700;
+  }
+
+  .b-field i {
+    display: block;
+    height: calc(18 * var(--u));
+    border: 1px solid #a9b0ba;
+    background-color: #ffffff;
+  }
+
+  .b-field--area i {
+    height: calc(60 * var(--u));
+  }
+
+  .b-hours {
+    position: absolute;
+    left: calc(566 * var(--u));
+    top: calc(346 * var(--u));
+    width: calc(170 * var(--u));
+    display: flex;
+    flex-direction: column;
+    gap: calc(4 * var(--u));
+    padding: calc(10 * var(--u)) calc(12 * var(--u));
+    border: 1px solid #d5d9df;
+    background-color: #f7f8fa;
+    font-size: calc(8 * var(--u));
+  }
+
+  .b-hours-title {
+    margin-bottom: calc(2 * var(--u));
+    color: var(--b-navy);
+    font-size: calc(10 * var(--u));
+    font-weight: 700;
+  }
+</style>

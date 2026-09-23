@@ -1,39 +1,58 @@
 ---
 /**
- * #hero (§5.1, §3.4, §6.1, SPEC_COSMOS). Deep space: the galaxy behind
- * everything, the H1 on near-black at the left, Concept 01 floating in
- * perspective in front of the galaxy at the right, rebuilt on load.
- * The spec band closes the section.
+ * #hero (§5.1, §3.4, §6.1, SPEC_COSMOS, ROUND2/3). Deep space: the galaxy
+ * behind everything, the H1 on near-black at the left, a deck of five
+ * concept studies floating in perspective at the right. The spec band
+ * closes the section.
  *
  * Layers: section.s-void (opaque, position:relative, overflow:clip)
  *   0  <Cosmos variant="galaxy" />      first child, absolutely positioned
  *   1  .hero__main, .sb                  transparent content above it
  *
- * Motion (CSS on load, no JS gate — the H1 is the LCP):
+ * The showcase ([data-showcase], driven by src/scripts/compare.ts):
+ *   .hs-deck[data-tilt]            the deck: five ghost cards (one per
+ *                                  concept, --slot 0–4) + ONE live card
+ *   .hs-card[data-x-host]          the live plate; --x lives here so the
+ *                                  tags riding the URL bar follow the blade
+ *   template[data-card]            the other four plates, cloned on demand
+ *   .hs-tabs[role=tablist]         Roofing · Dental · Restaurant · Law ·
+ *                                  Fitness, each with a progress bar (a CSS
+ *                                  animation of --hs-dwell; its end advances)
+ *   .hs-cap                        "Concept NN · A study by Vesta" /
+ *                                  "Fictional business, not client work"
+ *
+ * Motion on load (CSS, no JS gate — the H1 is the LCP):
  *   0     meta hairline draws            520   lead rises
- *   80    meta labels rise               620   primary CTA rises, 700 secondary
- *   120+  H1 words (55ms steps)          900   primary CTA fills violet
- *   300   plate enters (48px, −24°→−14°) 1000  micro-line, 1080 status
- *   700   rebuild blade 0 → 1 (1300ms)   2000+ compare.ts eases to .56, arms
- * Scroll: motion.ts writes --hx (0→1) on [data-hero-exit]; the H1 drifts
- * −56px and the plate −90px while turning −14° → −4° (transform only).
+ *   120+  H1 words flip up (3D)          620+  WhatsApp, Email, packages rise
+ *   300   deck enters (48px, −10°)       900   WhatsApp fills violet
+ *   700   rebuild blade 0 → 1 (1300ms)   1100+ ghost cards deal in behind
+ *   2000+ compare.ts eases to .56, arms, the niche clock starts (7s)
+ *
+ * The dive (scroll): motion.ts writes --hx (0 → 1) on [data-hero-exit];
+ * compare.ts drives the galaxy's --dive with the same progress. The H1,
+ * the copy and the deck come toward the camera at different depths while
+ * the galaxy swells and swings face-on; the spec band rises out of depth
+ * (data-scene). Transform-only.
  */
 import SplitText from '../ui/SplitText.astro';
 import WaGlyph from '../ui/WaGlyph.astro';
+import MailGlyph from '../ui/MailGlyph.astro';
 import Arrow from '../ui/Arrow.astro';
 import Cosmos from '../Cosmos.astro';
 import ConceptPlate from '../ConceptPlate.astro';
 import SpecBand from './SpecBand.astro';
-import { hero, wa } from '../../data/site';
+import { concepts } from '../../data/concepts';
+import { hero, wa, mail } from '../../data/site';
 import { url } from '../../lib/url';
 
-/* TODO_SITE: hero.meta.audience + hero.meta.coords (SPEC_COSMOS §4 allows
-   the coordinates). Desktop shows both; tablet shows the coordinates only
-   (hero.meta.right wraps to two lines at 768–1099 next to the left label). */
-const TODO_SITE = {
-  audience: 'For businesses in the US and worldwide',
-  coords: 'São Paulo · 23.55° S 46.63° W',
+/* "Concept 01 · A study by Vesta" / "Fictional business, not client work" */
+const split = (caption: string): [string, string] => {
+  const cut = caption.lastIndexOf(' · ');
+  return cut > 0 ? [caption.slice(0, cut), caption.slice(cut + 3)] : [caption, ''];
 };
+const first = concepts[0];
+const [capA, capB] = split(first.caption);
+const tabName = (id: string) => (hero.showcase.tabs as Record<string, string>)[id] ?? id;
 ---
 
 <section id={hero.id} class="s-void hero" data-nav-theme="dark" data-hero-exit>
@@ -45,10 +64,6 @@ const TODO_SITE = {
         <p class="label hero__meta-l" data-load style="--d:80ms">
           <span class="hm-d">{hero.meta.left}</span><span class="hm-m">{hero.meta.mobile}</span>
         </p>
-        <p class="label hero__meta-r hm-w" data-load style="--d:140ms">
-          <span class="hm-aud">{TODO_SITE.audience}</span>
-          <span class="hm-geo">{TODO_SITE.coords}</span>
-        </p>
         <span class="hero__meta-rule" data-load="draw" aria-hidden="true"></span>
       </div>
 
@@ -58,23 +73,102 @@ const TODO_SITE = {
         <div class="hero__copy">
           <p class="lead hero__lead" data-load style="--d:520ms">{hero.lead}</p>
           <div class="hero__ctas">
-            <a class="btn hero__cta" href={wa(hero.primary.text)} data-sticky-anchor data-wa-intent="hero" data-load style="--d:620ms">
-              <span class="hero__cta-edge" aria-hidden="true"></span>
-              <WaGlyph size={16} />
-              <span>{hero.primary.label}</span>
-              <Arrow />
-            </a>
-            <a class="tlink hero__sec" href={url(hero.secondary.href)} data-load style="--d:700ms">
-              <span>{hero.secondary.label}</span>
-              <Arrow />
-            </a>
+            <span class="hero__ctaw hero__ctaw--wa" data-load style="--d:620ms">
+              <a class="btn hero__cta" href={wa(hero.primary.text)} data-sticky-anchor data-wa-intent="hero" data-magnetic=".22">
+                <span class="hero__cta-edge" aria-hidden="true"></span>
+                <WaGlyph size={16} />
+                <span>{hero.primary.label}</span>
+                <Arrow />
+              </a>
+            </span>
+            <span class="hero__ctaw hero__ctaw--mail" data-load style="--d:700ms">
+              <a class="btn btn-line hero__mail" href={mail(hero.email.subject)} data-magnetic=".22">
+                <MailGlyph size={16} />
+                <span>{hero.email.label}</span>
+              </a>
+            </span>
+            <span class="hero__ctaw hero__ctaw--sec" data-load style="--d:780ms">
+              <a class="tlink hero__sec" href={url(hero.secondary.href)}>
+                <span>{hero.secondary.label}</span>
+                <Arrow />
+              </a>
+            </span>
           </div>
           <p class="small hero__micro" data-load style="--d:1000ms">{hero.micro}</p>
-          <p class="small hero__status" data-load style="--d:1080ms">{hero.status}</p>
         </div>
 
-        <div class="hero__stage">
-          <ConceptPlate mode="hero" class="hero__plate cp--cap-split" />
+        <div class="hero__stage" data-showcase>
+          <p class="label hs-cap" data-cap aria-live="off">
+            <span class="hs-cap-a" data-cap-a>{capA}</span><span class="visually-hidden"> · </span><span
+              class="hs-cap-b"
+              data-cap-b>{capB}</span
+            >
+          </p>
+
+          <div class="hs-deck" id="hs-deck" role="tabpanel" aria-labelledby={`hs-tab-${first.id}`} data-deck data-tilt="3">
+            {
+              concepts.map((c, k) => (
+                <div class="hs-ghost" data-ghost={c.id} style={`--g-bg:${c.palette.base};--slot:${k}`} aria-hidden="true">
+                  <div class="hs-gpose">
+                    <i class="hs-gbar" />
+                    <i class="hs-gscreen" />
+                  </div>
+                </div>
+              ))
+            }
+            {
+              concepts.map((c, k) => {
+                const [a, b] = split(c.caption);
+                const card = (
+                  <div class:list={['hs-card', k === 0 && 'hs-card--first']} data-card={c.id} data-x-host data-cap-a={a} data-cap-b={b}>
+                    <div class="hs-pose">
+                      <div class="hs-rail" aria-hidden="true">
+                        <span class="hs-rail-move">
+                          <span class="hs-tag hs-tag--after label">
+                            <span class="hs-t-l">{hero.plate.tags.after}</span>
+                            <span class="hs-t-s">{hero.plate.tagsShort.after}</span>
+                          </span>
+                          <i class="hs-tick" />
+                          <span class="hs-tag hs-tag--before label">
+                            <span class="hs-t-l">{hero.plate.tags.before}</span>
+                            <span class="hs-t-s">{hero.plate.tagsShort.before}</span>
+                          </span>
+                        </span>
+                      </div>
+                      <ConceptPlate concept={c.id} mode="hero" caption={false} class="hero__plate" />
+                    </div>
+                  </div>
+                );
+                return k === 0 ? card : <template data-card={c.id}>{card}</template>;
+              })
+            }
+          </div>
+
+          <div class="hs-tabs" role="tablist" aria-label={hero.showcase.label}>
+            {
+              concepts.map((c, k) => (
+                <button
+                  class:list={['hs-tab', k === 0 && 'is-current']}
+                  type="button"
+                  role="tab"
+                  id={`hs-tab-${c.id}`}
+                  data-concept={c.id}
+                  aria-selected={k === 0 ? 'true' : 'false'}
+                  aria-controls="hs-deck"
+                  tabindex={k === 0 ? 0 : -1}
+                  style={`--k:${k}`}
+                >
+                  <span class="hs-track" aria-hidden="true">
+                    <i class="hs-fill" />
+                  </span>
+                  <span class="hs-tab-t">
+                    <span class="hs-num">{c.number}</span>
+                    <span class="hs-name">{tabName(c.id)}</span>
+                  </span>
+                </button>
+              ))
+            }
+          </div>
         </div>
       </div>
     </div>
@@ -91,8 +185,7 @@ const TODO_SITE = {
   /* ---------- section ----------------------------------------------------- */
   /* A one-column grid so the galaxy can take the first row only: an
      absolutely positioned grid child uses its grid area as containing
-     block. The sky fills the first screen and stops at the spec band's
-     hairline, which reads as the edge of the viewport onto space. */
+     block. The sky fills the first screen and stops at the spec band. */
   .hero {
     position: relative;
     display: grid;
@@ -100,13 +193,15 @@ const TODO_SITE = {
     overflow: clip;
     background-color: var(--void);
     /* galaxy composition (read by cosmos.ts; fractions of the sky box,
-       y from the top; mask = dark point A → bright point B).
-       Phones: the galaxy opens in the sky under the plate, the text
-       column above it stays masked near-black. */
-    --cosmos-x: 0.7;
-    --cosmos-y: 0.86;
-    --cosmos-r: 0.65;
-    --cosmos-mask: 0.3 0.55 0.6 0.82;
+       y from the top; mask = dark at A → full at B).
+       Phones: the galaxy opens at the right between the CTAs and the deck,
+       above the fold; the text column above stays near-black. */
+    --cosmos-x: 0.8;
+    --cosmos-y: 0.52;
+    --cosmos-r: 0.62;
+    --cosmos-mask: 0.2 0.3 0.62 0.46;
+    /* dwell per niche (the tab's progress bar) */
+    --hs-dwell: 7s;
   }
 
   /* explicit end line: for an abspos grid child, "auto" means the
@@ -116,23 +211,18 @@ const TODO_SITE = {
     grid-column: 1 / 2;
   }
 
-  /* everything readable sits above the galaxy */
   .hero__main {
     position: relative;
     z-index: 1;
     grid-row: 1;
     grid-column: 1;
     padding-top: calc(var(--nav-h) + 20px);
-    /* phones: open sky under the plate, where the galaxy core sits */
-    padding-bottom: 240px;
+    padding-bottom: 56px;
   }
 
   /* ---------- meta row ---------------------------------------------------- */
   .hero__meta {
     position: relative;
-    display: flex;
-    justify-content: space-between;
-    gap: 24px;
     padding-bottom: 14px;
   }
 
@@ -140,18 +230,8 @@ const TODO_SITE = {
     color: var(--haze);
   }
 
-  .hero__meta-r {
-    display: none;
-    color: var(--dim);
-  }
-
   .hm-d {
     display: none;
-  }
-
-  .hm-geo {
-    color: var(--haze);
-    font-variant-numeric: tabular-nums;
   }
 
   .hero__meta-rule {
@@ -176,39 +256,51 @@ const TODO_SITE = {
     align-items: start;
   }
 
+  /* the dive: each layer comes toward the camera at its own depth, away
+     from the galaxy (transform-origin on the galaxy's side) */
   .hero__grid :global(.hero__h1) {
-    margin-top: 36px;
+    margin-top: 32px;
     max-width: 14ch;
     /* phones: the three lines fill the column instead of stopping at 40px */
-    font-size: max(var(--t-d1), min(13.2vw, 3.5rem));
+    font-size: max(var(--t-d1), min(12.6vw, 3.5rem));
     color: var(--starlight);
-    transform: translate3d(0, calc(var(--hx, 0) * -56px), 0);
+    transform-origin: 120% 30%;
+    transform: perspective(1200px) translate3d(0, calc(var(--hx, 0) * -150px), calc(var(--hx, 0) * 240px));
   }
 
   .hero__copy {
-    margin-top: 24px;
+    margin-top: 22px;
+    transform-origin: 120% 0%;
+    transform: perspective(1200px) translate3d(0, calc(var(--hx, 0) * -80px), calc(var(--hx, 0) * 130px));
   }
 
   .hero__lead {
     color: var(--starlight);
   }
 
+  /* phones: WhatsApp full width, then Email + packages on one row */
   .hero__ctas {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-top: 28px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px 20px;
+    margin-top: 26px;
+  }
+
+  .hero__ctaw {
+    display: block;
+    min-width: 0;
+  }
+
+  .hero__ctaw--wa {
+    grid-column: 1 / -1;
   }
 
   .hero__micro {
+    display: none;
     margin-top: 24px;
-    max-width: 46ch;
+    max-width: 44ch;
     color: var(--haze);
-  }
-
-  .hero__status {
-    margin-top: 8px;
-    color: var(--dim);
   }
 
   /* primary CTA: arrives as a void button with a violet edge, then fills */
@@ -249,39 +341,77 @@ const TODO_SITE = {
     }
   }
 
-  /* secondary: 48px outline on phones, a text link from tablet up */
+  /* Email: the secondary, an outline on void (opaque for the contrast gate) */
+  .hero__mail {
+    width: 100%;
+    background-color: var(--void);
+    background-clip: padding-box;
+  }
+
   .hero__sec {
-    justify-content: center;
     min-height: 48px;
-    border: 1px solid var(--line-dark-strong);
+    padding-block: 0;
     color: var(--starlight);
   }
 
   .hero__sec::after {
-    display: none;
+    bottom: 12px;
   }
 
-  /* ---------- the plate --------------------------------------------------- */
+  /* ---------- the showcase ------------------------------------------------ */
   .hero__stage {
     position: relative;
-    margin-top: 56px;
-    translate: 0 calc(var(--hx, 0) * -60px);
+    display: flex;
+    flex-direction: column;
+    margin-top: 72px;
+    /* the card pose, shared by the live card and the ghosts */
+    --pose: rotateX(calc(7deg - var(--hx, 0) * 7deg)) rotateY(-4deg);
+    transform-origin: 50% 0%;
+    transform: perspective(1600px) translate3d(0, calc(var(--hx, 0) * -70px), calc(var(--hx, 0) * 50px));
   }
 
-  .hero__stage :global(.cp--hero) {
-    perspective: 1600px;
+  /* caption: on phones under the tabs; a void chip over any part of the sky */
+  .hs-cap {
+    order: 3;
+    width: fit-content;
+    max-width: 100%;
+    margin-top: 14px;
+    padding: 5px 10px 4px 0;
+    background-color: var(--void);
+    color: var(--dim);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    line-height: 1.5;
+    transform-origin: 50% 100%;
   }
 
-  .hero__stage :global(.cp--hero .cp-frame) {
-    transform: rotateX(8deg) rotateY(-4deg);
-    transform-origin: 50% 50%;
+  .hs-cap-a,
+  .hs-cap-b {
+    display: block;
   }
 
-  :global(html:not(.motion-reduced)) .hero__stage :global(.cp--hero .cp-frame) {
-    animation: hero-plate-in 1600ms var(--ease-mech) 300ms both;
+  :global(html:not(.motion-reduced)) .hs-cap {
+    animation: rise-in 900ms var(--ease-expo) 1300ms both;
   }
 
-  @keyframes hero-plate-in {
+  /* the deck: ghosts and the live card share one grid cell */
+  .hs-deck {
+    position: relative;
+    display: grid;
+    padding-top: 30px;
+    perspective: 2400px;
+  }
+
+  .hs-deck > * {
+    grid-area: 1 / 1;
+    min-width: 0;
+  }
+
+  :global(html:not(.motion-reduced)) .hs-deck {
+    animation: hs-deck-in 1600ms var(--ease-mech) 300ms both;
+  }
+
+  @keyframes hs-deck-in {
     from {
       opacity: 0;
       translate: 0 48px;
@@ -297,28 +427,327 @@ const TODO_SITE = {
     }
   }
 
-  /* a void chip: the caption stays legible over any part of the sky */
-  .hero__stage :global(.cp-cap) {
-    width: fit-content;
-    margin-top: 16px;
-    max-width: 100%;
-    padding: 5px 10px 4px 0;
-    background-color: var(--void);
+  .hs-card,
+  .hs-ghost {
+    perspective: 2000px;
   }
 
-  :global(html:not(.motion-reduced)) .hero__stage :global(.cp-cap) {
-    animation: rise-in 900ms var(--ease-expo) 1300ms both;
+  .hs-card {
+    position: relative;
+    z-index: 2;
+    transform-origin: 50% 50%;
+  }
+
+  .hs-card.is-leaving {
+    z-index: 3;
+    pointer-events: none;
+  }
+
+  .hs-pose,
+  .hs-gpose {
+    --u: calc(100cqi / 760);
+    position: relative;
+    container-type: inline-size;
+    transform: var(--pose);
+    transform-origin: 50% 50%;
+  }
+
+  /* the load rebuild runs on the card (the host of --x), not the figure */
+  .hs-card :global(.cp--hero) {
+    animation: none !important;
+  }
+
+  :global(html:not(.motion-reduced)) .hs-card--first {
+    animation: hs-rebuild 1300ms var(--ease-mech) 700ms both;
+  }
+
+  .hs-card.is-live {
+    animation: none !important;
+  }
+
+  @keyframes hs-rebuild {
+    from {
+      --x: 0;
+    }
+    to {
+      --x: 1;
+    }
+  }
+
+  /* the plate's own tags sat on its content: they ride the URL bar now */
+  .hs-card :global(.cp-tag) {
+    display: none;
+  }
+
+  .hs-rail {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 7;
+    height: max(18px, calc(28 * var(--u)));
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .hs-rail-move {
+    position: absolute;
+    inset: 0;
+    transform: translate3d(calc(var(--x, 1) * 100%), 0, 0);
+  }
+
+  /* the blade, continued through the URL bar */
+  .hs-tick {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background-color: var(--starlight);
+  }
+
+  :global(html:not(.js)) .hs-tick {
+    display: none;
+  }
+
+  .hs-tag {
+    position: absolute;
+    top: 50%;
+    padding: 4px 7px 3px;
+    background-color: var(--void);
+    color: var(--starlight);
+    font-size: 10.5px;
+    line-height: 1.2;
+    letter-spacing: 0.14em;
+    white-space: nowrap;
+    transform: translateY(-50%);
+  }
+
+  .hs-tag--after {
+    right: calc(100% + 6px);
+  }
+
+  .hs-tag--before {
+    left: 6px;
+  }
+
+  .hs-t-s {
+    display: none;
+  }
+
+  @container (max-width: 520px) {
+    .hs-t-l {
+      display: none;
+    }
+
+    .hs-t-s {
+      display: inline;
+    }
+
+    .hs-tag {
+      padding: 3px 5px 2px;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+    }
+  }
+
+  /* ghost cards: the next studies waiting in the deck, up and to the right,
+     each a step deeper and darker. Slot 0 sits under the live card. */
+  .hs-ghost {
+    --slot: 0;
+    position: relative;
+    z-index: 1;
+    pointer-events: none;
+    transform: translate3d(
+      calc(var(--slot) * 2.6%),
+      calc(var(--slot) * -5.2%),
+      calc(var(--slot) * -70px - 4px)
+    );
+    opacity: calc(1 - max(0, var(--slot) - 2) * 1);
+    transition:
+      transform 1000ms var(--ease-expo),
+      opacity 700ms linear;
+  }
+
+  :global(html:not(.motion-reduced)) .hs-ghost {
+    animation: hs-deal 1100ms var(--ease-expo) calc(1100ms + var(--slot) * 160ms) backwards;
+  }
+
+  @keyframes hs-deal {
+    from {
+      opacity: 0;
+      translate: -3% 6%;
+    }
+  }
+
+  .hs-gpose {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .hs-gpose::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 1px solid rgb(185 162 255 / 0.3);
+  }
+
+  .hs-gbar {
+    display: block;
+    height: max(18px, calc(28 * var(--u)));
+    background-color: var(--plate);
+    border-bottom: 1px solid var(--line-dark);
+  }
+
+  .hs-gscreen {
+    position: relative;
+    display: block;
+    aspect-ratio: 16 / 10;
+    background-color: var(--g-bg, var(--night));
+  }
+
+  /* deeper = darker (a void veil, not a filter) */
+  .hs-gscreen::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-color: var(--void);
+    opacity: calc(0.18 + var(--slot) * 0.2);
+    transition: opacity 900ms linear;
+  }
+
+  /* ---------- tabs -------------------------------------------------------- */
+  .hs-tabs {
+    order: 2;
+    display: flex;
+    justify-content: space-between;
+    gap: 6px;
+    margin-top: 18px;
+  }
+
+  :global(html:not(.js)) .hs-tabs {
+    display: none;
+  }
+
+  .hs-tab {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0 0 8px;
+    color: var(--dim);
+    text-align: left;
+    cursor: pointer;
+    transition: color var(--t-micro) linear;
+  }
+
+  :global(html:not(.motion-reduced)) .hs-tab {
+    animation: rise-in 800ms var(--ease-expo) calc(1400ms + var(--k) * 70ms) both;
+  }
+
+  .hs-tab.is-current {
+    color: var(--starlight);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .hs-tab:hover {
+      color: var(--starlight);
+    }
+  }
+
+  .hs-tab:focus-visible {
+    outline: 2px solid var(--starlight);
+    outline-offset: 3px;
+  }
+
+  .hs-track {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 2px;
+    overflow: hidden;
+    background-color: var(--line-dark-strong);
+  }
+
+  .hs-fill {
+    position: absolute;
+    inset: 0;
+    display: block;
+    background-color: var(--violet);
+    transform: scaleX(0);
+    transform-origin: left center;
+  }
+
+  .hs-fill.is-run {
+    animation: hs-fill var(--hs-dwell) linear forwards;
+  }
+
+  .is-hold .hs-fill.is-run {
+    animation-play-state: paused;
+  }
+
+  .is-stopped .hs-tab.is-current .hs-fill {
+    transform: scaleX(1);
+    transition: transform 500ms var(--ease-expo);
+  }
+
+  @keyframes hs-fill {
+    to {
+      transform: scaleX(1);
+    }
+  }
+
+  .hs-tab-t {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    line-height: 1.2;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 359px) {
+    .hs-tab-t {
+      font-size: 10px;
+      letter-spacing: 0.06em;
+    }
+  }
+
+  .hs-num {
+    display: none;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* the name flips up when its tab becomes current */
+  .hs-name {
+    display: inline-block;
+    transform-origin: 50% 100%;
+  }
+
+  :global(html:not(.motion-reduced)) .hs-tab.is-current .hs-name {
+    animation: hs-name-flip 700ms var(--ease-expo);
+  }
+
+  @keyframes hs-name-flip {
+    from {
+      transform: perspective(300px) translate3d(0, 60%, 0) rotateX(-80deg);
+    }
   }
 
   /* ---------- tablet ------------------------------------------------------ */
   @media (min-width: 768px) {
-    /* tablet: the sky is portrait; the galaxy fills the empty right of
-       the H1 and fades out toward the copy and the plate */
     .hero {
-      --cosmos-x: 0.82;
-      --cosmos-y: 0.24;
-      --cosmos-r: 0.36;
-      --cosmos-mask: 0.45 0.7 0.8 0.3;
+      /* tablet: the galaxy opens beside the CTAs, above the deck, and
+         stays clear of the H1 (dark at the top-left) */
+      --cosmos-x: 0.8;
+      --cosmos-y: 0.4;
+      --cosmos-r: 0.34;
+      --cosmos-mask: 0.34 0.16 0.7 0.36;
     }
 
     .hero__main {
@@ -327,15 +756,6 @@ const TODO_SITE = {
 
     .hm-d {
       display: inline;
-    }
-
-    .hero__meta-r.hm-w {
-      display: flex;
-      gap: 40px;
-    }
-
-    .hm-aud {
-      display: none;
     }
 
     .hm-m {
@@ -353,55 +773,62 @@ const TODO_SITE = {
     }
 
     .hero__ctas {
-      flex-direction: row;
-      align-items: center;
-      gap: 16px 32px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px 14px;
     }
 
-    .hero__cta {
+    .hero__cta,
+    .hero__mail {
       width: auto;
     }
 
-    .hero__sec {
-      min-height: 0;
-      border: 0;
+    .hero__ctaw--sec {
+      margin-left: 4px;
     }
 
-    .hero__sec::after {
+    .hero__micro {
       display: block;
     }
 
     .hero__stage {
       grid-column: 2 / -1;
       margin-right: calc(-1 * var(--gut));
-      margin-top: 64px;
+      margin-top: 56px;
+      --pose: rotateY(calc(-10deg + var(--hx, 0) * 10deg)) rotateX(calc(5deg - var(--hx, 0) * 5deg));
+      transform-origin: 30% 0%;
+      transform: perspective(1600px) translate3d(calc(var(--hx, 0) * 40px), calc(var(--hx, 0) * -160px), calc(var(--hx, 0) * 160px));
     }
 
-    .hero__stage :global(.cp--hero) {
-      perspective: 2000px;
+    .hs-num {
+      display: inline;
+      color: var(--dim);
     }
 
-    .hero__stage :global(.cp--hero .cp-frame) {
-      transform: rotateY(calc(-10deg + var(--hx, 0) * 6deg)) rotateX(5deg);
+    .hs-tabs {
+      margin-right: var(--gut);
+      gap: 16px;
+    }
+
+    .hs-tab {
+      flex: 1 1 0;
     }
   }
 
   /* ---------- desktop ----------------------------------------------------- */
   @media (min-width: 1100px) {
     .hero {
-      --cosmos-x: 0.87;
-      --cosmos-y: 0.31;
-      --cosmos-r: 0.28;
-      --cosmos-mask: initial;
+      --cosmos-x: 0.86;
+      --cosmos-y: 0.26;
+      --cosmos-r: 0.27;
+      /* the H1 column stays near-black: dark to the left of ~52%, full
+         from ~70% (fewer, dimmer stars behind the headline) */
+      --cosmos-mask: 0.5 0.5 0.72 0.34;
     }
 
     .hero__main {
       min-height: max(100svh, 760px);
-      padding-bottom: 64px;
-    }
-
-    .hm-aud {
-      display: inline;
+      padding-bottom: 40px;
     }
 
     .hero__grid :global(.hero__h1) {
@@ -411,55 +838,70 @@ const TODO_SITE = {
     }
 
     .hero__copy {
-      grid-column: 1 / 6;
+      grid-column: 1 / 7;
       grid-row: 2;
       margin-top: 40px;
     }
 
-    /* the plate rises beside the H1's last (short) line, so the whole
-       object floats inside the first screen */
+    .hero__ctas {
+      flex-wrap: nowrap;
+      gap: 12px;
+    }
+
+    .hero__ctaw--sec {
+      margin-left: 12px;
+    }
+
+    /* the deck rises beside the H1's last (short) line, so the whole
+       object — plate and tabs — floats inside the first screen */
     .hero__stage {
       grid-column: 7 / -1;
       grid-row: 2;
-      margin-top: calc(var(--t-d1) * -0.98 + 6px);
-      margin-right: -100px;
-      translate: 0 calc(var(--hx, 0) * -90px);
+      margin-top: calc(var(--t-d1) * -1.02);
+      margin-right: -24px;
+      --pose: rotateY(calc(-14deg + var(--hx, 0) * 14deg)) rotateX(calc(5deg - var(--hx, 0) * 5deg));
+      transform-origin: 30% 20%;
+      transform: perspective(1600px) translate3d(calc(var(--hx, 0) * 90px), calc(var(--hx, 0) * -420px), calc(var(--hx, 0) * 340px));
     }
 
-    .hero__stage :global(.cp--hero .cp-frame) {
-      transform: rotateY(calc(-14deg + var(--hx, 0) * 10deg)) rotateX(5deg);
+    .hs-deck {
+      padding-top: 26px;
     }
 
-    /* caption on a leader line, hung off the plate's top-left corner */
-    /* a void chip: the caption stays legible over any part of the sky */
-    .hero__stage :global(.cp-cap) {
+    .hs-tabs {
+      margin-top: 22px;
+      margin-right: 24px;
+    }
+
+    /* caption on a leader line, hung off the deck's top-left corner */
+    .hs-cap {
       position: absolute;
-      left: calc(4.8cqi + 34px);
-      bottom: calc(100% - 1.9cqi + 22px);
+      left: 34px;
+      bottom: calc(100% - 4px);
       margin: 0;
       padding: 5px 10px 4px;
     }
 
-    .hero__stage :global(.cp-cap)::before,
-    .hero__stage :global(.cp-cap)::after {
+    .hs-cap::before,
+    .hs-cap::after {
       content: '';
       position: absolute;
       background-color: var(--line-dark-strong);
     }
 
-    /* elbow: from the caption's first line, left, then down to the corner */
-    .hero__stage :global(.cp-cap)::before {
+    /* elbow: from the caption's first line, left, then down to the deck */
+    .hs-cap::before {
       left: -34px;
       top: calc(5px + 0.75em);
       width: 26px;
       height: 1px;
     }
 
-    .hero__stage :global(.cp-cap)::after {
+    .hs-cap::after {
       left: -34px;
       top: calc(5px + 0.75em);
       width: 1px;
-      height: calc(100% - 5px - 0.75em + 22px);
+      height: calc(100% - 5px - 0.75em + 30px);
     }
   }
 </style>

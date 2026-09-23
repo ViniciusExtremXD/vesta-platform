@@ -18,47 +18,36 @@
  */
 import ConceptPlate from '../ConceptPlate.astro';
 import SplitText from '../ui/SplitText.astro';
-
-interface Note {
-  id: string;
-  text: string;
-}
+import type { ConceptAnnotation, ConceptId } from '../../data/concepts';
 
 export interface Props {
   title: string;
+  /** Small label above the title (e.g. "The 2016 template"). */
+  kicker?: string;
   state: 'before' | 'after';
-  notes: readonly Note[];
+  /** Anchored notes (x/y in the plate's 760 × 475 reference units). */
+  notes: readonly ConceptAnnotation[];
+  concept?: ConceptId;
   side?: 'left' | 'right';
   titleId: string;
 }
 
-const { title, state, notes, side = 'right', titleId } = Astro.props;
-
-/* marker anchors in reference units. `a` = which edge of the marker sits on
-   the anchor: 's' starts there (marker to the right), 'e' ends there (marker
-   to the left), 'c' centred. `bar` = on the URL bar, after the URL text. */
-const POS: Record<string, { x: number; y: number; a: 's' | 'e' | 'c'; bar?: boolean }> = {
-  A1: { x: 492, y: 459, a: 's' }, // the phone number, in the footer only
-  A2: { x: 733, y: 150, a: 'c' }, // the slider arrows
-  A3: { x: 206, y: 150, a: 'e' }, // "Welcome to Halden Roofing"
-  A4: { x: 176, y: 0, a: 's', bar: true }, // no title or description written for search
-  B1: { x: 268, y: 118, a: 's' }, // the promise, first screen
-  B2: { x: 340, y: 284, a: 's' }, // call + inspection buttons
-  B3: { x: 266, y: 376, a: 'e' }, // a page per service
-  B4: { x: 176, y: 0, a: 's', bar: true }, // structured data
-};
+const { title, kicker, state, notes, concept = 'halden', side = 'right', titleId } = Astro.props;
 ---
 
 <div class:list={['g ap', `ap--${side}`, `ap--${state}`]} data-ap>
-  <SplitText as="h2" id={titleId} class="d2 ap-title" text={title} />
+  <div class="ap-title">
+    {kicker && <p class="label ap-kicker" data-reveal><span class="node" aria-hidden="true"></span><span>{kicker}</span></p>}
+    <SplitText as="h2" id={titleId} class="d2" text={title} />
+  </div>
 
-  <div class="ap-fig" data-inview>
-    <div class="ap-plate" data-reveal>
-      <ConceptPlate mode="static" state={state} />
+  <div class="ap-fig" data-inview data-tilt="4">
+    <div class="ap-plate">
+      <ConceptPlate concept={concept} mode="static" state={state} />
     </div>
     {
       notes.map((n, i) => {
-        const p = POS[n.id] ?? { x: 380, y: 237, a: 'c' as const };
+        const p = n;
         return (
           <span
             class:list={['ap-mk label', `ap-mk--${p.a}`, p.bar && 'ap-mk--bar']}
@@ -120,9 +109,27 @@ const POS: Record<string, { x: number; y: number; a: 's' | 'e' | 'c'; bar?: bool
 
   .ap-fig {
     position: relative;
+    transform-style: preserve-3d;
     container-type: inline-size;
     --ru: calc(100cqi / 760);
     --bar-h: max(18px, calc(28 * var(--ru)));
+  }
+
+  /* the plate swings in from a deeper, turned plane (transform + opacity) */
+  .ap-plate {
+    transform-origin: 50% 100%;
+    transition:
+      transform 1400ms var(--ease-expo),
+      opacity 700ms linear;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .ap-fig:not(.is-in) .ap-plate {
+    opacity: 0;
+    transform: perspective(1600px) translate3d(0, 60px, -220px) rotateX(18deg) rotateY(var(--swing, -14deg));
+  }
+
+  .ap--left .ap-fig {
+    --swing: 14deg;
   }
 
   .ap-mk {
@@ -145,11 +152,13 @@ const POS: Record<string, { x: number; y: number; a: 's' | 'e' | 'c'; bar?: bool
     line-height: 1;
     cursor: default;
     translate: var(--mk-dx) 0;
+    /* markers float above the plate: the tilt shows the depth */
+    transform: translateZ(36px);
     transition:
       transform 700ms var(--ease-expo),
       opacity 300ms linear,
       background-color var(--t-micro) linear;
-    transition-delay: calc(500ms + var(--k, 0) * 110ms), calc(500ms + var(--k, 0) * 110ms), 0ms;
+    transition-delay: calc(900ms + var(--k, 0) * 130ms), calc(900ms + var(--k, 0) * 130ms), 0ms;
   }
 
   .ap-mk--s {
@@ -191,7 +200,7 @@ const POS: Record<string, { x: number; y: number; a: 's' | 'e' | 'c'; bar?: bool
 
   .ap-mk.is-hot {
     background-color: var(--violet-deep);
-    transform: scale(1.12);
+    transform: translateZ(56px) scale(1.12);
     transition-delay: 0ms;
   }
 
@@ -202,13 +211,25 @@ const POS: Record<string, { x: number; y: number; a: 's' | 'e' | 'c'; bar?: bool
 
   :global(html.js:not(.motion-reduced):not(.motion-failed)) .ap-fig:not(.is-in) .ap-mk {
     opacity: 0;
-    transform: scale(0.5);
+    transform: translateZ(120px) rotateX(-90deg) scale(0.6);
   }
 
   /* ------------------------------------------------------------- list */
 
-  .ap-title {
+  .ap-title :global(h2) {
     max-width: 10ch;
+  }
+
+  .ap-kicker {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+    color: var(--accent-text);
+  }
+
+  .ap-kicker .node {
+    color: var(--violet);
   }
 
   .ap-list {

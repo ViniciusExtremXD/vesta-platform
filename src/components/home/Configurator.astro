@@ -1,42 +1,54 @@
 ---
 /**
- * #configure (SPEC §5.8 + SPEC_COSMOS), deep-space void.
+ * #configure (SPEC §5.8 + SPEC_COSMOS + ROUND2/3), deep-space void.
  *
- * A real <form>, one fieldset + legend per step, beside a live preview: the
- * mini Concept plate with the visitor's business name on it and a listing
- * card beneath (sticky on desktop). Under the form, the build sheet: odometer
- * price, a delivery dimension line and one full-width violet CTA that opens
- * WhatsApp with the build sheet written out.
+ * A real <form>, one fieldset + legend per step, beside a live preview (sticky
+ * on desktop): a DECK of page plates and a Google listing card. Under the
+ * form, the build sheet: free price analysis, a delivery dimension line, the
+ * WhatsApp CTA and an email CTA, both carrying the build sheet.
+ *
+ * The deck
+ * - Card 0 (Home) holds the five concept plates (ConceptPlate mini). Step 01
+ *   "Industry" picks one; CSS (:has) turns the plates like a turntable.
+ * - Cards 1–4 (Services, About, Contact, Locations) are drawn here, each with
+ *   its own mini design, themed with the chosen concept's palette tokens
+ *   (--pb … --pl, written below as one generated rule per concept).
+ * - Complete Website fans the deck. Clicking a page (the card itself or the
+ *   "Pages" buttons, aria-pressed) swaps it with the front card: the front
+ *   card sinks back into the deck with a 3D tilt while the chosen one lifts,
+ *   turns and lands in front (configure.ts, WAAPI, transform/z-index only).
  *
  * Division of labour (fail-open):
- * - CSS alone (via :has) drives every VISUAL state that depends on the
- *   choices: selected rows, the Rebuild URL field, the fixed "Google setup"
- *   row, the Complete fan of 5 page plates, the Rebuild "Before" ghost and
- *   the listing's Landing Page state. So all of it works with no JS.
- * - src/scripts/configure.ts (dynamically imported near the viewport) writes
- *   the TEXT: name + URL on the plate and listing, the build-sheet rows, the
- *   odometer, the dimension line, the WhatsApp href, #configure?model=<id>
- *   preselection and the mobile sticky-bar summary.
- * - No JS: Landing Page + Google preselected, a static sheet for it, and the
- *   CTA is the plain prefilled link (configure.noJsText).
+ * - CSS alone drives every visual state that depends on the choices (plate
+ *   swap, page palette, selected rows, URL field, fixed Google row, the fan,
+ *   the Before ghost, the listing state), so all of it works with no JS.
+ * - src/scripts/configure.ts writes the TEXT (names, URLs, sheet rows, the
+ *   WhatsApp + mailto hrefs, sticky-bar summary), runs the card shuffle and
+ *   the flip/bump micro-motion.
  * No storage, no network. Every word comes from src/data/site.ts.
  */
 import SectionLabel from '../ui/SectionLabel.astro';
 import SplitText from '../ui/SplitText.astro';
 import Arrow from '../ui/Arrow.astro';
 import WaGlyph from '../ui/WaGlyph.astro';
+import MailGlyph from '../ui/MailGlyph.astro';
 import ConceptPlate from '../ConceptPlate.astro';
-import Odometer from '../Odometer.astro';
-import { configure, packages, pricing, getPackage, wa, type ConfigSelection } from '../../data/site';
+import { configure, packages, pricing, getPackage, wa, mail, type ConfigSelection } from '../../data/site';
+import { concepts } from '../../data/concepts';
+import type { ConceptPalette } from '../../data/concepts';
 
 const d = configure.defaults;
 const p0 = getPackage(d.packageId);
 const rows0 = configure.sheet.rows(d);
 const row = (key: string) => rows0.find((r) => r.key === key)!;
+const S = configure.steps;
+const PV = configure.preview;
+const PG = PV.pages;
 
 /* ---- the text the script needs, derived from site.ts (never retyped) ---- */
 const TU = '{u}';
 const TB = '{b}';
+const TI = '{i}';
 const msgLines = (patch: Partial<ConfigSelection>) => configure.message({ ...d, ...patch }).split('\n');
 const sheetVal = (patch: Partial<ConfigSelection>, key: string) =>
   configure.sheet.rows({ ...d, ...patch }).find((r) => r.key === key)!;
@@ -44,12 +56,12 @@ const base = msgLines({});
 
 const data = {
   wa: wa(''),
+  mail: mail(configure.emailSubject),
   pk: Object.fromEntries(
     packages.map((p) => [
       p.id,
       {
         name: p.name,
-        price: p.price.display,
         days: p.daysLabel,
         r: Math.min(1, p.dayRange[1] / pricing.dayScaleMax),
         line: msgLines({ packageId: p.id })[1],
@@ -67,6 +79,7 @@ const data = {
     none: msgLines({ care: false })[3],
     biz: msgLines({ business: TB })[4],
     noBiz: msgLines({ business: '' })[4],
+    ind: msgLines({ industry: TI })[5],
   },
   sheet: {
     startNew: sheetVal({ start: 'new' }, 'start').value,
@@ -75,70 +88,260 @@ const data = {
     care: sheetVal({ care: true }, 'options').value,
     none: sheetVal({ care: false }, 'options').value,
   },
-  listing: {
-    url0: configure.listing.defaultUrl,
-    title: configure.listing.title(TB),
-    name0: configure.listing.defaultName,
-  },
+  cc: Object.fromEntries(
+    concepts.map((c) => [c.id, { name: c.name, domain: c.domain, niche: c.niche, city: c.city, svc: c.after.services }])
+  ),
+  other: S.industry.other,
+  listing: { title: configure.listing.title(TB) },
   send: configure.sticky.send,
 };
 
-const S = configure.steps;
 const split = (s: string) => {
   const i = s.lastIndexOf(' · ');
   return i > 0 ? [s.slice(0, i), s.slice(i + 3)] : [s, ''];
 };
 const [careName, careNote] = split(S.options.care);
 const [gName, gNote] = split(S.options.googleIncluded);
-const fan = configure.preview.fanPages;
+const fan = PV.fanPages;
 const noJsHref = wa(configure.noJsText);
+const noJsMail = mail(configure.emailSubject, configure.noJsText);
 const delivery0 = Math.min(1, p0.dayRange[1] / pricing.dayScaleMax);
-const priceNote = sheetVal({ care: true }, 'price').note;
+/* the typical-range note, whatever the Care choice (the care line lives in Options) */
+const priceNote = sheetVal({ care: false }, 'price').note;
+
+/* ---- the deck palette: halden by default, one :has rule per concept ---- */
+const h = concepts[0];
+const pvars = (p: ConceptPalette) =>
+  `--pb:${p.base};--pb2:${p.base2};--pd:${p.deep};--pt:${p.text};--pm:${p.muted};--pband:${p.band};--pband2:${p.band2};--pink:${p.ink};--pink2:${p.ink2};--pa:${p.accent};--pon:${p.onAccent};--pl:${p.line}`;
+const deckCss =
+  `.cfg-deck{${pvars(h.palette)}}` +
+  concepts
+    .map((c) => `.cfg:has(input[name="industry"][value="${c.id}"]:checked) .cfg-deck{${pvars(c.palette)}}`)
+    .join('');
+
+const industry = [
+  ...concepts.map((c) => ({ id: c.id, label: c.niche, sw: c.palette.accent })),
+  { id: 'other', label: S.industry.other, sw: '' },
+];
+const hNav = fan.slice(1, 4);
 ---
 
 <section id="configure" class="s-void section cfg" data-nav-theme="dark" aria-labelledby="configure-title" data-configure>
+  <Fragment set:html={`<style>${deckCss}</style>`} />
   <div class="cfg-light" aria-hidden="true"></div>
 
   <div class="wrap cfg-wrap">
-    <header class="head g">
+    <header class="head g" data-scene>
       <SectionLabel n={configure.label.index ?? undefined} name={configure.label.name} class="head-label" />
       <SplitText as="h2" id="configure-title" class="d2 head-h" text={configure.h2} />
       <p class="lead head-lead" data-reveal style="--d:140ms">{configure.lead}</p>
     </header>
 
     <div class="cfg-body g">
-      <!-- live preview: plate + listing (sticky on desktop) -->
+      <!-- live preview: the page deck + listing (sticky on desktop) -->
       <div class="pv">
         <div class="pv-in">
-          <div class="pv-stage" data-reveal style="--d:80ms">
-            <div class="pv-plate">
-              <div class="pv-ghost" aria-hidden="true">
-                <i class="pv-ghost-bar"></i>
-                <i class="pv-ghost-rule"></i>
-                <span class="pv-ghost-tag label">{configure.preview.ghostLabel}</span>
+          <div class="pv-stage" data-inview>
+            <div class="pv-tilt" data-tilt="5">
+              <div class="pv-bump" data-cfg-bump>
+                <div class="cfg-deck" data-deck>
+                  <div class="pv-ghost" aria-hidden="true">
+                    <i class="pv-ghost-bar"></i>
+                    <i class="pv-ghost-rule"></i>
+                    <span class="pv-ghost-tag label">{PV.ghostLabel}</span>
+                  </div>
+
+                  <!-- card 0: Home = the five concept plates, one shown -->
+                  <div class="card card--home is-front" data-card="0" style="--k:0">
+                    <div class="swap">
+                      {
+                        concepts.map((c) => (
+                          <div class={`si si--${c.id}`}>
+                            <ConceptPlate concept={c.id} mode="mini" />
+                          </div>
+                        ))
+                      }
+                    </div>
+                    <span class="pv-home label" aria-hidden="true">{fan[0]}</span>
+                  </div>
+
+                  <!-- cards 1–4: Services, About, Contact, Locations -->
+                  {
+                    fan.slice(1).map((name, j) => {
+                      const i = j + 1;
+                      return (
+                        <div class={`card card--pg card--p${i}`} data-card={i} style={`--k:${i}`} aria-hidden="true">
+                          <div class="pg">
+                            <div class="pg-bar">
+                              <span class="pg-url">
+                                <span data-cp-url data-cp-follow>
+                                  {h.domain}
+                                </span>
+                                {PG.paths[i]}
+                              </span>
+                              <span class="pg-name label">{name}</span>
+                            </div>
+                            <div class="pg-screen">
+                              <div class="pg-head">
+                                <span class="pg-brand" data-cp-name data-cp-follow>
+                                  {h.name}
+                                </span>
+                                <span class="pg-nav">
+                                  {hNav.map((n) => (
+                                    <span class:list={['pg-nav-i', { 'is-on': n === name }]}>{n}</span>
+                                  ))}
+                                </span>
+                              </div>
+
+                              {i === 1 && (
+                                <div class="pg-body pg-svc">
+                                  <div class="svc-top pg-in" style="--n:0">
+                                    <p class="pg-h">{PG.services.title}</p>
+                                    <p class="pg-sub">{PG.services.sub}</p>
+                                  </div>
+                                  <span class="pg-btn pg-in" style="--n:1">
+                                    {PG.services.cta}
+                                  </span>
+                                  <div class="svc-band">
+                                    {h.after.services.map((s, n) => (
+                                      <div class={`svc-t svc-t--${n} pg-in`} style={`--n:${n + 2}`}>
+                                        <i class="svc-th">
+                                          <i class="svc-art" />
+                                        </i>
+                                        <span class="svc-name" data-svc={n}>
+                                          {s}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {i === 2 && (
+                                <div class="pg-body pg-abt">
+                                  <div class="abt-img pg-in" style="--n:0">
+                                    <svg viewBox="0 0 200 240" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+                                      <rect x="0" y="150" width="200" height="90" class="abt-ground" />
+                                      <path d="M30 150V92l46-34 46 34v58z" class="abt-house" />
+                                      <path d="M112 150v-38l30-22 30 22v38z" class="abt-house abt-house--b" />
+                                      <circle cx="160" cy="46" r="16" class="abt-sun" />
+                                      <rect x="62" y="116" width="16" height="34" class="abt-door" />
+                                    </svg>
+                                  </div>
+                                  <div class="abt-txt">
+                                    <p class="pg-h pg-in" style="--n:1">
+                                      {PG.about.title}
+                                    </p>
+                                    <p class="pg-sub pg-in" style="--n:2">
+                                      {PG.about.sub}
+                                    </p>
+                                    <ol class="abt-tl">
+                                      {PG.about.years.map((y, n) => (
+                                        <li class="abt-row pg-in" style={`--n:${n + 3}`}>
+                                          <span class="abt-y">{y}</span>
+                                          <i class="abt-bars">
+                                            <i />
+                                            <i />
+                                          </i>
+                                        </li>
+                                      ))}
+                                    </ol>
+                                  </div>
+                                </div>
+                              )}
+
+                              {i === 3 && (
+                                <div class="pg-body pg-ct">
+                                  <div class="ct-form">
+                                    <p class="pg-h pg-in" style="--n:0">
+                                      {PG.contact.title}
+                                    </p>
+                                    {PG.contact.fields.map((f, n) => (
+                                      <span class={`ct-f ct-f--${n} pg-in`} style={`--n:${n + 1}`}>
+                                        <span class="ct-l">{f}</span>
+                                        <i class="ct-box" />
+                                      </span>
+                                    ))}
+                                    <span class="pg-btn pg-in" style="--n:4">
+                                      {PG.contact.send}
+                                    </span>
+                                  </div>
+                                  <div class="ct-map pg-in" style="--n:2">
+                                    <svg viewBox="0 0 300 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+                                      <rect x="176" y="18" width="90" height="70" class="map-park" />
+                                      <path d="M-10 214c60-26 96 8 150-18s96-66 170-40" class="map-river" />
+                                      <path d="M0 60h300M0 130h300M0 250h300M60 0v300M140 0v300M226 0v300M0 0l300 300" class="map-st" />
+                                    </svg>
+                                    <span class="ct-pin">
+                                      <i class="pin" />
+                                      <span class="ct-chip">
+                                        <span class="ct-chip-t">{PG.contact.pin}</span>
+                                        <span data-cp-city>{h.city}</span>
+                                      </span>
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+
+                              {i === 4 && (
+                                <div class="pg-body pg-loc">
+                                  <div class="loc-map pg-in" style="--n:0">
+                                    <svg viewBox="0 0 300 220" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+                                      <path d="M-10 160c70-40 120 20 190-30s90-40 130-20" class="map-river" />
+                                      <path d="M0 40h300M0 110h300M0 190h300M50 0v220M130 0v220M210 0v220M0 220 260 0" class="map-st" />
+                                    </svg>
+                                    {PG.locations.places.map((_, n) => (
+                                      <span class={`loc-pin loc-pin--${n}`}>{n + 1}</span>
+                                    ))}
+                                  </div>
+                                  <div class="loc-list">
+                                    <p class="pg-h pg-in" style="--n:1">
+                                      {PG.locations.title}
+                                    </p>
+                                    {PG.locations.places.map((pl, n) => (
+                                      <span class="loc-row pg-in" style={`--n:${n + 2}`}>
+                                        <span class="loc-n">{n + 1}</span>
+                                        <span class="loc-t">
+                                          <span class="loc-name">{pl}</span>
+                                          <span class="loc-h">{PG.locations.hours}</span>
+                                        </span>
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  }
+                </div>
               </div>
-              <ol class="pv-sheets" aria-hidden="true">
-                {
-                  fan.slice(1).map((name, i) => (
-                    <li class="pv-sheet" style={`--i:${i + 1}`}>
-                      <span class="pv-sheet-bar label">{name}</span>
-                    </li>
-                  ))
-                }
-              </ol>
-              <ConceptPlate mode="mini" />
-              <span class="pv-home label" aria-hidden="true">{fan[0]}</span>
             </div>
           </div>
-          <p class="pv-cap label" data-reveal style="--d:160ms">
-            <span class="stripe" aria-hidden="true"></span>
-            <span>{configure.preview.siteLabel}</span>
-          </p>
+
+          <div class="pv-foot">
+            <div class="pages" role="group" aria-label={PG.navAria} data-pages>
+              <span class="pages-l label" aria-hidden="true">{PG.navLabel}</span>
+              {
+                fan.map((name, i) => (
+                  <button class="page-b" type="button" data-page={i} aria-pressed={i === 0 ? 'true' : 'false'}>
+                    {name}
+                  </button>
+                ))
+              }
+            </div>
+            <p class="pv-cap label" data-reveal style="--d:160ms">
+              <span class="stripe" aria-hidden="true"></span>
+              <span>{PV.siteLabel}</span>
+            </p>
+          </div>
 
           <div class="lst-wrap" data-reveal style="--d:220ms">
-            <p class="pv-cap pv-cap--lst label">{configure.preview.listingLabel}</p>
+            <p class="pv-cap pv-cap--lst label">{PV.listingLabel}</p>
             <div class="lst">
-              <p class="lst-url" data-cfg-url>{configure.listing.defaultUrl}</p>
+              <p class="lst-url" data-cp-url data-cp-follow>{configure.listing.defaultUrl}</p>
               <p class="lst-title" data-cfg-title>{configure.listing.title('')}</p>
               <div class="lst-x lst-x--on">
                 <div><p class="lst-text">{configure.listing.text}</p></div>
@@ -152,32 +355,38 @@ const priceNote = sheetVal({ care: true }, 'price').note;
       </div>
 
       <!-- the controls, then the build sheet -->
-      <div class="side">
+      <div class="side" data-scene="soft">
         <form class="ctl" data-config action="#configure" method="get" aria-describedby="cfg-note">
           <fieldset class="step" data-reveal style="--i:0">
-            <legend class="step-lg label"><span class="step-n">{S.package.index}</span>{S.package.legend}</legend>
-            <div class="opts">
+            <legend class="step-lg label"><span class="step-n">{S.industry.index}</span>{S.industry.legend}</legend>
+            <div class="inds">
               {
-                S.package.options.map((o) => {
-                  const [name, price] = split(o.label);
-                  return (
-                    <label class="opt">
-                      <input class="ind" type="radio" name="package" value={o.id} checked={o.id === d.packageId} />
-                      <span class="opt-t">{name}</span>
-                      {price && (
-                        <span class="opt-v">
-                          <span class="visually-hidden"> · </span>
-                          {price}
-                        </span>
-                      )}
-                    </label>
-                  );
-                })
+                industry.map((o) => (
+                  <label class="opt ind-opt" style={o.sw ? `--sw:${o.sw}` : undefined}>
+                    <input class="ind" type="radio" name="industry" value={o.id} />
+                    <span class="opt-t">{o.label}</span>
+                    <i class:list={['sw', { 'sw--none': !o.sw }]} aria-hidden="true" />
+                  </label>
+                ))
               }
             </div>
           </fieldset>
 
           <fieldset class="step" data-reveal style="--i:1">
+            <legend class="step-lg label"><span class="step-n">{S.package.index}</span>{S.package.legend}</legend>
+            <div class="opts">
+              {
+                S.package.options.map((o) => (
+                  <label class="opt">
+                    <input class="ind" type="radio" name="package" value={o.id} checked={o.id === d.packageId} />
+                    <span class="opt-t">{o.label}</span>
+                  </label>
+                ))
+              }
+            </div>
+          </fieldset>
+
+          <fieldset class="step" data-reveal style="--i:2">
             <legend class="step-lg label"><span class="step-n">{S.start.index}</span>{S.start.legend}</legend>
             <div class="opts">
               {
@@ -209,7 +418,7 @@ const priceNote = sheetVal({ care: true }, 'price').note;
             </div>
           </fieldset>
 
-          <fieldset class="step" data-reveal style="--i:2">
+          <fieldset class="step" data-reveal style="--i:3">
             <legend class="step-lg label"><span class="step-n">{S.options.index}</span>{S.options.legend}</legend>
             <div class="opts">
               <div class="opt opt-fixed">
@@ -239,7 +448,7 @@ const priceNote = sheetVal({ care: true }, 'price').note;
             </div>
           </fieldset>
 
-          <fieldset class="step" data-reveal style="--i:3">
+          <fieldset class="step" data-reveal style="--i:4">
             <legend class="step-lg label"><span class="step-n">{S.name.index}</span>{S.name.legend}</legend>
             <label class="fld">
               <span class="fld-l">{S.name.business.label}</span>
@@ -266,6 +475,10 @@ const priceNote = sheetVal({ care: true }, 'price').note;
                 <dt>{row('package').label}</dt>
                 <dd data-sheet="package">{row('package').value}</dd>
               </div>
+              <div class="row" data-sheet-row="industry" hidden>
+                <dt>{S.industry.sheetLabel}</dt>
+                <dd data-sheet="industry"></dd>
+              </div>
               <div class="row">
                 <dt>{row('start').label}</dt>
                 <dd data-sheet="start">{row('start').value}</dd>
@@ -277,12 +490,8 @@ const priceNote = sheetVal({ care: true }, 'price').note;
               <div class="row row-price">
                 <dt>{row('price').label}</dt>
                 <dd>
-                  <span class="price"><Odometer value={p0.price.display} delay={200} /></span>
-                  {priceNote && (
-                    <span class="p-note" data-sheet="note" hidden={!d.care}>
-                      {priceNote}
-                    </span>
-                  )}
+                  <span class="price">{row('price').value}</span>
+                  {priceNote && <span class="p-note">{priceNote}</span>}
                 </dd>
               </div>
               <div class="row row-del">
@@ -303,19 +512,26 @@ const priceNote = sheetVal({ care: true }, 'price').note;
               </div>
             </dl>
 
-            <a
-              class="btn cfg-cta"
-              href={noJsHref}
-              target="_blank"
-              rel="noopener"
-              data-wa-intent="configure"
-              data-magnetic=".2"
-              data-cfg-cta
-            >
-              <WaGlyph size={18} />
-              <span>{configure.cta}</span>
-              <Arrow />
-            </a>
+            <div class="ctas">
+              <a
+                class="btn cfg-cta"
+                href={noJsHref}
+                target="_blank"
+                rel="noopener"
+                data-wa-intent="configure"
+                data-magnetic=".3"
+                data-cfg-cta
+              >
+                <WaGlyph size={18} />
+                <span>{configure.cta}</span>
+                <Arrow />
+              </a>
+              <a class="btn btn-line cfg-mail" href={noJsMail} data-magnetic=".2" data-cfg-mail>
+                <MailGlyph size={16} />
+                <span>{configure.ctaEmail}</span>
+                <Arrow />
+              </a>
+            </div>
             <p class="cfg-note" id="cfg-note">{configure.note}</p>
           </div>
         </aside>
@@ -327,8 +543,8 @@ const priceNote = sheetVal({ care: true }, 'price').note;
 </section>
 
 <script>
-  /* configure.ts (~3 KB) loads only when the section nears the viewport, on
-     the first interaction, or at once when the URL asks for a model. */
+  /* configure.ts loads only when the section nears the viewport, on the
+     first interaction, or at once when the URL asks for a model. */
   const root = document.getElementById('configure');
   if (root && root.querySelector('[data-config]')) {
     let started = false;
@@ -340,7 +556,7 @@ const priceNote = sheetVal({ care: true }, 'price').note;
       import('../../scripts/configure')
         .then((m) => m.initConfigure(root))
         .catch(() => {
-          /* the no-JS link stays in place */
+          /* the no-JS links stay in place */
         });
     };
     if ('IntersectionObserver' in window) {
@@ -388,7 +604,7 @@ const priceNote = sheetVal({ care: true }, 'price').note;
 
   .head-lead {
     color: var(--fg);
-    max-width: 44ch;
+    max-width: 34ch;
   }
 
   @media (min-width: 768px) {
@@ -419,7 +635,7 @@ const priceNote = sheetVal({ care: true }, 'price').note;
   /* --------------------------------------------------------------- body */
   .cfg-body {
     /* fan headroom (4 page plates), fan drift, ghost travel */
-    --fan-y: 16px;
+    --fan-y: 18px;
     --fan-x: 6px;
     --ghost-x: 24px;
     --fan-head: calc(4 * var(--fan-y));
@@ -430,7 +646,7 @@ const priceNote = sheetVal({ care: true }, 'price').note;
 
   @media (min-width: 768px) {
     .cfg-body {
-      --fan-y: 20px;
+      --fan-y: 22px;
       --fan-x: 10px;
       --ghost-x: 44px;
       margin-top: 40px;
@@ -439,7 +655,8 @@ const priceNote = sheetVal({ care: true }, 'price').note;
 
   @media (min-width: 1100px) {
     .cfg-body {
-      --fan-x: 12px;
+      --fan-y: 24px;
+      --fan-x: 14px;
       --ghost-x: 56px;
       margin-top: 56px;
       align-items: stretch;
@@ -456,7 +673,7 @@ const priceNote = sheetVal({ care: true }, 'price').note;
 
     .pv-in {
       position: sticky;
-      top: 24px;
+      top: calc(var(--nav-h, 76px) + 24px);
     }
   }
 
@@ -469,65 +686,138 @@ const priceNote = sheetVal({ care: true }, 'price').note;
   /* ------------------------------------------------------------ preview */
   .pv-stage {
     padding: var(--fan-head) calc(4 * var(--fan-x)) 0 var(--ghost-x);
-  }
-
-  .pv-plate {
-    position: relative;
-    container-type: inline-size;
-  }
-
-  .pv-plate > :global(.cp) {
-    position: relative;
-    z-index: 5;
-  }
-
-  /* Complete: the plate fans into 5 page plates. The four behind rise as
-     tabs, each one a step up and a little right, 640ms mech, 50ms apart. */
-  .pv-sheets {
-    position: absolute;
-    inset: 0;
-    z-index: 2;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  .pv-sheet {
-    position: absolute;
-    inset: 0;
-    z-index: calc(5 - var(--i));
-    background-color: var(--plate);
-    border: 1px solid rgb(185 162 255 / 0.3);
-    visibility: hidden;
-    transform: translate3d(0, 0, 0);
+    transform-origin: 30% 60%;
     transition:
-      transform 640ms var(--ease-mech) calc((4 - var(--i)) * 50ms),
+      transform 1500ms var(--ease-expo),
+      opacity 700ms linear;
+  }
+
+  /* bespoke 3D entrance: the deck swings in from a turned, deeper plane */
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .pv-stage:not(.is-in) {
+    opacity: 0;
+    transform: perspective(1400px) translate3d(0, 70px, -220px) rotateY(-26deg) rotateX(14deg);
+  }
+
+  .pv-bump {
+    transform-style: preserve-3d;
+  }
+
+  .cfg-deck {
+    --pgk: 0;
+    position: relative;
+    perspective: 1800px;
+    perspective-origin: 50% 20%;
+  }
+
+  /* the cards: Home in flow (sets the height), the pages stacked on it */
+  .card {
+    position: relative;
+    z-index: calc(10 - var(--k));
+    transform: translate3d(0, 0, 0);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .card--pg {
+    position: absolute;
+    inset: 0;
+    visibility: hidden;
+    transition:
+      transform 640ms var(--ease-mech) calc((4 - var(--k)) * 50ms),
       visibility 0s linear calc(640ms + 200ms);
   }
 
-  .pv-sheet-bar {
-    display: flex;
-    align-items: center;
-    height: var(--fan-y);
-    padding-inline: 10px;
-    background-color: var(--plate);
-    color: var(--dim);
-    font-size: 12px;
-    letter-spacing: 0.16em;
-    line-height: 1;
-    white-space: nowrap;
-    overflow: hidden;
-  }
-
-  .cfg:has(input[name='package'][value='complete']:checked) .pv-sheet {
+  /* Complete: the deck fans. Every card sits at its slot --k (0 = front),
+     one step up and a little right per slot, 640ms mech, 60ms apart. */
+  .cfg:has(input[name='package'][value='complete']:checked) .card {
     visibility: visible;
-    transform: translate3d(calc(var(--i) * var(--fan-x)), calc(var(--i) * var(--fan-y) * -1), 0);
+    transform: translate3d(calc(var(--k) * var(--fan-x)), calc(var(--k) * var(--fan-y) * -1), 0);
     transition:
-      transform 640ms var(--ease-mech) calc((var(--i) - 1) * 50ms),
+      transform 700ms var(--ease-mech) calc(var(--k) * 60ms),
       visibility 0s linear 0s;
   }
 
-  /* the front plate names itself "Home" when the others fan out */
+  .cfg:has(input[name='package'][value='complete']:checked) .card:not(.is-front) {
+    cursor: pointer;
+  }
+
+  .cfg-deck.is-shuffling .card {
+    transition: none !important;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .cfg:has(input[name='package'][value='complete']:checked) .cfg-deck:not(.is-shuffling) .card:not(.is-front):hover {
+      transform: translate3d(calc(var(--k) * var(--fan-x)), calc(var(--k) * var(--fan-y) * -1 - 8px), 0);
+      transition-duration: 320ms;
+      transition-delay: 0ms;
+    }
+  }
+
+  /* ---- Home: the concept plates turn like a turntable ---- */
+  .swap {
+    display: grid;
+    perspective: 1600px;
+  }
+
+  .si {
+    grid-area: 1 / 1;
+    min-width: 0;
+    visibility: hidden;
+    opacity: 0;
+    transform: rotateY(64deg) translate3d(12%, 0, -120px);
+    transform-origin: 50% 50%;
+    backface-visibility: hidden;
+    transition:
+      transform 620ms var(--ease-quint),
+      opacity 360ms linear 160ms,
+      visibility 0s linear 640ms;
+  }
+
+  .cfg:not(:has(input[name='industry']:checked)) .si--halden,
+  .cfg:has(input[name='industry'][value='other']:checked) .si--halden,
+  .cfg:has(input[name='industry'][value='halden']:checked) .si--halden,
+  .cfg:has(input[name='industry'][value='dental']:checked) .si--dental,
+  .cfg:has(input[name='industry'][value='restaurant']:checked) .si--restaurant,
+  .cfg:has(input[name='industry'][value='law']:checked) .si--law,
+  .cfg:has(input[name='industry'][value='fitness']:checked) .si--fitness {
+    visibility: visible;
+    opacity: 1;
+    transform: none;
+    transition:
+      transform 620ms var(--ease-quint),
+      opacity 200ms linear,
+      visibility 0s linear 0s;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed))
+    .cfg:has(input[name='industry'][value='other']:checked)
+    .si--halden,
+  :global(html.js:not(.motion-reduced):not(.motion-failed))
+    .cfg:has(input[name='industry'][value='halden']:checked)
+    .si--halden,
+  :global(html.js:not(.motion-reduced):not(.motion-failed))
+    .cfg:has(input[name='industry'][value='dental']:checked)
+    .si--dental,
+  :global(html.js:not(.motion-reduced):not(.motion-failed))
+    .cfg:has(input[name='industry'][value='restaurant']:checked)
+    .si--restaurant,
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .cfg:has(input[name='industry'][value='law']:checked) .si--law,
+  :global(html.js:not(.motion-reduced):not(.motion-failed))
+    .cfg:has(input[name='industry'][value='fitness']:checked)
+    .si--fitness {
+    animation: si-in 1050ms var(--ease-expo) 180ms both;
+  }
+
+  @keyframes si-in {
+    from {
+      opacity: 0;
+      transform: rotateY(-72deg) translate3d(-14%, 0, -160px);
+    }
+    40% {
+      opacity: 1;
+    }
+  }
+
+  /* the front plate names itself "Home" when the deck fans out */
   .pv-home {
     position: absolute;
     top: 1px;
@@ -538,8 +828,8 @@ const priceNote = sheetVal({ care: true }, 'price').note;
     height: calc(max(18px, calc(28 * 100cqi / 760)) - 2px);
     padding-inline: 10px;
     background-color: var(--plate);
-    color: var(--dim);
-    font-size: 12px;
+    color: var(--haze);
+    font-size: 11px;
     letter-spacing: 0.16em;
     line-height: 1;
     visibility: hidden;
@@ -547,6 +837,10 @@ const priceNote = sheetVal({ care: true }, 'price').note;
     transition:
       opacity 320ms linear,
       visibility 0s linear 320ms;
+  }
+
+  .card--home {
+    container-type: inline-size;
   }
 
   .cfg:has(input[name='package'][value='complete']:checked) .pv-home {
@@ -557,11 +851,564 @@ const priceNote = sheetVal({ care: true }, 'price').note;
       visibility 0s linear 0s;
   }
 
+  /* ---- the page plates ---- */
+  .pg {
+    --u: calc(100cqi / 760);
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    container-type: inline-size;
+    background-color: var(--plate);
+  }
+
+  .card--pg {
+    container-type: inline-size;
+  }
+
+  .pg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 6;
+    border: 1px solid rgb(185 162 255 / 0.34);
+    pointer-events: none;
+  }
+
+  .pg-bar {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    height: max(18px, calc(28 * var(--u)));
+    padding-inline: max(10px, calc(16 * var(--u))) 10px;
+    background-color: var(--plate);
+    border-bottom: 1px solid var(--line-dark);
+  }
+
+  .pg-url {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--dim);
+    font-size: max(9px, calc(11 * var(--u)));
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    line-height: 1;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .pg-name {
+    flex: 0 0 auto;
+    color: var(--haze);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    line-height: 1;
+  }
+
+  .card:not(.is-front) .pg-name {
+    color: var(--starlight);
+  }
+
+  .pg-screen {
+    position: relative;
+    flex: 1 1 auto;
+    overflow: hidden;
+    background-color: var(--pb);
+    color: var(--pt);
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .pg-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: calc(16 * var(--u));
+    height: calc(52 * var(--u));
+    padding-inline: calc(32 * var(--u));
+    border-bottom: 1px solid color-mix(in srgb, var(--pl) 22%, transparent);
+  }
+
+  .pg-brand {
+    min-width: 0;
+    max-width: calc(300 * var(--u));
+    overflow: hidden;
+    color: var(--pt);
+    font-stretch: var(--wd-display);
+    font-size: calc(15 * var(--u));
+    font-weight: 650;
+    letter-spacing: -0.005em;
+    line-height: 1.2;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .pg-nav {
+    display: flex;
+    gap: calc(18 * var(--u));
+  }
+
+  .pg-nav-i {
+    position: relative;
+    padding-block: calc(4 * var(--u));
+    color: var(--pm);
+    font-size: calc(11 * var(--u));
+    font-weight: 500;
+    line-height: 1.2;
+  }
+
+  .pg-nav-i.is-on {
+    color: var(--pt);
+  }
+
+  .pg-nav-i.is-on::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: calc(2 * var(--u));
+    background-color: var(--pa);
+  }
+
+  .pg-body {
+    position: absolute;
+    inset: calc(52 * var(--u)) 0 0;
+  }
+
+  .pg-h {
+    color: var(--pt);
+    font-stretch: var(--wd-display);
+    font-size: calc(34 * var(--u));
+    font-weight: 650;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+  }
+
+  .pg-sub {
+    margin-top: calc(8 * var(--u));
+    color: var(--pm);
+    font-size: calc(13 * var(--u));
+    line-height: 1.35;
+  }
+
+  .pg-btn {
+    display: inline-flex;
+    align-items: center;
+    height: calc(34 * var(--u));
+    padding-inline: calc(16 * var(--u));
+    background-color: var(--pa);
+    color: var(--pon);
+    font-size: calc(12 * var(--u));
+    font-weight: 650;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  /* Services: title row, a light band with one featured tile + two rows */
+  .svc-top {
+    position: absolute;
+    left: calc(32 * var(--u));
+    top: calc(30 * var(--u));
+  }
+
+  .pg-svc > .pg-btn {
+    position: absolute;
+    right: calc(32 * var(--u));
+    top: calc(48 * var(--u));
+  }
+
+  .svc-band {
+    position: absolute;
+    inset: calc(128 * var(--u)) 0 0;
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: calc(14 * var(--u));
+    padding: calc(22 * var(--u)) calc(32 * var(--u)) calc(26 * var(--u));
+    background-color: var(--pband);
+  }
+
+  .svc-t {
+    display: flex;
+    flex-direction: column;
+    gap: calc(8 * var(--u));
+    min-width: 0;
+  }
+
+  .svc-t--0 {
+    grid-row: 1 / span 2;
+  }
+
+  .svc-t--1,
+  .svc-t--2 {
+    flex-direction: row;
+    align-items: center;
+    gap: calc(14 * var(--u));
+  }
+
+  .svc-th {
+    position: relative;
+    display: block;
+    flex: 1 1 auto;
+    overflow: hidden;
+    background-color: var(--pband2);
+  }
+
+  .svc-t--1 .svc-th,
+  .svc-t--2 .svc-th {
+    flex: 0 0 calc(120 * var(--u));
+    align-self: stretch;
+  }
+
+  .svc-art {
+    position: absolute;
+    left: 18%;
+    bottom: -30%;
+    width: 64%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background-color: var(--pa);
+    opacity: 0.85;
+  }
+
+  .svc-t--1 .svc-art {
+    left: 30%;
+    bottom: -50%;
+    background-color: var(--pink2);
+    opacity: 0.35;
+  }
+
+  .svc-t--2 .svc-art {
+    left: -20%;
+    bottom: 10%;
+    border-radius: 0;
+    transform: rotate(45deg);
+    background-color: var(--pink);
+    opacity: 0.25;
+  }
+
+  .svc-name {
+    color: var(--pink);
+    font-stretch: var(--wd-display);
+    font-size: calc(14 * var(--u));
+    font-weight: 650;
+    line-height: 1.2;
+  }
+
+  /* About: an image panel, the story as a timeline */
+  .pg-abt {
+    display: grid;
+    grid-template-columns: 0.8fr 1fr;
+    gap: calc(30 * var(--u));
+    padding: calc(26 * var(--u)) calc(32 * var(--u)) calc(28 * var(--u));
+  }
+
+  .abt-img {
+    position: relative;
+    overflow: hidden;
+    background-color: var(--pb2);
+  }
+
+  .abt-img svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .abt-ground {
+    fill: var(--pd);
+  }
+
+  .abt-house {
+    fill: var(--pm);
+    opacity: 0.55;
+  }
+
+  .abt-house--b {
+    opacity: 0.3;
+  }
+
+  .abt-door {
+    fill: var(--pa);
+  }
+
+  .abt-sun {
+    fill: var(--pa);
+    opacity: 0.8;
+  }
+
+  .abt-txt {
+    min-width: 0;
+    padding-top: calc(4 * var(--u));
+  }
+
+  .abt-tl {
+    display: grid;
+    gap: calc(14 * var(--u));
+    margin: calc(24 * var(--u)) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .abt-row {
+    display: grid;
+    grid-template-columns: calc(70 * var(--u)) 1fr;
+    align-items: center;
+    gap: calc(14 * var(--u));
+    padding-top: calc(12 * var(--u));
+    border-top: 1px solid color-mix(in srgb, var(--pl) 26%, transparent);
+  }
+
+  .abt-y {
+    color: var(--pa);
+    font-stretch: var(--wd-display);
+    font-size: calc(16 * var(--u));
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .abt-bars {
+    display: grid;
+    gap: calc(7 * var(--u));
+  }
+
+  .abt-bars > i {
+    display: block;
+    height: calc(6 * var(--u));
+    background-color: var(--pm);
+    opacity: 0.4;
+  }
+
+  .abt-bars > i + i {
+    width: 64%;
+    opacity: 0.22;
+  }
+
+  /* Contact: a form beside a map */
+  .pg-ct {
+    display: grid;
+    grid-template-columns: 1fr 1.05fr;
+  }
+
+  .ct-form {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: calc(10 * var(--u));
+    padding: calc(26 * var(--u)) calc(28 * var(--u)) 0 calc(32 * var(--u));
+  }
+
+  .ct-form .pg-h {
+    margin-bottom: calc(8 * var(--u));
+  }
+
+  .ct-f {
+    display: grid;
+    gap: calc(5 * var(--u));
+    width: 100%;
+  }
+
+  .ct-l {
+    color: var(--pm);
+    font-size: calc(11 * var(--u));
+    font-weight: 500;
+    line-height: 1;
+  }
+
+  .ct-box {
+    display: block;
+    height: calc(30 * var(--u));
+    border: 1px solid color-mix(in srgb, var(--pl) 40%, transparent);
+    background-color: var(--pd);
+  }
+
+  .ct-f--2 .ct-box {
+    height: calc(58 * var(--u));
+  }
+
+  .ct-form .pg-btn {
+    margin-top: calc(6 * var(--u));
+  }
+
+  .ct-map,
+  .loc-map {
+    position: relative;
+    overflow: hidden;
+    background-color: var(--pband);
+  }
+
+  .ct-map svg,
+  .loc-map svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .map-st {
+    fill: none;
+    stroke: var(--pink2);
+    stroke-width: 1.4;
+    opacity: 0.35;
+  }
+
+  .map-river {
+    fill: none;
+    stroke: var(--pink2);
+    stroke-width: 10;
+    opacity: 0.18;
+  }
+
+  .map-park {
+    fill: var(--pa);
+    opacity: 0.22;
+  }
+
+  .ct-pin {
+    position: absolute;
+    left: 44%;
+    top: 36%;
+    display: flex;
+    align-items: flex-start;
+    gap: calc(8 * var(--u));
+  }
+
+  .pin {
+    display: block;
+    width: calc(18 * var(--u));
+    height: calc(18 * var(--u));
+    border-radius: 50% 50% 50% 0;
+    background-color: var(--pa);
+    transform: rotate(-45deg);
+  }
+
+  .ct-chip {
+    display: grid;
+    gap: calc(3 * var(--u));
+    padding: calc(8 * var(--u)) calc(10 * var(--u));
+    background-color: var(--pb);
+    color: var(--pt);
+    font-size: calc(11 * var(--u));
+    line-height: 1.15;
+    white-space: nowrap;
+  }
+
+  .ct-chip-t {
+    color: var(--pm);
+    font-size: calc(9 * var(--u));
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  /* Locations: a map with numbered pins, the list beside it */
+  .pg-loc {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+  }
+
+  .loc-pin {
+    position: absolute;
+    display: grid;
+    place-items: center;
+    width: calc(24 * var(--u));
+    height: calc(24 * var(--u));
+    border-radius: 50%;
+    background-color: var(--pa);
+    color: var(--pon);
+    font-size: calc(11 * var(--u));
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .loc-pin--0 {
+    left: 26%;
+    top: 30%;
+  }
+
+  .loc-pin--1 {
+    left: 58%;
+    top: 18%;
+  }
+
+  .loc-pin--2 {
+    left: 66%;
+    top: 62%;
+  }
+
+  .loc-list {
+    display: flex;
+    flex-direction: column;
+    gap: calc(12 * var(--u));
+    padding: calc(26 * var(--u)) calc(32 * var(--u)) 0 calc(28 * var(--u));
+  }
+
+  .loc-list .pg-h {
+    margin-bottom: calc(10 * var(--u));
+  }
+
+  .loc-row {
+    display: grid;
+    grid-template-columns: calc(24 * var(--u)) 1fr;
+    align-items: center;
+    gap: calc(12 * var(--u));
+    padding-top: calc(12 * var(--u));
+    border-top: 1px solid color-mix(in srgb, var(--pl) 26%, transparent);
+  }
+
+  .loc-n {
+    display: grid;
+    place-items: center;
+    width: calc(24 * var(--u));
+    height: calc(24 * var(--u));
+    border: 1px solid var(--pa);
+    border-radius: 50%;
+    color: var(--pt);
+    font-size: calc(11 * var(--u));
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .loc-t {
+    display: grid;
+    gap: calc(4 * var(--u));
+  }
+
+  .loc-name {
+    color: var(--pt);
+    font-stretch: var(--wd-display);
+    font-size: calc(15 * var(--u));
+    font-weight: 650;
+    line-height: 1.1;
+  }
+
+  .loc-h {
+    color: var(--pm);
+    font-size: calc(11 * var(--u));
+    line-height: 1.1;
+  }
+
+  /* the page just brought forward builds itself: blocks rise in sequence */
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .card.is-landed .pg-in {
+    animation: pg-in 760ms var(--ease-expo) calc(var(--n, 0) * 70ms) both;
+  }
+
+  @keyframes pg-in {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 18px, 0);
+    }
+  }
+
   /* Rebuild: a hairline-only "Before" ghost slides out to the left */
   .pv-ghost {
     position: absolute;
     inset: 0;
-    z-index: 1;
+    z-index: 0;
     border: 1px solid var(--line-dark-strong);
     visibility: hidden;
     transform: translate3d(0, 0, 0) scale(1);
@@ -581,7 +1428,7 @@ const priceNote = sheetVal({ care: true }, 'price').note;
   }
 
   .pv-ghost-bar {
-    top: max(18px, calc(28 * 100cqi / 760));
+    top: 24px;
   }
 
   .pv-ghost-rule {
@@ -610,18 +1457,116 @@ const priceNote = sheetVal({ care: true }, 'price').note;
       visibility 0s linear 0s;
   }
 
+  /* ---- under the deck: the page buttons (Complete + JS), the caption ---- */
+  .pv-foot {
+    display: grid;
+    row-gap: 14px;
+    margin-top: 18px;
+    margin-left: var(--ghost-x);
+  }
+
+  .pages {
+    display: none;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 2px;
+  }
+
+  :global(html.js) .cfg:has(input[name='package'][value='complete']:checked) .pages {
+    display: flex;
+    animation: pages-in 600ms var(--ease-expo) both;
+  }
+
+  @keyframes pages-in {
+    from {
+      opacity: 0;
+      transform: translate3d(0, -10px, 0);
+    }
+  }
+
+  .pages-l {
+    margin-right: 10px;
+    color: var(--dim);
+  }
+
+  .page-b {
+    position: relative;
+    min-height: 40px;
+    padding: 0 12px;
+    border: 0;
+    background-color: var(--void);
+    color: var(--haze);
+    font-size: 0.8125rem;
+    font-weight: 550;
+    line-height: 1;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: color var(--t-micro) linear;
+  }
+
+  .page-b::after {
+    content: '';
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: 6px;
+    height: 2px;
+    background-color: var(--lilac);
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 420ms var(--ease-expo);
+  }
+
+  .page-b[aria-pressed='true'] {
+    color: var(--starlight);
+  }
+
+  .page-b[aria-pressed='true']::after {
+    transform: scaleX(1);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .page-b:hover {
+      color: var(--starlight);
+    }
+  }
+
+  .page-b:focus-visible {
+    outline: 2px solid var(--starlight);
+    outline-offset: -2px;
+  }
+
+  @media (max-width: 767px) {
+    .pages-l {
+      flex-basis: 100%;
+      margin-bottom: 2px;
+    }
+
+    .page-b {
+      min-height: 44px;
+      padding: 0 8px;
+    }
+
+    .page-b::after {
+      left: 8px;
+      right: 8px;
+    }
+
+    .pages {
+      margin-left: -8px;
+    }
+  }
+
   .pv-cap {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-top: 16px;
-    margin-left: var(--ghost-x);
     color: var(--fg-3);
   }
 
   /* ------------------------------------------------------------ listing */
   .lst-wrap {
-    margin-top: 40px;
+    margin-top: 36px;
     margin-left: var(--ghost-x);
     margin-right: calc(4 * var(--fan-x));
   }
@@ -694,7 +1639,6 @@ const priceNote = sheetVal({ care: true }, 'price').note;
       visibility 0s linear 420ms;
   }
 
-  /* Landing Page selected: the card turns dim and says how to get it */
   .cfg:has(input[name='package'][value='landing']:checked) .lst-url,
   .cfg:has(input[name='package'][value='landing']:checked) .lst-title,
   .cfg:has(input[name='package'][value='landing']:checked) .lst-x--off .lst-text {
@@ -724,9 +1668,18 @@ const priceNote = sheetVal({ care: true }, 'price').note;
     min-width: 0;
   }
 
+  /* the form column is very tall on one-column layouts: a hinge tilt would
+     throw its far end around, so it only rises out of depth there */
+  @media (max-width: 1099px) {
+    .side[data-scene] {
+      --scene-tilt: 0deg;
+      --scene-depth: -40px;
+    }
+  }
+
   .ctl {
     display: grid;
-    row-gap: 40px;
+    row-gap: 36px;
   }
 
   .step {
@@ -763,6 +1716,7 @@ const priceNote = sheetVal({ care: true }, 'price').note;
 
   .opt {
     position: relative;
+    isolation: isolate;
     display: grid;
     grid-template-columns: 12px minmax(0, 1fr) auto;
     align-items: center;
@@ -774,9 +1728,32 @@ const priceNote = sheetVal({ care: true }, 'price').note;
     color: var(--haze);
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
-    transition:
-      background-color var(--t-micro) linear,
-      color var(--t-micro) linear;
+    transition: color var(--t-micro) linear;
+  }
+
+  /* the selected row: a steel plate sweeps in from the left, 3D-hinged */
+  .opt::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-color: var(--steel);
+    transform: perspective(600px) rotateY(-24deg) scaleX(0);
+    transform-origin: left center;
+    transition: transform 560ms var(--ease-expo);
+  }
+
+  .opt:has(.ind:checked) {
+    background-color: var(--steel);
+    color: var(--starlight);
+  }
+
+  :global(html.js) .opt:has(.ind:checked) {
+    background-color: var(--void);
+  }
+
+  .opt:has(.ind:checked)::before {
+    transform: none;
   }
 
   .opt-t {
@@ -787,11 +1764,14 @@ const priceNote = sheetVal({ care: true }, 'price').note;
     transition: transform var(--t-ui) var(--ease-expo);
   }
 
+  .opt:has(.ind:checked) .opt-t {
+    transform: translateX(4px);
+  }
+
   .opt-v {
     font-stretch: var(--wd-display);
     font-size: 0.9375rem;
     font-weight: 600;
-    font-variant-numeric: lining-nums proportional-nums;
     white-space: nowrap;
   }
 
@@ -806,11 +1786,6 @@ const priceNote = sheetVal({ care: true }, 'price').note;
 
   .opt-v--on {
     color: var(--lilac);
-  }
-
-  .opt:has(.ind:checked) {
-    background-color: var(--steel);
-    color: var(--starlight);
   }
 
   .opt:has(.ind:focus-visible) {
@@ -829,8 +1804,63 @@ const priceNote = sheetVal({ care: true }, 'price').note;
     }
   }
 
-  .opt:active {
-    background-color: var(--steel);
+  /* industry: a 2/3-column grid of tiles, each with the concept's accent */
+  .inds {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1px;
+    border: 1px solid var(--line);
+    background-color: var(--line-dark);
+  }
+
+  @media (min-width: 560px) and (max-width: 1099px) {
+    .inds {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1360px) {
+    .inds {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  .ind-opt {
+    grid-template-columns: 12px minmax(0, 1fr);
+    column-gap: 12px;
+    min-height: 60px;
+    padding: 12px 14px 14px;
+    border-bottom: 0;
+  }
+
+  .ind-opt .opt-t {
+    font-size: 0.9375rem;
+  }
+
+  .sw {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 3px;
+    background-color: var(--sw, var(--line-dark));
+    transform: scaleX(0.18);
+    transform-origin: left center;
+    transition: transform 520ms var(--ease-expo);
+  }
+
+  .sw--none {
+    background-color: var(--line-dark-strong);
+  }
+
+  .ind-opt:has(.ind:checked) .sw {
+    transform: none;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .ind-opt:hover .sw {
+      transform: scaleX(0.5);
+    }
   }
 
   /* the 12×12 square indicator; fills lilac (violet as a mark on dark) */
@@ -859,8 +1889,8 @@ const priceNote = sheetVal({ care: true }, 'price').note;
     position: absolute;
     inset: -1px;
     background-color: var(--lilac);
-    transform: scale(0);
-    transition: transform var(--t-micro) var(--ease-expo);
+    transform: scale(0) rotate(-90deg);
+    transition: transform 420ms var(--ease-settle);
   }
 
   .ind:checked {
@@ -868,7 +1898,7 @@ const priceNote = sheetVal({ care: true }, 'price').note;
   }
 
   .ind:checked::before {
-    transform: scale(1);
+    transform: none;
   }
 
   /* "Google setup · included" — fixed, not a control */
@@ -878,6 +1908,10 @@ const priceNote = sheetVal({ care: true }, 'price').note;
     background-color: var(--void);
   }
 
+  .opt-fixed::before {
+    display: none;
+  }
+
   .ind-fixed {
     border-color: var(--lilac);
     cursor: default;
@@ -885,7 +1919,7 @@ const priceNote = sheetVal({ care: true }, 'price').note;
 
   .ind-fixed::before {
     inset: 2px;
-    transform: scale(1);
+    transform: none;
   }
 
   .cfg:has(input[name='package'][value='landing']:checked) .opt-fixed {
@@ -937,7 +1971,6 @@ const priceNote = sheetVal({ care: true }, 'price').note;
     outline-offset: 3px;
   }
 
-  /* Rebuild reveals the current-site field (grid rows, 420ms) */
   .url-x {
     display: grid;
     grid-template-rows: 0fr;
@@ -950,7 +1983,6 @@ const priceNote = sheetVal({ care: true }, 'price').note;
   .url-in {
     min-height: 0;
     overflow: hidden;
-    /* room for the focus ring inside the clip */
     margin-inline: -6px;
     padding: 0 6px;
   }
@@ -1003,6 +2035,10 @@ const priceNote = sheetVal({ care: true }, 'price').note;
     border-top: 1px solid var(--line);
   }
 
+  .row[hidden] {
+    display: none;
+  }
+
   .row dt {
     color: var(--haze);
     font-size: 0.875rem;
@@ -1018,24 +2054,25 @@ const priceNote = sheetVal({ care: true }, 'price').note;
     font-weight: 600;
     line-height: 1.35;
     overflow-wrap: anywhere;
+    transform-origin: 50% 0%;
   }
 
   .row-price {
     align-items: center;
-    padding-block: 18px;
+    padding-block: 20px;
   }
 
   .price {
     display: block;
-    font-size: clamp(2.25rem, 1.7rem + 1.4vw, 3.25rem);
-    font-weight: 520;
+    font-size: clamp(1.5rem, 1.2rem + 0.9vw, 2.125rem);
+    font-weight: 600;
     letter-spacing: -0.015em;
-    line-height: 1;
+    line-height: 1.05;
   }
 
   .p-note {
     display: block;
-    margin-top: 10px;
+    margin-top: 8px;
     color: var(--haze);
     font-stretch: 100%;
     font-size: 0.8125rem;
@@ -1043,13 +2080,8 @@ const priceNote = sheetVal({ care: true }, 'price').note;
     line-height: 1.4;
   }
 
-  .p-note[hidden] {
-    display: none;
-  }
-
   /* delivery: a dimension line proportional to the lead time (full = 3
-     weeks). Width changes by transform only: the bar scales, the far tick
-     travels. 600ms mech. */
+     weeks). Width changes by transform only. */
   .dl {
     position: relative;
     display: block;
@@ -1083,7 +2115,7 @@ const priceNote = sheetVal({ care: true }, 'price').note;
     background-color: currentColor;
     transform: scaleX(var(--r));
     transform-origin: left center;
-    transition: transform 600ms var(--ease-mech);
+    transition: transform 900ms var(--ease-expo);
   }
 
   .dl-t0,
@@ -1101,7 +2133,7 @@ const priceNote = sheetVal({ care: true }, 'price').note;
   .dl-t1w {
     inset: 0;
     transform: translate3d(calc(var(--r) * 100%), 0, 0);
-    transition: transform 600ms var(--ease-mech);
+    transition: transform 900ms var(--ease-expo);
   }
 
   .dl-t1 {
@@ -1116,37 +2148,45 @@ const priceNote = sheetVal({ care: true }, 'price').note;
     transform: translate3d(0, 0, 0);
   }
 
-  .sheet.is-in .dl-bar,
-  .sheet.is-in .dl-t1w {
-    transition-delay: 0ms;
+  /* the CTAs: WhatsApp full width 56px violet, email as the hairline twin */
+  .ctas {
+    display: grid;
+    row-gap: 10px;
+    margin-top: 28px;
   }
 
-  /* the CTA: full width, 56px, violet */
-  .cfg-cta {
+  .cfg-cta,
+  .cfg-mail {
     display: flex;
     width: 100%;
-    margin-top: 28px;
     justify-content: flex-start;
     gap: 14px;
     padding: 0 22px;
   }
 
-  .cfg-cta > span {
+  .cfg-cta > span,
+  .cfg-mail > span {
     min-width: 0;
     padding-block: 12px;
     white-space: normal;
     line-height: 1.25;
   }
 
+  .cfg-mail {
+    --fg: var(--starlight);
+  }
+
   @media (max-width: 767px) {
-    .cfg-cta {
+    .cfg-cta,
+    .cfg-mail {
       gap: 12px;
       padding: 0 16px;
       letter-spacing: 0.04em;
     }
   }
 
-  .cfg-cta :global(.arrow) {
+  .cfg-cta :global(.arrow),
+  .cfg-mail :global(.arrow) {
     margin-left: auto;
   }
 
@@ -1160,13 +2200,16 @@ const priceNote = sheetVal({ care: true }, 'price').note;
   }
 
   /* ---------------------------------------------------------- motion off */
-  :global(html.motion-reduced) .pv-sheet,
+  :global(html.motion-reduced) .card,
+  :global(html.motion-reduced) .si,
+  :global(html.motion-reduced) .pv-stage,
   :global(html.motion-reduced) .pv-ghost,
   :global(html.motion-reduced) .pv-home,
   :global(html.motion-reduced) .lst-x,
   :global(html.motion-reduced) .url-x,
   :global(html.motion-reduced) .dl-bar,
   :global(html.motion-reduced) .dl-t1w,
+  :global(html.motion-reduced) .opt::before,
   :global(html.motion-reduced) .ind::before {
     transition: none !important;
   }

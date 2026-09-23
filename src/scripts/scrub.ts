@@ -6,11 +6,14 @@
    handler returns before touching layout.
 
    Per frame
-     read   track rect (+ stage rect, six layer anchors, six legend rows on
-            desktop — the leader lines)
-     write  --e1 on .b-assembly, --lift on each .cp-layer (CSS turns both
+     read   track rect, stage rect, six right-hand layer corners (the part
+            numbers) + on desktop six left-hand corners and six legend rows
+            (the leader lines)
+     write  --e1 / --spread on .b-assembly, --lift on each .cp-layer, the
+            camera orbit --orb / --el on the section (CSS turns all of it
             into transforms), .is-active on the legend row, the counter
-            digit, six leader paths, .is-in on the final line.
+            digit, six part-number positions, six leader paths, .is-in on
+            the final line.
 
    Static mode (.build--static, or html.motion-reduced / motion-failed /
    no JS) is pure CSS: exploded, every callout listed. This script only
@@ -47,20 +50,24 @@ export function initScrub(): void {
     layers.push(el);
   }
   const rows = Array.from(root.querySelectorAll<HTMLElement>('.b-co'));
+  const tags = Array.from(root.querySelectorAll<HTMLElement>('.b-tag'));
   const paths = svg ? Array.from(svg.querySelectorAll<SVGPathElement>('.b-ld')) : [];
   const terms = svg ? Array.from(svg.querySelectorAll<SVGRectElement>('.b-term')) : [];
   const axis = svg?.querySelector<SVGPathElement>('.b-axis') ?? null;
 
-  /* one 1px probe per layer at its top-left corner: with the stage's
-     rotateZ(-36deg) that corner is the layer's leftmost vertex, so the six
-     probes stack into one vertical column — where the leaders start */
-  const anchors = layers.map((layer) => {
+  /* two 1px probes per layer. Top-left: with the stage's rotateZ (−20° to
+     −52° through the orbit) that corner is the layer's leftmost vertex, so
+     the six stack into one column — where the leaders start. Bottom-right:
+     the rightmost vertex — where the part numbers hang. */
+  const probe = (layer: HTMLElement, css: string): HTMLElement => {
     const a = document.createElement('i');
     a.setAttribute('aria-hidden', 'true');
-    a.style.cssText = 'position:absolute;left:0;top:0;width:1px;height:1px;pointer-events:none;';
+    a.style.cssText = `position:absolute;${css};width:1px;height:1px;pointer-events:none;`;
     layer.appendChild(a);
     return a;
-  });
+  };
+  const anchors = layers.map((layer) => probe(layer, 'left:0;top:0'));
+  const corners = layers.map((layer) => probe(layer, 'right:0;bottom:0'));
 
   const html = document.documentElement;
   const isStatic = () => root.classList.contains('build--static') || html.classList.contains('motion-failed') || vestibular();
@@ -81,6 +88,8 @@ export function initScrub(): void {
   const ay = new Array<number>(N).fill(0);
   const cx = new Array<number>(N).fill(0);
   const cy = new Array<number>(N).fill(0);
+  const tx = new Array<number>(N).fill(0);
+  const ty = new Array<number>(N).fill(0);
   let dirtyGeo = true;
 
   const setLive = (on: boolean) => {
@@ -95,6 +104,12 @@ export function initScrub(): void {
     }
     if (!on) {
       assembly.style.removeProperty('--e1');
+      assembly.style.removeProperty('--spread');
+      root.style.removeProperty('--orb');
+      root.style.removeProperty('--el');
+      root.style.removeProperty('--ptx');
+      root.style.removeProperty('--pty');
+      tags.forEach((t) => t.classList.remove('is-up', 'is-on'));
       layers.forEach((l) => {
         l.style.removeProperty('--lift');
         l.classList.remove('is-on');
@@ -148,6 +163,41 @@ export function initScrub(): void {
     requestFrame();
   });
 
+  /* the stack leans toward a fine pointer: eased in its own short rAF
+     burst, which stops once settled; each step asks the shared loop for a
+     frame so the part numbers and leaders follow */
+  if (window.matchMedia?.('(pointer: fine)')?.matches) {
+    let gx = 0;
+    let gy = 0;
+    let vx = 0;
+    let vy = 0;
+    let raf = 0;
+    const tick = (): void => {
+      vx += (gx - vx) * 0.07;
+      vy += (gy - vy) * 0.07;
+      const still = Math.abs(gx - vx) < 0.001 && Math.abs(gy - vy) < 0.001;
+      if (still) {
+        vx = gx;
+        vy = gy;
+      }
+      root.style.setProperty('--ptx', vx.toFixed(4));
+      root.style.setProperty('--pty', vy.toFixed(4));
+      requestFrame();
+      raf = still ? 0 : requestAnimationFrame(tick);
+    };
+    const aim = (x: number, y: number): void => {
+      gx = x;
+      gy = y;
+      if (!raf) raf = requestAnimationFrame(tick);
+    };
+    stage.addEventListener('pointermove', (e) => {
+      if (!live || isReduced()) return;
+      const r = stage.getBoundingClientRect();
+      aim(clamp01((e.clientX - r.left) / (r.width || 1)) - 0.5, clamp01((e.clientY - r.top) / (r.height || 1)) - 0.5);
+    });
+    stage.addEventListener('pointerleave', () => aim(0, 0));
+  }
+
   let skip = true;
 
   addFrame({
@@ -162,8 +212,14 @@ export function initScrub(): void {
       const span = r.height - vh;
       p = span > 0 ? clamp01(-r.top / span) : 0;
       desk = vw >= DESKTOP;
+      const s = stage.getBoundingClientRect();
+      /* part numbers: every width */
+      for (let i = 0; i < N; i++) {
+        const c = corners[i].getBoundingClientRect();
+        tx[i] = c.left - s.left;
+        ty[i] = c.top - s.top;
+      }
       if (desk && svg) {
-        const s = stage.getBoundingClientRect();
         if (dirtyGeo || Math.abs(s.width - vbW) > 0.5 || Math.abs(s.height - vbH) > 0.5) {
           vbW = s.width;
           vbH = s.height;
@@ -182,11 +238,10 @@ export function initScrub(): void {
             cy[i] = c.top - s.top + c.height / 2;
           }
         }
-        /* leaders follow the plate even when p is still (resize, fonts) */
-        skip = false;
-      } else {
-        skip = Math.abs(p - lastP) < 1e-4;
       }
+      /* the probes were read before this frame's write: always write, so
+         tags and leaders come to rest on the plate (see requestFrame below) */
+      skip = false;
     },
 
     write() {
@@ -198,17 +253,35 @@ export function initScrub(): void {
       const out = 1 - smooth((p - 0.88) / 0.12);
       const e1 = smooth(p / 0.15) * out;
       let top = -1;
+      let sum = 0;
       for (let i = 0; i < N; i++) {
         lifts[i] = smooth((p - 0.15 - i * 0.07) / 0.25) * out;
+        sum += i * lifts[i];
         if (lifts[i] > 0.5) top = i;
       }
+      /* centroid of the open stack, 0 (flat) → 1 (every layer up) */
+      const spread = sum / ((N * (N - 1)) / 2);
+      /* the camera orbit runs the whole scrub; elevation peaks mid-way */
+      const t = clamp01((p - 0.04) / 0.86);
+      const orb = smooth(t) * 2 - 1;
+      const el = Math.sin(Math.PI * t);
 
       if (moved) {
         assembly.style.setProperty('--e1', e1.toFixed(4));
+        assembly.style.setProperty('--spread', spread.toFixed(4));
+        root.style.setProperty('--orb', orb.toFixed(4));
+        root.style.setProperty('--el', el.toFixed(4));
         for (let i = 0; i < N; i++) layers[i].style.setProperty('--lift', lifts[i].toFixed(4));
-        /* the leaders were measured before this write: one more frame
-           re-reads the anchors so they come to rest exactly on the plate */
-        if (desk) requestFrame();
+        /* the probes were measured before this write: one more frame
+           re-reads them so tags and leaders rest exactly on the plate */
+        requestFrame();
+      }
+
+      for (let i = 0; i < N; i++) {
+        const tag = tags[i];
+        if (!tag) continue;
+        tag.style.transform = `translate3d(${tx[i].toFixed(1)}px, ${ty[i].toFixed(1)}px, 0)`;
+        tag.classList.toggle('is-up', lifts[i] > 0.62 && e1 > 0.5);
       }
 
       const isDone = p > 0.88;
@@ -228,6 +301,7 @@ export function initScrub(): void {
         layers.forEach((l, i) => l.classList.toggle('is-on', i === active));
         paths.forEach((pa, i) => pa.classList.toggle('is-on', i === active));
         terms.forEach((t, i) => t.classList.toggle('is-on', i === active));
+        tags.forEach((t, i) => t.classList.toggle('is-on', i === active));
       }
 
       const n = done ? N : Math.max(active, 0) + 1;

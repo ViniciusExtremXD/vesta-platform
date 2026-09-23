@@ -1088,3 +1088,33 @@ html.motion-reduced [data-tilt],
 html.motion-failed [data-tilt] {
   transform: none !important;
 }
+
+/* ---------- 14. 3D scene entrance ([data-scene]) ------------------------ */
+/* Put it on a section's inner wrapper (never on the section with the
+   background). motion.ts writes --scene 0 → 1 with scroll; the wrapper
+   swings up from a tilted, deeper plane. Transform-only; text opacity is
+   never scrubbed. data-scene="soft" halves the travel. */
+
+[data-scene] {
+  --scene: 1;
+  --scene-tilt: 16deg;
+  --scene-rise: 90px;
+  --scene-depth: -160px;
+  transform-origin: 50% 0%;
+  transform: perspective(1400px)
+    translate3d(0, calc((1 - var(--scene)) * var(--scene-rise)), calc((1 - var(--scene)) * var(--scene-depth)))
+    rotateX(calc((1 - var(--scene)) * var(--scene-tilt)));
+  will-change: transform;
+}
+
+[data-scene='soft'] {
+  --scene-tilt: 8deg;
+  --scene-rise: 48px;
+  --scene-depth: -80px;
+}
+
+html.motion-reduced [data-scene],
+html.motion-failed [data-scene],
+html:not(.js) [data-scene] {
+  transform: none;
+}

@@ -1,43 +1,39 @@
 ---
 /**
- * Footer (SPEC §5.13, SPEC_COSMOS §4), void.
+ * Footer (SPEC §5.13, SPEC_COSMOS §4, ROUND2, ROUND3), void.
  *
- * Brand block · Pricing · Studio · Contact as hairline rows; the orbit of
- * 4 Vesta drawn to scale between Mars and Jupiter; the measured build line;
- * the legal row (Motion toggle, Back to top); the giant VESTA wordmark in
- * plate, cropped by the page bottom.
+ * Mark + one line · Pricing (package names + the free price analysis) ·
+ * Studio · Contact (WhatsApp, Email, LinkedIn) as hairline rows that draw
+ * in from the left, row by row; 4 Vesta in 3D (<Asteroid>) beside the
+ * orbit of 4 Vesta drawn to scale between Mars and Jupiter; then the
+ * owner's logo lockup, large, with Back to top. No build line, no legal
+ * line, no Motion toggle (owner, ROUND3).
+ *
+ * Depth: the inner wrapper is a [data-scene] (it swings up out of a tilted,
+ * deeper plane as the footer scrolls in). The lockup rises from below the
+ * fold as the last screen arrives (scroll-linked, transform-only), flips up
+ * on its baseline when revealed, and tilts toward the pointer.
  *
  * The orbit diagram: semi-major axes and eccentricities from site.ts
  * (footer.orbit). Each orbit is a true Kepler ellipse with the Sun at one
- * focus, seen from above the ecliptic at a shallow angle (y × VIEW_K) and
+ * focus, seen from above the ecliptic at a shallow angle (y x VIEW_K) and
  * turned by VIEW_TILT. Periods follow Kepler's third law (T = a^1.5 years),
  * so the three planets move at their true relative rates, time-lapsed:
- * one Vesta year ≈ VESTA_LAP seconds. Transform-only, paused offscreen,
- * on a hidden tab and with Motion: off.
+ * one Vesta year = VESTA_LAP seconds. Each planet drags a short trail of
+ * its own recent positions. The time-lapse spins up when the diagram first
+ * comes into view and runs faster while the pointer is over it. Transform
+ * and opacity only, paused offscreen and on a hidden tab.
  *
  * data-sticky-hide: the mobile sticky bar never covers the footer.
  */
-import { footer, legal, wa } from '../data/site';
-import measurements from '../data/measurements.json';
-import { url, formatDate } from '../lib/url';
+import { footer, wa, mail, contact as contactInfo } from '../data/site';
+import { url } from '../lib/url';
 import Logo from './Logo.astro';
 import Cosmos from './Cosmos.astro';
+import Asteroid from './Asteroid.astro';
 import Arrow from './ui/Arrow.astro';
 import WaGlyph from './ui/WaGlyph.astro';
-
-/**
- * "VESTA" outlined from Mona Sans at wdth 115 / wght 760 (the wordmark
- * instance), tracked .3em like the nav mark, GPOS kerning applied.
- * Font units, y down; the viewBox is the ink box.
- */
-const WORDMARK = {
-  w: 4772.9,
-  h: 747.4,
-  viewBox: '4.6 -737.8 4772.9 747.4',
-  d: 'M292.4 0 4.6 -729H206.6L373.8 -250.2L408.3 -144.2H415.4L449.5 -249.4L617.4 -729H819.2L531.5 0ZM1181.6 0V-729H1770.2V-580.8H1325.2L1364.1 -619.8V-109.4L1325.2 -148.4H1772.6V0ZM1326.4 -299.1V-437.6H1720.6V-299.1ZM2460.4 9.6Q2347.4 9.6 2272.8 -21.1Q2198.2 -51.7 2161.3 -106.3Q2124.4 -161 2123.6 -231.7H2312.1Q2313.2 -197.9 2330.2 -172.9Q2347.2 -148 2381.3 -134.4Q2415.5 -120.9 2467.5 -120.9Q2510.5 -120.9 2540.5 -130.1Q2570.5 -139.3 2586.3 -157.9Q2602 -176.5 2602 -204.1Q2602 -227.4 2593.4 -242Q2584.8 -256.6 2565.2 -265.7Q2545.6 -274.8 2513.3 -280.9Q2481 -287.1 2433.2 -293.6Q2360.4 -303.2 2305.5 -319.2Q2250.6 -335.2 2214.1 -360.2Q2177.7 -385.2 2159.4 -422.2Q2141.1 -459.1 2141.1 -510.2Q2141.1 -582.5 2179.3 -633.2Q2217.5 -684 2288.5 -710.9Q2359.5 -737.8 2457.8 -737.8Q2549.7 -737.8 2617.6 -711.6Q2685.5 -685.3 2724 -636.2Q2762.5 -587 2766.2 -518.3H2582Q2579.4 -551 2562 -570.9Q2544.6 -590.9 2516.1 -600.1Q2487.7 -609.2 2451.4 -609.2Q2413 -609.2 2385.4 -600.3Q2357.8 -591.3 2343.4 -574.1Q2329 -557 2329 -532.1Q2329 -504.4 2343.8 -489.1Q2358.5 -473.8 2395.9 -465Q2433.3 -456.3 2500.4 -447.2Q2567.4 -438.8 2621 -425.2Q2674.6 -411.6 2712.5 -387Q2750.5 -362.3 2770.7 -321.5Q2790.8 -280.6 2790.8 -217.7Q2790.8 -148.4 2753 -97.2Q2715.2 -45.9 2641.9 -18.1Q2568.6 9.6 2460.4 9.6ZM3337 0V-594H3519V0ZM3111.5 -579.2V-729H3749.3V-579.2ZM3973.6 0 4252.4 -729H4497.9L4777.4 0H4582.3L4409.1 -501.8L4378.2 -594.9H4371.8L4341.1 -501.3L4167.8 0ZM4204 -141 4249.8 -278.3H4500.4L4545.6 -141Z',
-};
-/** Share of the wordmark's height left above the page bottom. */
-const CROP = 0.6;
+import MailGlyph from './ui/MailGlyph.astro';
 
 /* ------------------------------------------------------ the orbit diagram */
 
@@ -48,7 +44,10 @@ const VIEW_K = 0.34;
 /** Screen rotation of the whole plane, degrees (the orbit mark's −24°, softened). */
 const VIEW_TILT = -9;
 /** Seconds per Vesta year in the time-lapse. */
-const VESTA_LAP = 72;
+const VESTA_LAP = 26;
+/** Trail: dots per planet, and the time window they cover (Earth years). */
+const TRAIL_N = 6;
+const TRAIL_YEARS = 0.2;
 /**
  * Longitude of perihelion ϖ (degrees) and a starting mean anomaly for the
  * drawing. ϖ: Mars 336.0°, 4 Vesta ≈ 255° (Ω 103.8° + ω 151.2°), Jupiter
@@ -92,6 +91,7 @@ const bodies = footer.orbit.bodies.map((body) => {
   const el = ELEMENTS[body.name] ?? { peri: 0, m0: 0, r: 3 };
   const { a, e } = body;
   const b = a * Math.sqrt(1 - e * e);
+  const period = a ** 1.5;
   const u: [number, number] = [Math.cos(rad(el.peri)), Math.sin(rad(el.peri))];
   const v: [number, number] = [-u[1], u[0]];
   // centre and conjugate semi-diameters of the projected ellipse
@@ -104,7 +104,7 @@ const bodies = footer.orbit.bodies.map((body) => {
   const mid = (s11 + s22) / 2;
   const half = Math.sqrt(((s11 - s22) / 2) ** 2 + s12 ** 2);
   const angle = (0.5 * Math.atan2(2 * s12, s11 - s22) * 180) / Math.PI;
-  const start = project(...position(a, e, el.peri, rad(el.m0)));
+  const at = (years: number) => project(...position(a, e, el.peri, rad(el.m0) + (Math.PI * 2 * years) / period));
   return {
     name: body.name,
     a,
@@ -112,14 +112,16 @@ const bodies = footer.orbit.bodies.map((body) => {
     peri: el.peri,
     m0: el.m0,
     r: el.r,
-    period: a ** 1.5,
+    period,
     vesta: body.name === '4 Vesta',
     cx: C[0],
     cy: C[1],
     rx: Math.sqrt(mid + half),
     ry: Math.sqrt(Math.max(0, mid - half)),
     angle,
-    start,
+    start: at(0),
+    /** the still frame's trail: where the planet was just before */
+    trail: Array.from({ length: TRAIL_N }, (_, k) => at((-TRAIL_YEARS * (k + 1)) / TRAIL_N)),
   };
 });
 
@@ -149,36 +151,24 @@ const orbitData = JSON.stringify({
   tilt: VIEW_TILT,
   scale: SCALE,
   lap: VESTA_LAP / bodies.find((b) => b.vesta)!.period,
+  trail: TRAIL_YEARS,
   bodies: bodies.map((b) => ({ a: b.a, e: b.e, peri: b.peri, m0: b.m0, period: b.period })),
 });
 
 const fmtAu = (a: number) => `${a.toFixed(2)} AU`;
+const tr = (x: number, y: number) => `translate(${(sunX + x).toFixed(2)}px, ${(sunY + y).toFixed(2)}px)`;
 
 /* ------------------------------------------------------------- columns */
 
-/** "Landing Page $500–$700" → name + price, keeping the exact text. */
-const priceRow = (label: string) => {
-  const price = label.match(/^(.*?)\s+((?:from\s+)?\$[^\s]+)$/);
-  if (price) return { name: price[1], value: price[2], num: true };
-  return { name: label, value: '', num: false };
-};
-
 const { pricing, studio, contact } = footer.columns;
-/* The measured score is quoted only when it is 90 or better. */
-const buildLine =
-  measurements.performance >= 90
-    ? footer.buildLine(measurements.performance, formatDate(measurements.date))
-    : 'Designed and built by Vinícius Magno in São Paulo.';
 const backToTop = footer.backToTop.replace(/\s*↑\s*$/, '');
-/** Keep "CNPJ 61.465.539/0001-00" on one line when the legal row wraps. */
-const copyright = legal.copyright.replace('CNPJ ', 'CNPJ ');
 ---
 
 <footer class="foot s-void" data-nav-theme="dark" data-sticky-hide>
-  <div class="wrap">
+  <div class="wrap foot-in" data-scene>
     <div class="foot-cols g">
       <div class="foot-id" data-reveal>
-        <a class="foot-home" href={url('/')} aria-label="Vesta, home"><Logo /></a>
+        <a class="foot-home" href={url('/')} aria-label="Vesta, home"><Logo mark alt="" height={64} /></a>
         <p class="foot-blurb">{footer.brand.blurb}</p>
         <p class="foot-tagline">{footer.brand.tagline}</p>
       </div>
@@ -187,13 +177,16 @@ const copyright = legal.copyright.replace('CNPJ ', 'CNPJ ');
         <h2 class="foot-h label" id="foot-h-pricing">{pricing.title}</h2>
         <ul class="foot-rows">
           {
-            pricing.links.map((l) => {
-              const r = priceRow(l.label);
+            pricing.links.map((l, r) => {
+              const accent = /price analysis/i.test(l.label);
               return (
-                <li>
-                  <a class="frow" href={url(l.href)}>
-                    <span class="frow-name">{r.name}</span>{' '}
-                    {r.value && <span class:list={['frow-val', { num: r.num }]}>{r.value}</span>}
+                <li style={`--r:${r}`}>
+                  <a class:list={['frow', { 'is-accent': accent }]} href={url(l.href)}>
+                    <span class="frow-name">
+                      {accent && <span class="stripe frow-mark" aria-hidden="true" />}
+                      {l.label}
+                    </span>
+                    <Arrow size={12} />
                   </a>
                 </li>
               );
@@ -206,8 +199,8 @@ const copyright = legal.copyright.replace('CNPJ ', 'CNPJ ');
         <h2 class="foot-h label" id="foot-h-studio">{studio.title}</h2>
         <ul class="foot-rows">
           {
-            studio.links.map((l) => (
-              <li>
+            studio.links.map((l, r) => (
+              <li style={`--r:${r}`}>
                 <a class="frow" href={url(l.href)}>
                   <span class="frow-name">{l.label}</span>
                   <Arrow size={12} />
@@ -221,13 +214,19 @@ const copyright = legal.copyright.replace('CNPJ ', 'CNPJ ');
       <div class="foot-col foot-contact" data-reveal style="--i:3">
         <h2 class="foot-h label">{contact.title}</h2>
         <ul class="foot-rows">
-          <li>
+          <li style="--r:0">
             <a class="frow" href={wa(contact.whatsapp.text)} target="_blank" rel="noopener" data-wa-intent="footer">
-              <span class="frow-name frow-wa"><WaGlyph size={14} /><span class="tnum">{contact.whatsapp.label}</span></span>
+              <span class="frow-name frow-icon"><WaGlyph size={14} /><span class="tnum">{contact.whatsapp.label}</span></span>
               <Arrow dir="up-right" size={12} />
             </a>
           </li>
-          <li>
+          <li style="--r:1">
+            <a class="frow" href={mail()}>
+              <span class="frow-name frow-icon"><MailGlyph size={14} /><span>{contactInfo.email.address}</span></span>
+              <Arrow dir="up-right" size={12} />
+            </a>
+          </li>
+          <li style="--r:2">
             <a class="frow" href={contact.linkedin.href} target="_blank" rel="noopener">
               <span class="frow-name">{contact.linkedin.label}</span>
               <Arrow dir="up-right" size={12} />
@@ -246,13 +245,16 @@ const copyright = legal.copyright.replace('CNPJ ', 'CNPJ ');
       <span class="orb-rule rule" data-reveal="draw" aria-hidden="true"></span>
 
       <div class="orb-key" data-reveal style="--i:1">
+        <div class="orb-body">
+          <Asteroid size={260} drag class="orb-asteroid" />
+        </div>
         <p class="orb-caption">
           {
             /* lines break only between the "·" segments, never inside one */
             footer.orbit.caption.split(' · ').map((part, i, all) => (
               <Fragment>
                 <span class="orb-seg">{part}</span>
-                {i < all.length - 1 && ' · '}
+                {i < all.length - 1 && ' · '}
               </Fragment>
             ))
           }
@@ -272,70 +274,76 @@ const copyright = legal.copyright.replace('CNPJ ', 'CNPJ ');
 
       <div class="orb-fig" data-reveal="fade" style={`--i:2; --vb-ratio:${VB_W} / ${VB_H}`} aria-hidden="true">
         <Cosmos variant="stars" class="orb-cosmos" />
-        <svg
-          class="orb-svg"
-          viewBox={`0 0 ${VB_W} ${VB_H}`}
-          preserveAspectRatio="xMidYMid slice"
-          focusable="false"
-          data-orbit={orbitData}
-        >
-          {
-            bodies.map((b, i) => (
-              <g class="orb-ring" style={`--o:${i}; transform-origin:${sunX}px ${sunY}px`}>
-                <ellipse
-                  class:list={['orb-path', { 'is-vesta': b.vesta }]}
-                  cx={(sunX + b.cx).toFixed(2)}
-                  cy={(sunY + b.cy).toFixed(2)}
-                  rx={b.rx.toFixed(2)}
-                  ry={b.ry.toFixed(2)}
-                  transform={`rotate(${b.angle.toFixed(3)} ${(sunX + b.cx).toFixed(2)} ${(sunY + b.cy).toFixed(2)})`}
-                />
-              </g>
-            ))
-          }
-          <circle class="orb-sun" cx={sunX} cy={sunY} r="3.2"></circle>
-          {
-            bodies.map((b, i) => (
-              <g class="orb-ring" style={`--o:${i}; transform-origin:${sunX}px ${sunY}px`}>
-                <circle
-                  class:list={['orb-planet', { 'is-vesta': b.vesta }]}
-                  cx="0"
-                  cy="0"
-                  r={b.r}
-                  data-orbit-body={i}
-                  style={`transform: translate(${(sunX + b.start[0]).toFixed(2)}px, ${(sunY + b.start[1]).toFixed(2)}px)`}
-                />
-              </g>
-            ))
-          }
-        </svg>
+        <div class="orb-stage" data-tilt="5">
+          <svg
+            class="orb-svg"
+            viewBox={`0 0 ${VB_W} ${VB_H}`}
+            preserveAspectRatio="xMidYMid slice"
+            focusable="false"
+            data-orbit={orbitData}
+          >
+            {
+              bodies.map((b, i) => (
+                <g class="orb-ring" style={`--o:${i}; transform-origin:${sunX}px ${sunY}px`}>
+                  <ellipse
+                    class:list={['orb-path', { 'is-vesta': b.vesta }]}
+                    cx={(sunX + b.cx).toFixed(2)}
+                    cy={(sunY + b.cy).toFixed(2)}
+                    rx={b.rx.toFixed(2)}
+                    ry={b.ry.toFixed(2)}
+                    transform={`rotate(${b.angle.toFixed(3)} ${(sunX + b.cx).toFixed(2)} ${(sunY + b.cy).toFixed(2)})`}
+                  />
+                </g>
+              ))
+            }
+            <circle class="orb-sun" cx={sunX} cy={sunY} r="3.2"></circle>
+            {
+              bodies.map((b, i) => (
+                <g class="orb-ring" style={`--o:${i}; transform-origin:${sunX}px ${sunY}px`}>
+                  {b.trail
+                    .map((p, k) => (
+                      <circle
+                        class:list={['orb-trail', { 'is-vesta': b.vesta }]}
+                        cx="0"
+                        cy="0"
+                        r={(b.r * (1 - (k + 1) * 0.1)).toFixed(2)}
+                        data-orbit-trail={`${i}-${k + 1}`}
+                        style={`transform: ${tr(p[0], p[1])}; opacity: ${(0.6 * (1 - (k + 1) / (TRAIL_N + 1))).toFixed(3)}`}
+                      />
+                    ))
+                    .reverse()}
+                  <circle
+                    class:list={['orb-planet', { 'is-vesta': b.vesta }]}
+                    cx="0"
+                    cy="0"
+                    r={b.r}
+                    data-orbit-body={i}
+                    style={`transform: ${tr(b.start[0], b.start[1])}`}
+                  />
+                </g>
+              ))
+            }
+          </svg>
+        </div>
       </div>
     </div>
-
-    <p class="foot-build small" data-reveal="fade">{buildLine}</p>
 
     <span class="foot-rule rule" data-reveal="draw" aria-hidden="true"></span>
 
-    <div class="foot-legal" data-reveal="fade" style="--d:120ms">
-      <p class="foot-copy small tnum">{copyright}</p>
-      <div class="foot-tools">
-        <button class="foot-motion small" type="button" data-motion-toggle aria-pressed="false" aria-label={footer.motion.ariaReduce}>
-          <span class="foot-node" aria-hidden="true"></span>
-          <span data-motion-label>{footer.motion.on}</span>
-        </button>
-        <a class="foot-top small" href="#top" data-back-to-top>
-          {backToTop}
-          <Arrow dir="up" size={12} />
-        </a>
+    <div class="foot-end">
+      <div class="foot-brand" data-reveal data-wordmark>
+        <div class="foot-lift">
+          <div class="foot-flip">
+            <a class="foot-lockup" href={url('/')} aria-label="Vesta, home" data-tilt="7">
+              <Logo alt="" height={240} />
+            </a>
+          </div>
+        </div>
       </div>
-    </div>
-
-    <div class="foot-crop" style={`--wm-ratio:${WORDMARK.w} / ${(WORDMARK.h * CROP).toFixed(1)}`} aria-hidden="true">
-      <div class="foot-brand" data-reveal>
-        <svg viewBox={WORDMARK.viewBox} width="100%" focusable="false" aria-hidden="true">
-          <path d={WORDMARK.d}></path>
-        </svg>
-      </div>
+      <a class="foot-top small" href="#top" data-back-to-top data-reveal="fade" style="--d:200ms">
+        {backToTop}
+        <Arrow dir="up" size={12} />
+      </a>
     </div>
   </div>
 </footer>
@@ -359,7 +367,8 @@ const copyright = legal.copyright.replace('CNPJ ', 'CNPJ ');
     display: inline-flex;
     min-height: 44px;
     align-items: center;
-    margin-block-start: -12px;
+    margin-block-start: -8px;
+    margin-inline-start: -6px;
     color: var(--starlight);
     text-decoration: none;
   }
@@ -390,16 +399,41 @@ const copyright = legal.copyright.replace('CNPJ ', 'CNPJ ');
     color: var(--dim);
   }
 
+  /* hairline rows: the top rule and each row's rule draw in from the left,
+     one after another, as the column arrives */
   .foot-rows {
+    position: relative;
     margin: 0;
-    border-block-start: 1px solid var(--line-dark);
+  }
+
+  .foot-rows::before,
+  .foot-rows > li::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    height: 1px;
+    background-color: var(--line-dark);
+    transform-origin: left center;
+    transition: transform 1300ms var(--ease-quint);
+    pointer-events: none;
+  }
+
+  .foot-rows::before {
+    top: 0;
+    transition-delay: 120ms;
   }
 
   .foot-rows > li {
-    border-block-end: 1px solid var(--line-dark);
+    position: relative;
+  }
+
+  .foot-rows > li::after {
+    bottom: 0;
+    transition-delay: calc(220ms + var(--r, 0) * 90ms);
   }
 
   .frow {
+    position: relative;
     display: flex;
     align-items: baseline;
     justify-content: space-between;
@@ -410,38 +444,68 @@ const copyright = legal.copyright.replace('CNPJ ', 'CNPJ ');
     font-size: 0.9375rem;
     line-height: 1.35;
     text-decoration: none;
-    transition: color var(--t-micro) linear;
+    transition:
+      color var(--t-micro) linear,
+      opacity 600ms linear,
+      transform 1000ms var(--ease-expo);
+    transition-delay: 0ms, calc(260ms + var(--r, 0) * 90ms), calc(260ms + var(--r, 0) * 90ms);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .foot-col:not(.is-in) .foot-rows::before,
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .foot-col:not(.is-in) .foot-rows > li::after {
+    transform: scaleX(0);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .foot-col:not(.is-in) .frow {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+
+  /* hover: a lilac hairline sweeps along the row from the left */
+  .frow::after {
+    content: '';
+    position: absolute;
+    z-index: 1;
+    inset-inline: 0;
+    bottom: 0;
+    height: 1px;
+    background-color: var(--lilac);
+    transform: scaleX(0);
+    transform-origin: right center;
+    transition: transform 520ms var(--ease-expo);
   }
 
   .frow-name {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
     transition: transform var(--t-ui) var(--ease-expo);
   }
 
-  .frow-val {
-    flex: 0 0 auto;
-    color: var(--starlight);
-    font-stretch: var(--wd-display);
-    font-size: 0.875rem;
-    font-weight: 560;
-    text-align: right;
-  }
-
-  .frow-val:not(.num) {
-    flex: 0 1 auto;
-    color: var(--haze);
-    font-stretch: var(--wd-text);
-    font-weight: 420;
-  }
-
-  .frow-wa {
-    display: inline-flex;
-    align-items: center;
+  .frow-icon {
     gap: 10px;
   }
 
-  .frow-wa :global(svg) {
+  .frow-icon :global(svg) {
     flex: 0 0 auto;
-    transform: translateY(1px);
+  }
+
+  .frow-icon > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  /* the free price analysis: the one row that is an offer, marked */
+  .frow.is-accent {
+    color: var(--starlight);
+  }
+
+  .frow-mark {
+    margin-inline-end: 12px;
+  }
+
+  .frow.is-accent :global(.arrow) {
+    color: var(--lilac);
   }
 
   .frow :global(.arrow) {
@@ -458,8 +522,13 @@ const copyright = legal.copyright.replace('CNPJ ', 'CNPJ ');
       color: var(--starlight);
     }
 
+    .frow:hover::after {
+      transform: scaleX(1);
+      transform-origin: left center;
+    }
+
     .frow:hover .frow-name {
-      transform: translateX(4px);
+      transform: translateX(6px);
     }
 
     .frow:hover :global(.arrow) {
@@ -503,6 +572,17 @@ const copyright = legal.copyright.replace('CNPJ ', 'CNPJ ');
 
   .orb-key {
     padding-block-end: var(--s-8);
+  }
+
+  /* 4 Vesta itself, in 3D, above its numbers (drag to spin) */
+  .orb-body {
+    width: clamp(180px, 60%, 260px);
+    margin-block-end: var(--s-24);
+    margin-inline-start: -4%;
+  }
+
+  .orb-body :global(.orb-asteroid) {
+    width: 100%;
   }
 
   .orb-caption {
@@ -575,14 +655,20 @@ const copyright = legal.copyright.replace('CNPJ ', 'CNPJ ');
 
   /* the star field feathers out at the edges: no box around the sky */
   .orb-fig :global(.orb-cosmos) {
-    opacity: 0.75;
+    opacity: 0.85;
     -webkit-mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 45%, transparent 100%);
     mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 45%, transparent 100%);
   }
 
-  .orb-svg {
+  /* the diagram tilts toward the pointer over a still sky: depth */
+  .orb-stage {
     position: relative;
     z-index: 1;
+    width: 100%;
+    height: 100%;
+  }
+
+  .orb-svg {
     display: block;
     width: 100%;
     height: 100%;
@@ -604,12 +690,14 @@ const copyright = legal.copyright.replace('CNPJ ', 'CNPJ ');
     fill: var(--starlight);
   }
 
-  .orb-planet {
+  .orb-planet,
+  .orb-trail {
     fill: var(--haze);
     transform-origin: 0 0;
   }
 
-  .orb-planet.is-vesta {
+  .orb-planet.is-vesta,
+  .orb-trail.is-vesta {
     fill: var(--lilac);
   }
 
@@ -626,43 +714,65 @@ const copyright = legal.copyright.replace('CNPJ ', 'CNPJ ');
     opacity: 0;
   }
 
-  /* ---------------------------------------------------------- build line */
-
-  .foot-build {
-    margin-block-start: var(--s-64);
-    max-width: 62ch;
-    color: var(--dim);
-    text-wrap: pretty;
-  }
+  /* ------------------------------------------------------ the logo end */
 
   .foot-rule {
-    margin-block-start: var(--s-24);
+    margin-block-start: clamp(4rem, 3rem + 4vw, 7rem);
     background-color: var(--line-dark);
   }
 
-  /* ----------------------------------------------------------- legal row */
-
-  .foot-legal {
+  .foot-end {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
+    align-items: flex-end;
     justify-content: space-between;
-    gap: var(--s-8) var(--s-32);
-    padding-block: var(--s-8);
+    gap: var(--s-24) var(--s-48);
+    padding-block: clamp(2.5rem, 1.5rem + 4vw, 5rem) calc(var(--s-32) + env(safe-area-inset-bottom));
   }
 
-  .foot-copy {
-    color: var(--dim);
-    padding-block: 12px;
+  /* rises 40px over 1200ms expo (the verify gate measures this curve) */
+  .foot-brand[data-reveal] {
+    flex: 0 1 auto;
+    width: min(100%, 680px);
+    min-width: 0;
+    transition-duration: 1200ms, 1200ms;
   }
 
-  .foot-tools {
-    display: flex;
-    align-items: center;
-    gap: var(--s-32);
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .foot-brand[data-reveal]:not(.is-in) {
+    transform: translate3d(0, 40px, 0);
   }
 
-  .foot-motion,
+  /* scroll-linked: the lockup surfaces from below as the last screen
+     arrives (the script writes --dy; transform-only) */
+  .foot-lift {
+    perspective: 1200px;
+    perspective-origin: 30% 100%;
+    transform: translate3d(0, var(--dy, 0px), 0);
+  }
+
+  /* …and flips up on its baseline, out of depth, when revealed */
+  .foot-flip {
+    transform-origin: 50% 100%;
+    transition:
+      transform 1800ms var(--ease-expo) 120ms,
+      opacity 600ms linear 120ms;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .foot-brand:not(.is-in) .foot-flip {
+    opacity: 0;
+    transform: translate3d(0, 18%, -220px) rotateX(-70deg);
+  }
+
+  .foot-lockup {
+    display: block;
+    text-decoration: none;
+  }
+
+  .foot-lockup :global(.brand-logo) {
+    width: 100%;
+    height: auto;
+  }
+
   .foot-top {
     display: inline-flex;
     align-items: center;
@@ -673,26 +783,11 @@ const copyright = legal.copyright.replace('CNPJ ', 'CNPJ ');
     transition: color var(--t-micro) linear;
   }
 
-  /* hairline node: filled while motion is on */
-  .foot-node {
-    width: 9px;
-    height: 9px;
-    border: 1px solid var(--lilac);
-    background-color: var(--lilac);
-    transition: background-color 240ms var(--ease-expo);
-  }
-
-  .foot-motion[aria-pressed='true'] .foot-node {
-    border-color: var(--dim);
-    background-color: transparent;
-  }
-
   .foot-top :global(.arrow) {
     transition: transform var(--t-ui) var(--ease-expo);
   }
 
   @media (hover: hover) and (pointer: fine) {
-    .foot-motion:hover,
     .foot-top:hover {
       color: var(--starlight);
     }
@@ -700,30 +795,6 @@ const copyright = legal.copyright.replace('CNPJ ', 'CNPJ ');
     .foot-top:hover :global(.arrow) {
       transform: translateY(-3px);
     }
-  }
-
-  /* -------------------------------------------------- the giant wordmark */
-
-  .foot-crop {
-    margin-block-start: clamp(3rem, 2rem + 4vw, 6rem);
-    aspect-ratio: var(--wm-ratio);
-    overflow: clip;
-  }
-
-  .foot-brand svg {
-    display: block;
-    width: 100%;
-    height: auto;
-    fill: var(--plate);
-  }
-
-  /* rises 40px over 1200ms expo (the verify gate measures this curve) */
-  .foot-brand[data-reveal] {
-    transition-duration: 1200ms, 1200ms;
-  }
-
-  :global(html.js:not(.motion-reduced):not(.motion-failed)) .foot-brand[data-reveal]:not(.is-in) {
-    transform: translate3d(0, 40px, 0);
   }
 
   /* ----------------------------------------------------------- layouts */
@@ -750,17 +821,6 @@ const copyright = legal.copyright.replace('CNPJ ', 'CNPJ ');
 
     .orb-key {
       grid-row: 3;
-    }
-
-    .foot-legal {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 0;
-    }
-
-    .foot-tools {
-      width: 100%;
-      justify-content: space-between;
     }
   }
 
@@ -832,28 +892,72 @@ const copyright = legal.copyright.replace('CNPJ ', 'CNPJ ');
       /* the whole system, uncropped */
       aspect-ratio: var(--vb-ratio);
     }
-
-    .foot-build {
-      margin-block-start: var(--s-96);
-    }
   }
 
-  :global(html.motion-reduced) .orb-ring {
+  :global(html.motion-reduced) .orb-ring,
+  :global(html.motion-reduced) .frow,
+  :global(html.motion-reduced) .frow::after,
+  :global(html.motion-reduced) .foot-rows::before,
+  :global(html.motion-reduced) .foot-rows > li::after,
+  :global(html.motion-reduced) .foot-flip {
     transition: none;
+  }
+
+  :global(html.motion-reduced) .foot-lift {
+    transform: none;
   }
 </style>
 
 <script>
-  import { isReduced } from '../scripts/motion';
+  import { addFrame, isReduced, vestibular, travelTo } from '../scripts/motion';
 
-  // Back to top: the #top fragment scrolls natively; move focus up with it so
-  // keyboard users continue from the top of the page.
+  // Back to top travels on the site's eased curve (instant with Motion: off),
+  // then focus returns to the top so keyboard users continue from there.
   document.querySelectorAll<HTMLAnchorElement>('[data-back-to-top]').forEach((a) => {
-    a.addEventListener('click', () => {
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      travelTo(0);
       const home = document.querySelector<HTMLElement>('[data-nav] .nav-home');
       if (home) window.setTimeout(() => home.focus({ preventScroll: true }), 0);
     });
   });
+
+  /* ------------------------------------------------------------------ */
+  /* the lockup surfaces from below the fold as the last screen arrives */
+  /* ------------------------------------------------------------------ */
+
+  const brandEl = document.querySelector<HTMLElement>('[data-wordmark]');
+  const foot = brandEl?.closest<HTMLElement>('footer');
+  const lift = brandEl?.querySelector<HTMLElement>('.foot-lift');
+  if (brandEl && foot && lift) initLift(brandEl, foot, lift);
+
+  function initLift(brandEl: HTMLElement, foot: HTMLElement, lift: HTMLElement): void {
+    let dist = 0;
+    let range = 1;
+    let full = 0;
+    let near = false;
+    let written = -1;
+
+    addFrame({
+      read(_y, vh) {
+        const r = foot.getBoundingClientRect();
+        near = r.top < vh + 200;
+        if (!near) return;
+        dist = r.bottom - vh;
+        range = Math.max(240, Math.min(vh * 0.7, 640));
+        full = brandEl.offsetHeight;
+      },
+      write() {
+        const still = vestibular();
+        const p = still ? 1 : near ? 1 - Math.min(1, Math.max(0, dist / range)) : 0;
+        const key = Math.round(p * 1000);
+        if (key === written) return;
+        written = key;
+        const eased = 1 - Math.pow(1 - p, 3);
+        lift.style.setProperty('--dy', `${((1 - eased) * full * 0.55).toFixed(1)}px`);
+      },
+    });
+  }
 
   /* ------------------------------------------------------------------ */
   /* the orbit diagram: three planets on true Kepler orbits              */
@@ -866,6 +970,8 @@ const copyright = legal.copyright.replace('CNPJ ', 'CNPJ ');
     scale: number;
     /** seconds per Earth year in the time-lapse */
     lap: number;
+    /** trail window, Earth years */
+    trail: number;
     bodies: { a: number; e: number; peri: number; m0: number; period: number }[];
   }
 
@@ -882,30 +988,45 @@ const copyright = legal.copyright.replace('CNPJ ', 'CNPJ ');
     }
     const dots = data.bodies.map((_, i) => svg.querySelector<SVGCircleElement>(`[data-orbit-body="${i}"]`));
     if (dots.some((d) => !d)) return;
+    const trails = data.bodies.map((_, i) =>
+      Array.from(svg.querySelectorAll<SVGCircleElement>(`[data-orbit-trail^="${i}-"]`)).sort(
+        (a, b) => Number(a.dataset.orbitTrail!.split('-')[1]) - Number(b.dataset.orbitTrail!.split('-')[1])
+      )
+    );
 
     const rad = (d: number) => (d * Math.PI) / 180;
     const cT = Math.cos(rad(data.tilt));
     const sT = Math.sin(rad(data.tilt));
     const TAU = Math.PI * 2;
 
-    const place = (years: number) => {
+    /** screen transform of body b at time `years`; near side a touch larger */
+    const at = (b: OrbitData['bodies'][number], years: number): string => {
+      const M = rad(b.m0) + (TAU * years) / b.period;
+      let E = M;
+      for (let n = 0; n < 5; n++) E -= (E - b.e * Math.sin(E) - M) / (1 - b.e * Math.cos(E));
+      const xp = b.a * (Math.cos(E) - b.e);
+      const yp = b.a * Math.sqrt(1 - b.e * b.e) * Math.sin(E);
+      const c = Math.cos(rad(b.peri));
+      const s = Math.sin(rad(b.peri));
+      const X = xp * c - yp * s;
+      const Y = xp * s + yp * c;
+      const px = X * data.scale;
+      const py = -Y * data.scale * data.k;
+      const x = data.sun[0] + px * cT - py * sT;
+      const y = data.sun[1] + px * sT + py * cT;
+      const depth = 1 - 0.14 * (Y / b.a);
+      return `translate(${x.toFixed(2)}px, ${y.toFixed(2)}px) scale(${depth.toFixed(3)})`;
+    };
+
+    /** planets plus trails; the trail stretches with the time-lapse speed */
+    const place = (years: number, speed: number) => {
+      const win = data.trail * Math.min(2.6, Math.max(1, speed));
       data.bodies.forEach((b, i) => {
-        const M = rad(b.m0) + (TAU * years) / b.period;
-        let E = M;
-        for (let n = 0; n < 5; n++) E -= (E - b.e * Math.sin(E) - M) / (1 - b.e * Math.cos(E));
-        const xp = b.a * (Math.cos(E) - b.e);
-        const yp = b.a * Math.sqrt(1 - b.e * b.e) * Math.sin(E);
-        const c = Math.cos(rad(b.peri));
-        const s = Math.sin(rad(b.peri));
-        const X = xp * c - yp * s;
-        const Y = xp * s + yp * c;
-        const px = X * data.scale;
-        const py = -Y * data.scale * data.k;
-        const x = data.sun[0] + px * cT - py * sT;
-        const y = data.sun[1] + px * sT + py * cT;
-        // near side (Y < 0) a touch larger than the far side
-        const depth = 1 - 0.14 * (Y / b.a);
-        dots[i]!.style.transform = `translate(${x.toFixed(2)}px, ${y.toFixed(2)}px) scale(${depth.toFixed(3)})`;
+        dots[i]!.style.transform = at(b, years);
+        const tr = trails[i];
+        tr.forEach((dot, k) => {
+          dot.style.transform = at(b, years - (win * (k + 1)) / tr.length);
+        });
       });
     };
 
@@ -913,12 +1034,22 @@ const copyright = legal.copyright.replace('CNPJ ', 'CNPJ ');
     let last = 0;
     let raf = 0;
     let onscreen = false;
+    let speed = 1;
+    let target = 1;
+    let boostAt = 0;
+    let seen = false;
 
     const tick = (now: number) => {
       raf = 0;
-      if (last) years += Math.min(0.1, (now - last) / 1000) / data.lap;
+      const dt = last ? Math.min(0.1, (now - last) / 1000) : 0;
       last = now;
-      place(years);
+      // a burst when the diagram first comes into view, settling to cruise
+      const boost = boostAt ? 9 * Math.exp(-(now - boostAt) / 650) : 0;
+      if (boost < 0.01) boostAt = 0;
+      speed += (target - speed) * (1 - Math.exp(-dt * 3));
+      const s = speed + boost;
+      years += (dt / data.lap) * s;
+      place(years, s);
       schedule();
     };
 
@@ -934,16 +1065,25 @@ const copyright = legal.copyright.replace('CNPJ ', 'CNPJ ');
       }
     }
 
-    place(0);
+    place(0, 1);
 
     if ('IntersectionObserver' in window) {
       new IntersectionObserver(
         (entries) => {
           onscreen = entries.some((e) => e.isIntersecting);
+          if (onscreen && !seen && !isReduced()) {
+            seen = true;
+            boostAt = performance.now();
+          }
           schedule();
         },
-        { rootMargin: '80px 0px' }
+        { rootMargin: '0px 0px -10% 0px' }
       ).observe(fig);
+    }
+    // the pointer over the diagram speeds up the time-lapse
+    if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+      fig.addEventListener('pointerenter', () => (target = 3.2));
+      fig.addEventListener('pointerleave', () => (target = 1));
     }
     document.addEventListener('visibilitychange', schedule);
     document.addEventListener('vesta:motion', schedule);

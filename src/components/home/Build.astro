@@ -1,21 +1,32 @@
 ---
 /**
  * §5.4 #build — "Take one apart." (SPEC §6.3, skinned per SPEC_COSMOS).
- * The rebuilt Concept 01 drifts apart into its six layers like a
- * spacecraft's exploded view, then docks again.
+ * The rebuilt concept drifts apart into its six layers like a spacecraft's
+ * exploded view, then docks again.
  *
  * Live (JS, motion on, capable device): a 320svh track (240svh below
  * 1100px) holds a sticky 100svh stage with perspective. src/scripts/scrub.ts
- * writes --e1 on .b-assembly (rotation/scale) and --lift on each layer
- * (translateZ by index × --z-step), lights one row of the legend, rolls the
- * counter and draws one lilac leader from the layer's corner to its row
- * (desktop), along a dashed assembly axis through the six corners.
+ * writes --e1 on .b-assembly (tilt/scale), --lift on each layer (translateZ
+ * by index × --z-step), --spread (how far the stack has opened, so it stays
+ * centred on its own axis) and, on the section, --orb / --el: a slow camera
+ * orbit (rotateZ sweep plus a small change of elevation) that runs through
+ * the whole scrub. The faint star field behind (.b-sky) turns against the
+ * orbit, so the depth reads. On fine pointers the stack and the sky lean
+ * toward the pointer (eased, --ptx / --pty). Each lifted layer gets a part
+ * number that flips out of its right-hand corner (.b-tag); the one being
+ * read opens to its name. The legend lights one row, its words flip up, the
+ * counter rolls
+ * and (desktop) one lilac leader runs from the layer's corner to its row
+ * along a dashed assembly axis through the six corners.
+ * Round 3: deeper Z separation, the orbit, the part numbers, the sky.
+ * No data-scene here: the stage is position:sticky.
+ *
  * Desktop sets the words left (heading, then the legend) and the plate
- * right — mirrored from SPEC so the rising stack never crosses the heading.
- * The legend mirrors the stack: layer 06 at the top, 01 at the bottom, so
- * every leader runs nearly level. Below 1100px the legend is one caption
- * cell; inactive captions are visibility:hidden (a visually-hidden full
- * list keeps all six for screen readers while live).
+ * right, mirrored from SPEC so the rising stack never crosses the heading.
+ * The legend mirrors the stack: layer 06 at the top, 01 at the bottom.
+ * Below 1100px the legend is one caption cell; inactive captions are
+ * visibility:hidden (a visually-hidden full list keeps all six for screen
+ * readers while live).
  *
  * Static (.build--static — set inline below for Save-Data and low-memory /
  * low-core Chromium devices; also no JS, motion off, failed engine): no
@@ -34,6 +45,28 @@ import { build } from '../../data/site';
 /* the arrow is drawn as a hairline SVG; the text keeps its words */
 const skipText = build.skip.label.replace(/\s*↓\s*$/, '');
 const layers = build.layers;
+
+/* The faint sky behind the stack: a seeded scatter (same every build), in a
+   square that stays larger than the stage while it turns with the orbit. */
+let seed = 0x5eed1807;
+const rnd = () => {
+  seed = (seed + 0x6d2b79f5) | 0;
+  let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+};
+const stars = Array.from({ length: 140 }, (_, n) => {
+  const m = rnd();
+  return {
+    x: (rnd() * 1000).toFixed(1),
+    y: (rnd() * 1000).toFixed(1),
+    /* magnitude-like: most faint and small, a few bright */
+    r: (0.24 + Math.pow(m, 6) * 0.5).toFixed(2),
+    o: (0.28 + Math.pow(m, 2) * 0.62).toFixed(2),
+    lilac: rnd() < 0.22,
+    tw: n % 17 === 3,
+  };
+});
 ---
 
 <section id={build.id} class="s-void section build" data-nav-theme="dark" aria-labelledby="build-title" data-scrub>
@@ -53,6 +86,12 @@ const layers = build.layers;
   <div class="b-track">
     <div class="b-stage">
       <Cosmos variant="stars" />
+
+      <div class="b-sky" aria-hidden="true">
+        <svg viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice" focusable="false">
+          {stars.map((s) => <circle cx={s.x} cy={s.y} r={s.r} class:list={[{ l: s.lilac, tw: s.tw }]} style={`opacity:${s.o}`} />)}
+        </svg>
+      </div>
 
       <div class="wrap g b-grid">
         <header class="b-head">
@@ -111,6 +150,20 @@ const layers = build.layers;
         {layers.map((_, k) => <path class="b-ld" data-k={k} pathLength="1" d="M0 0" />)}
         {layers.map((_, k) => <rect class="b-term" data-k={k} x="-20" y="-20" width="5" height="5" />)}
       </svg>
+
+      <div class="b-tags" aria-hidden="true">
+        {
+          layers.map((l, k) => (
+            <span class="b-tag" data-k={k}>
+              <span class="b-tag-in">
+                <span class="b-tag-tick" />
+                <span class="b-tag-i">{l.index}</span>
+                <span class="b-tag-n label">{l.name}</span>
+              </span>
+            </span>
+          ))
+        }
+      </div>
     </div>
   </div>
 </section>
@@ -132,12 +185,22 @@ const layers = build.layers;
   .build {
     --rx: 55deg;
     --rz: -32deg;
-    --z-step: min(44px, 11vw);
-    --tx: 0px;
-    --ty: 9svh;
+    /* the camera orbit: --orb runs −1 → 1 through the scrub (scrub.ts), the
+       plate turns --orbit either side of --rz; --el lifts the camera a
+       little mid-way (0 → 1 → 0) */
+    --orb: 0;
+    --el: 0;
+    --orbit: 14deg;
+    --elev: 5deg;
+    --z-step: min(62px, 15vw);
+    /* how far the open stack slides back down its own axis, in steps, so
+       its centre stays where the flat plate was */
+    --z-centre: -2;
+    --tx: -3vw;
+    --ty: 6svh;
     --s0: 0.92;
-    --s1: 0.18;
-    --persp: 1400px;
+    --s1: 0.2;
+    --persp: 1200px;
     --plate-w: min(100%, 330px);
     isolation: isolate;
     /* the exploded stack may bleed sideways on narrow screens; clip, not
@@ -149,10 +212,11 @@ const layers = build.layers;
     .build {
       --rx: 57deg;
       --rz: -34deg;
-      --z-step: min(56px, 5.6svh);
-      --ty: 11svh;
-      --s1: 0.2;
-      --persp: 1800px;
+      --z-step: min(78px, 7.6svh);
+      --tx: -4vw;
+      --ty: 3svh;
+      --s1: 0.22;
+      --persp: 1600px;
       --plate-w: min(100%, 540px, calc((100svh - 500px) * 1.8));
     }
   }
@@ -161,11 +225,12 @@ const layers = build.layers;
     .build {
       --rx: 58deg;
       --rz: -36deg;
-      --z-step: min(70px, 7.8svh);
-      --tx: 0px;
-      --ty: 10svh;
-      --s1: 0.26;
-      --persp: 2200px;
+      --orbit: 16deg;
+      --z-step: min(104px, 11svh);
+      --tx: -5.5vw;
+      --ty: 7svh;
+      --s1: 0.28;
+      --persp: 2000px;
       --plate-w: min(100%, 860px, calc((100svh - 380px) * 1.74));
     }
   }
@@ -175,6 +240,8 @@ const layers = build.layers;
      ====================================================================== */
   .b-stage {
     position: relative;
+    /* the sky square is larger than the stage: keep it inside */
+    overflow: clip;
   }
 
   .b-grid {
@@ -197,11 +264,15 @@ const layers = build.layers;
 
   .b-assembly {
     --e1: 1;
+    --spread: 1;
     position: relative;
     width: var(--plate-w);
     transform-style: preserve-3d;
-    transform: translate3d(calc(var(--e1) * var(--tx)), calc(var(--e1) * var(--ty)), 0) rotateX(calc(var(--e1) * var(--rx)))
-      rotateZ(calc(var(--e1) * var(--rz))) scale(calc(var(--s0) - var(--e1) * var(--s1)));
+    transform: translate3d(calc(var(--e1) * var(--tx)), calc(var(--e1) * var(--ty)), 0)
+      rotateX(calc(var(--e1) * (var(--rx) + var(--el) * var(--elev) - var(--pty, 0) * 7deg)))
+      rotateZ(calc(var(--e1) * (var(--rz) + var(--orb) * var(--orbit) + var(--ptx, 0) * 9deg)))
+      translate3d(0, 0, calc(var(--spread) * var(--z-centre) * var(--z-step)))
+      scale(calc(var(--s0) - var(--e1) * var(--s1)));
   }
 
   @media (pointer: fine) {
@@ -357,8 +428,8 @@ const layers = build.layers;
   }
 
   .b-view {
-    /* room for the stack rising above the plate */
-    padding-top: calc(var(--z-step) * 4.6);
+    /* room for the stack opening above and below the plate's plane */
+    padding-block: calc(var(--z-step) * 2.4) calc(var(--z-step) * 2.2);
   }
 
   @media (min-width: 1100px) {
@@ -374,7 +445,7 @@ const layers = build.layers;
       grid-column: 1 / span 8;
       grid-row: 2;
       align-self: start;
-      padding-top: calc(var(--z-step) * 3);
+      padding-block: calc(var(--z-step) * 1.6) calc(var(--z-step) * 2.6);
     }
 
     .b-side {
@@ -393,6 +464,21 @@ const layers = build.layers;
   :global(html.motion-reduced) .b-assembly,
   :global(html.motion-failed) .b-assembly {
     --e1: 1 !important;
+    --tx: 0px !important;
+    --spread: 1 !important;
+    --orb: 0 !important;
+    --el: 0 !important;
+    --ptx: 0 !important;
+    --pty: 0 !important;
+  }
+
+  .build--static .b-sky,
+  :global(html:not(.js)) .b-sky,
+  :global(html.motion-reduced) .b-sky,
+  :global(html.motion-failed) .b-sky {
+    --orb: 0 !important;
+    --ptx: 0 !important;
+    --pty: 0 !important;
   }
 
   .build--static .b-assembly :global(.cp-layer),
@@ -782,5 +868,194 @@ const layers = build.layers;
 
   .build:not(.is-open) .b-leaders {
     visibility: hidden;
+  }
+  /* ======================================================================
+     6. the sky, the part numbers, the flips (round 3)
+     ====================================================================== */
+
+  /* a faint second star field between the Cosmos backdrop and the stack.
+     It turns against the camera orbit and drifts a little, so the stack
+     reads as floating in depth. One transform on one element per frame. */
+  .b-sky {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    z-index: 0;
+    width: 160vmax;
+    height: 160vmax;
+    margin: -80vmax 0 0 -80vmax;
+    pointer-events: none;
+    transform: translate3d(calc(var(--ptx, 0) * -18px), calc(var(--orb) * -2.5% + var(--pty, 0) * -14px), 0) rotate(calc(var(--orb) * -9deg));
+  }
+
+  .b-sky svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .b-sky circle {
+    fill: var(--starlight);
+  }
+
+  .b-sky circle.l {
+    fill: var(--lilac);
+  }
+
+  /* a few stars breathe; only while the stage is near the viewport */
+  .build.is-near .b-sky circle.tw {
+    animation: b-tw 3.8s ease-in-out infinite alternate;
+  }
+
+  .b-sky circle.tw:nth-child(3n) {
+    animation-duration: 5.2s;
+    animation-delay: -1.6s;
+  }
+
+  @keyframes b-tw {
+    to {
+      opacity: 0.12;
+    }
+  }
+
+  /* part numbers: absolutely placed at each layer's right-hand corner by
+     scrub.ts (transform only). Live mode only. */
+  .b-tags {
+    display: none;
+  }
+
+  .build.is-live .b-tags {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    overflow: clip;
+  }
+
+  .b-tag {
+    position: absolute;
+    left: 0;
+    top: 0;
+    will-change: transform;
+  }
+
+  .b-tag-in {
+    display: flex;
+    align-items: center;
+    transform-origin: 0 100%;
+    translate: 0 -50%;
+    transition:
+      transform 820ms var(--ease-expo),
+      opacity 280ms linear,
+      visibility 0s linear 0s;
+  }
+
+  .b-tag:not(.is-up) .b-tag-in {
+    visibility: hidden;
+    opacity: 0;
+    transform: perspective(500px) rotateX(-92deg);
+    transition:
+      transform 360ms var(--ease-expo),
+      opacity 200ms linear,
+      visibility 0s linear 360ms;
+  }
+
+  .b-tag-tick {
+    display: block;
+    width: 10px;
+    height: 1px;
+    background-color: var(--lilac);
+  }
+
+  .b-tag-i {
+    display: block;
+    padding: 4px 6px 3px;
+    border: 1px solid var(--lilac);
+    background-color: var(--void);
+    color: var(--lilac);
+    font-stretch: var(--wd-display);
+    font-size: 0.6875rem;
+    font-weight: 620;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    transition:
+      background-color 240ms linear,
+      color 240ms linear,
+      border-color 240ms linear;
+  }
+
+  .b-tag.is-on .b-tag-i {
+    border-color: var(--violet);
+    background-color: var(--violet);
+    color: var(--starlight);
+  }
+
+  /* the name opens beside the number of the layer being read */
+  .b-tag-n {
+    display: none;
+    margin-left: -1px;
+    padding: 4px 8px 3px;
+    border: 1px solid var(--violet);
+    background-color: var(--void);
+    color: var(--starlight);
+    font-size: 0.6875rem;
+    line-height: 1;
+    white-space: nowrap;
+    transform-origin: 0 50%;
+  }
+
+  @media (min-width: 768px) {
+    .b-tag.is-on .b-tag-n {
+      display: block;
+      animation: b-open 620ms var(--ease-expo) both;
+    }
+  }
+
+  @keyframes b-open {
+    from {
+      opacity: 0;
+      transform: perspective(500px) rotateY(-88deg);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* the legend's words flip up out of their line when a layer is read */
+  @keyframes b-flip {
+    from {
+      opacity: 0;
+      transform: perspective(700px) translate3d(0, 38%, 0) rotateX(-72deg);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .build.is-live .b-co.is-active .b-co-text {
+    transform-origin: 50% 100%;
+    animation: b-flip 760ms var(--ease-expo) both;
+  }
+
+  @media (max-width: 1099.98px) {
+    .build.is-live .b-co.is-active .b-co-head {
+      transform-origin: 50% 100%;
+      animation: b-flip 640ms var(--ease-expo) both;
+    }
+
+    .build.is-live .b-co.is-active .b-co-text {
+      animation-delay: 70ms;
+    }
+  }
+
+  :global(html.motion-reduced) .b-sky circle,
+  :global(html.motion-reduced) .build .b-co-text,
+  :global(html.motion-reduced) .build .b-co-head,
+  :global(html.motion-reduced) .b-tag-n {
+    animation: none !important;
   }
 </style>

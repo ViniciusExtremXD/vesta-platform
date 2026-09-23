@@ -1,0 +1,94 @@
+---
+/**
+ * 4 Vesta in 3D — raw WebGL2 (src/scripts/asteroid.ts).
+ *   <Asteroid size={320} />         square, decorative (aria-hidden)
+ *   <Asteroid size={320} drag />    the visitor can spin it (pointer + touch)
+ * Fills a square box of `size` px (max 100% of its container), transparent,
+ * so it floats on the section's own space. Without JS, WebGL2 or a hardware
+ * GPU it shows a shaded CSS body, so the spot is never empty.
+ */
+export interface Props {
+  size?: number;
+  drag?: boolean;
+  class?: string;
+}
+const { size = 320, drag = false, class: cls = '' } = Astro.props;
+---
+
+<div class={`asteroid ${cls}`} style={`--size:${size}px`} data-asteroid data-drag={drag ? '' : undefined} aria-hidden="true">
+  <span class="asteroid-fallback"></span>
+</div>
+
+<script>
+  import { initAsteroids } from '../scripts/asteroid';
+  initAsteroids();
+</script>
+
+<style>
+  .asteroid {
+    position: relative;
+    width: min(var(--size), 100%);
+    aspect-ratio: 1;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .asteroid[data-drag] {
+    cursor: grab;
+    /* vertical swipes still scroll the page; horizontal ones spin the body */
+    touch-action: pan-y;
+  }
+
+  .asteroid.is-grabbing {
+    cursor: grabbing;
+  }
+
+  /* static body (no JS / no GPU): a lumpy oblate silhouette lit from the
+     left, the night side falling to black, and a hairline lilac limb on the
+     right (the span is the backlit limb, ::before is the body over it) */
+  .asteroid-fallback {
+    position: absolute;
+    inset: 16% 8% 17% 9%;
+    z-index: 0;
+    border-radius: 52% 47% 44% 50% / 56% 52% 42% 46%;
+    transform: rotate(12deg);
+    background: #7f6cc0;
+    transition: opacity 0.9s ease 0.5s;
+  }
+
+  .asteroid-fallback::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    transform: translate(-0.8%, 0.6%);
+    background:
+      radial-gradient(ellipse 30% 20% at 60% 88%, rgba(8, 7, 13, 0.6), transparent 70%),
+      radial-gradient(ellipse 110% 120% at 16% 36%, #b9ad9f 0%, #95887a 24%, #5d5147 44%, #231d1f 62%, #0d0b11 76%, #09080d 100%);
+  }
+
+  /* the canvas is created by the script, so it takes no scope attribute */
+  .asteroid :global(.asteroid__gl) {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: block;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transform: scale(0.94);
+    transition:
+      opacity 1.2s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 1.6s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .asteroid.is-live :global(.asteroid__gl) {
+    opacity: 1;
+    transform: none;
+  }
+
+  .asteroid.is-live .asteroid-fallback {
+    opacity: 0;
+  }
+</style>

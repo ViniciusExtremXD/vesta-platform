@@ -270,6 +270,9 @@ const IN_PAGE = {
       'data-expand',
       'data-niche',
       'data-cards',
+      'data-scene',
+      'data-asteroid',
+      'data-dive',
     ];
 
     const covered = (el) => {
@@ -855,6 +858,8 @@ for (const vp of VIEWPORTS) {
   await page.setJavaScriptEnabled(false);
   await page.setViewport({ width: vp.width, height: vp.height, deviceScaleFactor: 1 });
   await page.goto(`${ORIGIN}/`, { waitUntil: 'networkidle2', timeout: 45000 });
+  // as entradas CSS do topo (sem JS elas ainda rodam) terminam em ~2,2 s
+  await new Promise((r) => setTimeout(r, 3000));
   const invisible = await page.evaluate(IN_PAGE.invisibleContent);
   const overflow = await page.evaluate(IN_PAGE.horizontalOverflow);
   const ok = invisible.length === 0 && overflow.docOverflowPx <= 1;

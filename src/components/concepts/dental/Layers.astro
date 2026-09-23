@@ -1,0 +1,821 @@
+---
+/**
+ * Concept 02 AFTER — Pellwood Dental Studio (fictional), rebuilt, as six
+ * stacked layers. DOM contract: src/components/concepts/README.md.
+ *
+ *   .cp-layer.cp-l1  wireframe: modular grid + box tags          --i:0
+ *   .cp-layer.cp-l2  porcelain surface, wide-light type, arched  --i:1  (opaque)
+ *                    window with a line-drawn molar, ink band
+ *   .cp-layer.cp-l3  window frame, icon frames, load waterfall   --i:2
+ *   .cp-layer.cp-l4  JSON-LD card (Dentist) + sitemap card       --i:3
+ *   .cp-layer.cp-l5  glacier "Book a visit", new-patient call,   --i:4
+ *                    WhatsApp
+ *   .cp-layer.cp-l6  event pins                                  --i:5
+ *
+ * Identity: the one LIGHT rebuild of the five. Porcelain + deep ink + one
+ * cool accent (glacier #2F6690, ice #A9C8DF tint on ink). Mona Sans wide and
+ * light. Alive, quietly: a glacier scan line crosses the molar every ~7s and
+ * the "accepting new patients" dot breathes (transform/opacity only, hero /
+ * mini / static modes, paused with .cp.is-offscreen / .is-paused, hidden
+ * states only under html.js). Text outside l2 sits on opaque chips/cards, so
+ * it reads on porcelain and on --void when the layers lift.
+ */
+import { dental, dentalArt } from '../../../data/concepts/dental';
+
+const A = dental.after;
+const X = dentalArt;
+
+/* the molar, one continuous line (window coordinates: 272 × 290) */
+const molar =
+  'M94.2 128C91.9 110 98.9 98 110.5 96C119.8 95 126.7 102 136 104C145.3 102 152.2 95 161.5 95C173.1 96 180.1 108 177.8 128C176.6 144 173.1 156 173.1 168C173.1 194 177.8 224 168.5 252C166.2 259 159.2 260 156.9 253C152.2 232 149.9 208 136 198C122.1 208 119.8 232 115.1 253C112.8 260 104.7 260 102.4 252C94.2 224 98.9 194 98.9 168C98.9 156 95.4 144 94.2 128Z';
+/* the pulp chamber and canals: the anatomical detail that makes it precise */
+const pulp =
+  'M115.1 150C115.1 138 122.1 132 125.6 140C130.2 145 141.8 145 146.4 140C149.9 132 156.9 138 156.9 150C156.9 164 149.9 176 136 176C122.1 176 115.1 164 115.1 150Z';
+const canals = 'M120.9 172C117.4 198 114 226 109.3 250M151.1 172C154.6 198 158 224 162.7 248';
+---
+
+<div class="cp-layer cp-l1" style="--i:0">
+  <svg class="w-grid" viewBox="0 0 760 475" preserveAspectRatio="none" aria-hidden="true">
+    <path
+      d="M40 0V475M190 0V475M400 0V475M452 0V475M724 0V475M0 52H760M0 350H760"
+      fill="none"
+      stroke="#A9C8DF"
+      stroke-opacity=".28"
+      vector-effect="non-scaling-stroke"></path>
+    <path d="M0 106H760M0 160H760M0 214H760M0 268H760M0 322H760" fill="none" stroke="#A9C8DF" stroke-opacity=".12" stroke-dasharray="2 4" vector-effect="non-scaling-stroke"></path>
+  </svg>
+  <span class="w-box w-nav"><span class="w-tag">{A.wireframeTags[0]}</span></span>
+  <span class="w-box w-h1"><span class="w-tag">{A.wireframeTags[1]}</span></span>
+  <span class="w-box w-cta"><span class="w-tag">{A.wireframeTags[2]}</span></span>
+  <span class="w-box w-svc"><span class="w-tag">{A.wireframeTags[3]}</span></span>
+</div>
+
+<div class="cp-layer cp-l4" style="--i:3">
+  <span class="d-card">
+    <span class="d-brace">{'{'}</span>
+    <span class="d-line">{A.jsonLd[0]},</span>
+    <span class="d-line">{A.jsonLd[1]},</span>
+    <span class="d-line">{X.jsonTel}</span>
+    <span class="d-brace">{'}'}</span>
+  </span>
+  <span class="d-tree">
+    {A.sitemap.map((p, i) => <span class:list={['d-node', i === 0 ? 'is-root' : 'is-leaf']}>{p}</span>)}
+  </span>
+</div>
+
+<div class="cp-layer cp-l6" style="--i:5">
+  <span class="e-pin e-pin--book"><i></i><span class="e-chip">{A.events[2]}</span></span>
+  <span class="e-pin e-pin--call"><i></i><span class="e-chip">{A.events[1]}</span></span>
+  <span class="e-pin e-pin--wa"><span class="e-chip">{A.events[0]}</span><i></i></span>
+</div>
+
+<div class="cp-layer cp-l2" style="--i:1">
+  <div class="s-nav">
+    <span class="s-logo">
+      <svg class="s-mark" viewBox="0 0 18 20" aria-hidden="true">
+        <path
+          d="M2.6 6.4C2.6 3 5 1.6 6.6 2.4c1 .5 3.8.5 4.8 0C13 1.6 15.4 3 15.4 6.4c0 2.6-.8 4.2-1 6.2-.3 2.6.1 5.2-1 6.2-.5.5-1.1.1-1.3-.8-.4-2.2-.8-4.4-3.1-4.4s-2.7 2.2-3.1 4.4c-.2.9-.8 1.3-1.3.8-1.1-1-.7-3.6-1-6.2-.2-2-1-3.6-1-6.2Z"
+          fill="none"
+          stroke="#0D1A22"
+          stroke-width="1.2"
+          stroke-linejoin="round"></path>
+        <path d="M5.6 7.2c1.8 1.3 5 1.3 6.8 0" fill="none" stroke="#2F6690" stroke-width="1.2" stroke-linecap="round"></path>
+      </svg>
+      <span class="s-name" data-cp-name>{dental.name}</span>
+    </span>
+    <span class="s-links">{A.nav.map((l, i) => <span class:list={['s-link', i === 0 && 'is-on']}>{l}</span>)}</span>
+  </div>
+
+  <span class="s-eyebrow"><span class="s-dot"><i class="s-ring"></i></span>{X.status} · {dental.city}</span>
+  <span class="s-h1">{A.headline}</span>
+  <span class="s-sub">{A.sub}</span>
+
+  <div class="s-arch">
+    <svg class="s-art" viewBox="0 0 272 280" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M14 280V136A122 122 0 0 1 258 136V280" fill="none" stroke="#0D1A22" stroke-opacity=".1" vector-effect="non-scaling-stroke"></path>
+      <path d="M28 280V136A108 108 0 0 1 244 136V280" fill="none" stroke="#0D1A22" stroke-opacity=".06" vector-effect="non-scaling-stroke"></path>
+      <g transform="translate(0 -6)">
+      <ellipse cx="136" cy="266" rx="60" ry="4.5" fill="#0D1A22" fill-opacity=".06"></ellipse>
+      <path d={molar} fill="#F6F4EF" fill-opacity=".78" stroke="#0D1A22" stroke-width="1.25" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>
+      <path d={pulp} fill="#0D1A22" fill-opacity=".035" stroke="#0D1A22" stroke-opacity=".3" vector-effect="non-scaling-stroke"></path>
+      <path d={canals} fill="none" stroke="#0D1A22" stroke-opacity=".3" stroke-linecap="round" vector-effect="non-scaling-stroke"></path>
+      <path d="M119.8 109C127.9 115 144.1 115 152.2 109" fill="none" stroke="#0D1A22" stroke-opacity=".45" stroke-linecap="round" vector-effect="non-scaling-stroke"></path>
+      <path d="M97.7 166C117.4 174 154.6 174 174.3 166" fill="none" stroke="#2F6690" stroke-width="1.3" stroke-dasharray="2.5 2.5"></path>
+      <!-- the caliper scale beside the molar -->
+      <path d="M214 95V259" stroke="#0D1A22" stroke-opacity=".32" vector-effect="non-scaling-stroke"></path>
+      <path
+        d="M214 95h8M214 108.7h4M214 122.3h4M214 136h4M214 149.7h4M214 163.3h4M214 177h8M214 190.7h4M214 204.3h4M214 218h4M214 231.7h4M214 245.3h4M214 259h8"
+        stroke="#0D1A22"
+        stroke-opacity=".32"
+        vector-effect="non-scaling-stroke"></path>
+      <path d="M204 95H214M204 259H214" stroke="#2F6690" stroke-width="1.4"></path>
+      <path d="M94 276H178M94 272V280M178 272V280" fill="none" stroke="#2F6690" stroke-width="1.1"></path>
+      </g>
+    </svg>
+    <i class="s-scan" aria-hidden="true"></i>
+  </div>
+
+  <span class="s-open">
+    <span class="s-open-label">{X.opening.label}</span>
+    <span class="s-open-value">{X.opening.value}</span>
+  </span>
+
+  <div class="s-band">
+    <span class="s-band-label">{X.bandLabel}</span>
+    <span class="s-band-link">
+      {X.bandLink}
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 8h11M9 4l4 4-4 4" fill="none" stroke="#A9C8DF" stroke-width="1.4"></path></svg>
+    </span>
+    <span class="s-svcs">
+      {
+        A.services.map((s, i) => (
+          <span class="s-svc" style={`--k:${i}`}>
+            <svg class="s-ico" viewBox="0 0 20 20" aria-hidden="true">
+              {i === 0 && (
+                <>
+                  <path d="M4 7.2C4 4 6.4 2.8 8 3.6c.9.5 3.1.5 4 0 1.6-.8 4 .4 4 3.6 0 2.4-.8 3.8-1 5.6-.3 2.4.1 4.4-.9 5.4-.5.4-1 0-1.2-.8-.4-2-.8-3.8-2.9-3.8s-2.5 1.8-2.9 3.8c-.2.8-.7 1.2-1.2.8-1-1-.6-3-.9-5.4-.2-1.8-1-3.2-1-5.6Z" fill="none" stroke="#A9C8DF" stroke-width="1.2" stroke-linejoin="round" />
+                  <path d="M6.6 6.4c.4-1 1.2-1.4 2-1.4" fill="none" stroke="#A9C8DF" stroke-width="1.2" stroke-linecap="round" />
+                </>
+              )}
+              {i === 1 && (
+                <>
+                  <path d="M5 3.5h10l-1 3.5H6Z" fill="none" stroke="#A9C8DF" stroke-width="1.2" stroke-linejoin="round" />
+                  <path d="M7 9.5h6M7.4 12h5.2M7.8 14.5h4.4M10 7v11" fill="none" stroke="#A9C8DF" stroke-width="1.2" stroke-linecap="round" />
+                </>
+              )}
+              {i === 2 && (
+                <>
+                  <path d="M3.5 5c0 7 3 11 6.5 11s6.5-4 6.5-11" fill="none" stroke="#A9C8DF" stroke-width="1.2" stroke-linecap="round" />
+                  <path d="M6.5 5c0 5 1.6 8 3.5 8s3.5-3 3.5-8" fill="none" stroke="#A9C8DF" stroke-width="1.2" stroke-linecap="round" />
+                </>
+              )}
+              {i === 3 && (
+                <>
+                  <circle cx="10" cy="10" r="6.8" fill="none" stroke="#A9C8DF" stroke-width="1.2" />
+                  <path d="M10 6v4.4l2.8 1.8" fill="none" stroke="#A9C8DF" stroke-width="1.2" stroke-linecap="round" />
+                </>
+              )}
+            </svg>
+            <span class="s-svc-name">{s}</span>
+            <span class="s-svc-note">{X.serviceNotes[i]}</span>
+          </span>
+        ))
+      }
+    </span>
+  </div>
+</div>
+
+<div class="cp-layer cp-l3" style="--i:2">
+  <span class="f-arch"><i class="f-c f-c1"></i><i class="f-c f-c2"></i></span>
+  {A.services.map((_, i) => <span class="f-ico" style={`--k:${i}`}></span>)}
+  <svg class="f-fall" viewBox="0 0 272 280" preserveAspectRatio="none" aria-hidden="true">
+    <g fill="#0D1A22" fill-opacity=".07">
+      <rect x="40" y="206" width="18" height="2.5"></rect>
+      <rect x="44" y="213" width="30" height="2.5"></rect>
+      <rect x="50" y="220" width="22" height="2.5"></rect>
+      <rect x="56" y="227" width="34" height="2.5"></rect>
+    </g>
+    <rect x="40" y="206" width="6" height="2.5" fill="#2F6690"></rect>
+    <rect x="56" y="227" width="8" height="2.5" fill="#2F6690" fill-opacity=".7"></rect>
+  </svg>
+</div>
+
+<div class="cp-layer cp-l5" style="--i:4">
+  <span class="k-btn k-book">
+    {A.buttons[0]}
+    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 8h11M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5"></path></svg>
+  </span>
+  <span class="k-btn k-call"><span class="k-pre">{X.callPrefix}</span>{A.buttons[1]}</span>
+  <span class="k-btn k-wa">
+    <svg viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M8 1.5a6.5 6.5 0 0 0-5.6 9.8L1.5 14.5l3.3-.9A6.5 6.5 0 1 0 8 1.5Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"></path>
+    </svg>
+    {A.buttons[2]}
+  </span>
+</div>
+
+<style>
+  .cp-layer {
+    --u: calc(100cqi / 760);
+    --p-porc: #f6f4ef;
+    --p-mist: #e4eaec;
+    --p-ink: #0d1a22;
+    --p-ink-2: #4a5a63; /* 6.5:1 porcelain, 5.9:1 mist */
+    --p-glacier: #2f6690; /* white 6.1:1 */
+    --p-ice: #a9c8df; /* 10.1:1 on ink, 11.5:1 on void */
+    --p-fog: #a3b1ba; /* 8.0:1 on ink */
+    --p-deep: #0a141b;
+    position: absolute;
+    inset: 0;
+    color: var(--p-ink);
+    font-family: var(--font-sans);
+    font-stretch: 100%;
+    font-weight: 400;
+    line-height: 1.2;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  /* flat z-order: the invisible parts of a real site sit under l2 */
+  .cp-l1,
+  .cp-l4,
+  .cp-l6 {
+    z-index: 0;
+  }
+
+  .cp-l2 {
+    z-index: 1;
+    background-color: var(--p-porc);
+  }
+
+  .cp-l3 {
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  .cp-l5 {
+    z-index: 3;
+  }
+
+  /* ---------- L1 wireframe ---------- */
+  .w-grid {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .w-box {
+    position: absolute;
+    border: 1px solid rgb(169 200 223 / 0.62);
+  }
+
+  .w-nav {
+    left: calc(8 * var(--u));
+    top: calc(6 * var(--u));
+    width: calc(744 * var(--u));
+    height: calc(40 * var(--u));
+  }
+
+  .w-h1 {
+    left: calc(30 * var(--u));
+    top: calc(112 * var(--u));
+    width: calc(392 * var(--u));
+    height: calc(100 * var(--u));
+  }
+
+  .w-cta {
+    left: calc(30 * var(--u));
+    top: calc(268 * var(--u));
+    width: calc(360 * var(--u));
+    height: calc(54 * var(--u));
+  }
+
+  .w-svc {
+    left: calc(8 * var(--u));
+    top: calc(358 * var(--u));
+    width: calc(744 * var(--u));
+    height: calc(110 * var(--u));
+  }
+
+  .w-tag {
+    position: absolute;
+    left: -1px;
+    bottom: 100%;
+    padding: calc(2 * var(--u)) calc(6 * var(--u));
+    background-color: var(--p-glacier);
+    color: #ffffff;
+    font-size: calc(7.5 * var(--u));
+    font-stretch: 125%;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    white-space: nowrap;
+  }
+
+  .w-nav .w-tag,
+  .w-svc .w-tag {
+    bottom: auto;
+    top: -1px;
+  }
+
+  /* ---------- L2 porcelain surface ---------- */
+  .s-nav {
+    position: absolute;
+    inset: 0 0 auto;
+    height: calc(52 * var(--u));
+    display: flex;
+    align-items: center;
+    padding-inline: calc(40 * var(--u));
+    border-bottom: 1px solid rgb(13 26 34 / 0.09);
+    background-color: var(--p-porc);
+  }
+
+  .s-logo {
+    display: flex;
+    align-items: center;
+    gap: calc(8 * var(--u));
+    min-width: 0;
+    max-width: calc(270 * var(--u));
+  }
+
+  .s-mark {
+    flex: 0 0 auto;
+    width: calc(15 * var(--u));
+    height: calc(17 * var(--u));
+  }
+
+  .s-name {
+    overflow: hidden;
+    color: var(--p-ink);
+    font-size: calc(11.5 * var(--u));
+    font-stretch: 125%;
+    font-weight: 480;
+    letter-spacing: 0;
+    word-spacing: 0.08em;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .s-links {
+    position: absolute;
+    left: calc(340 * var(--u));
+    display: flex;
+    gap: calc(22 * var(--u));
+  }
+
+  .s-link {
+    position: relative;
+    color: var(--p-ink-2);
+    font-size: calc(9.5 * var(--u));
+    font-stretch: 110%;
+    font-weight: 450;
+  }
+
+  .s-link.is-on {
+    color: var(--p-ink);
+  }
+
+  .s-link.is-on::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: calc(-6 * var(--u));
+    height: 1px;
+    background-color: var(--p-glacier);
+  }
+
+  .s-eyebrow {
+    position: absolute;
+    left: calc(40 * var(--u));
+    top: calc(96 * var(--u));
+    display: flex;
+    align-items: center;
+    gap: calc(8 * var(--u));
+    color: var(--p-ink-2);
+    font-size: calc(9 * var(--u));
+    font-stretch: 112%;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+  }
+
+  .s-dot {
+    position: relative;
+    width: calc(6 * var(--u));
+    height: calc(6 * var(--u));
+    border-radius: 50%;
+    background-color: var(--p-glacier);
+  }
+
+  /* the breathing ring: decoration only, absent unless motion runs */
+  .s-ring {
+    position: absolute;
+    inset: 0;
+    display: none;
+    border: 1px solid var(--p-glacier);
+    border-radius: 50%;
+    opacity: 0;
+  }
+
+  .s-h1 {
+    position: absolute;
+    left: calc(38 * var(--u));
+    top: calc(118 * var(--u));
+    width: calc(392 * var(--u));
+    color: var(--p-ink);
+    font-size: calc(42 * var(--u));
+    font-stretch: 118%;
+    font-weight: 320;
+    line-height: 1.04;
+    letter-spacing: -0.03em;
+  }
+
+  .s-sub {
+    position: absolute;
+    left: calc(40 * var(--u));
+    top: calc(222 * var(--u));
+    width: calc(290 * var(--u));
+    color: var(--p-ink-2);
+    font-size: calc(10.5 * var(--u));
+    font-stretch: 106%;
+    line-height: 1.55;
+    text-wrap: balance;
+  }
+
+  /* the arched window: a semicircle top on a 272-wide box */
+  .s-arch {
+    position: absolute;
+    left: calc(452 * var(--u));
+    top: calc(70 * var(--u));
+    width: calc(272 * var(--u));
+    height: calc(280 * var(--u));
+    overflow: hidden;
+    border-radius: calc(136 * var(--u)) calc(136 * var(--u)) 0 0;
+    background-color: var(--p-mist);
+  }
+
+  .s-art,
+  .f-fall {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* the scan line: static and out of sight unless motion runs */
+  .s-scan {
+    position: absolute;
+    inset: 0;
+    display: none;
+    background: linear-gradient(to bottom, rgb(47 102 144 / 0) 78%, rgb(47 102 144 / 0.1) 99.4%, rgb(47 102 144 / 0.9) 99.4%);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .s-open {
+    position: absolute;
+    left: calc(630 * var(--u));
+    top: calc(98 * var(--u));
+    display: flex;
+    flex-direction: column;
+    gap: calc(3 * var(--u));
+    padding: calc(9 * var(--u)) calc(14 * var(--u)) calc(10 * var(--u)) calc(12 * var(--u));
+    border: 1px solid rgb(13 26 34 / 0.08);
+    border-left: calc(2 * var(--u)) solid var(--p-glacier);
+    background-color: #ffffff;
+    white-space: nowrap;
+  }
+
+  .s-open-label {
+    color: var(--p-ink-2);
+    font-size: calc(7.5 * var(--u));
+    font-stretch: 112%;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .s-open-value {
+    color: var(--p-ink);
+    font-size: calc(12 * var(--u));
+    font-stretch: 115%;
+    font-weight: 450;
+  }
+
+  /* ---------- the ink band: four treatments ---------- */
+  .s-band {
+    position: absolute;
+    inset: auto 0 0;
+    height: calc(125 * var(--u));
+    background-color: var(--p-ink);
+    color: var(--p-porc);
+  }
+
+  .s-band-label {
+    position: absolute;
+    left: calc(40 * var(--u));
+    top: calc(24 * var(--u));
+    color: var(--p-ice);
+    font-size: calc(8 * var(--u));
+    font-stretch: 118%;
+    font-weight: 560;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  .s-band-link {
+    position: absolute;
+    left: calc(40 * var(--u));
+    top: calc(48 * var(--u));
+    display: flex;
+    align-items: center;
+    gap: calc(6 * var(--u));
+    color: var(--p-porc);
+    font-size: calc(9.5 * var(--u));
+    font-stretch: 110%;
+    font-weight: 450;
+  }
+
+  .s-band-link svg {
+    width: calc(10 * var(--u));
+    height: calc(10 * var(--u));
+  }
+
+  .s-svcs {
+    position: absolute;
+    left: calc(190 * var(--u));
+    top: calc(20 * var(--u));
+    display: grid;
+    grid-template-columns: repeat(4, calc(132.5 * var(--u)));
+  }
+
+  .s-svc {
+    display: flex;
+    flex-direction: column;
+    gap: calc(5 * var(--u));
+    height: calc(68 * var(--u));
+    padding-left: calc(14 * var(--u));
+    border-left: 1px solid rgb(246 244 239 / 0.14);
+    background-color: var(--p-ink);
+  }
+
+  .s-ico {
+    width: calc(17 * var(--u));
+    height: calc(17 * var(--u));
+    margin-bottom: calc(5 * var(--u));
+  }
+
+  .s-svc-name {
+    color: var(--p-porc);
+    font-size: calc(13 * var(--u));
+    font-stretch: 118%;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+  }
+
+  .s-svc-note {
+    color: var(--p-fog);
+    font-size: calc(8.5 * var(--u));
+    font-stretch: 106%;
+    white-space: nowrap;
+  }
+
+  /* ---------- L3 frames + waterfall ---------- */
+  .f-arch {
+    position: absolute;
+    left: calc(460 * var(--u));
+    top: calc(78 * var(--u));
+    width: calc(256 * var(--u));
+    height: calc(272 * var(--u));
+    border: 1px solid rgb(13 26 34 / 0.16);
+    border-bottom: 0;
+    border-radius: calc(128 * var(--u)) calc(128 * var(--u)) 0 0;
+  }
+
+  .f-c {
+    position: absolute;
+    bottom: 0;
+    width: calc(10 * var(--u));
+    height: calc(10 * var(--u));
+    border: 0 solid var(--p-glacier);
+  }
+
+  .f-c1 {
+    left: -1px;
+    border-width: 0 0 2px 2px;
+  }
+
+  .f-c2 {
+    right: -1px;
+    border-width: 0 2px 2px 0;
+  }
+
+  .f-ico {
+    position: absolute;
+    left: calc((199 + var(--k) * 132.5) * var(--u));
+    top: calc(366 * var(--u));
+    width: calc(25 * var(--u));
+    height: calc(25 * var(--u));
+    border: 1px solid rgb(169 200 223 / 0.26);
+  }
+
+  .f-fall {
+    position: absolute;
+    left: calc(452 * var(--u));
+    top: calc(70 * var(--u));
+    width: calc(272 * var(--u));
+    height: calc(280 * var(--u));
+  }
+
+  /* ---------- L4 data ---------- */
+  .d-card {
+    position: absolute;
+    left: calc(466 * var(--u));
+    top: calc(96 * var(--u));
+    display: flex;
+    flex-direction: column;
+    gap: calc(3 * var(--u));
+    width: calc(244 * var(--u));
+    padding: calc(10 * var(--u)) calc(12 * var(--u));
+    border: 1px solid rgb(169 200 223 / 0.55);
+    background-color: var(--p-deep);
+    font-size: calc(9 * var(--u));
+    line-height: 1.35;
+  }
+
+  .d-brace {
+    color: var(--p-fog);
+  }
+
+  .d-line {
+    padding-left: calc(12 * var(--u));
+    color: var(--p-porc);
+    white-space: nowrap;
+  }
+
+  .d-tree {
+    position: absolute;
+    left: calc(40 * var(--u));
+    top: calc(372 * var(--u));
+    display: grid;
+    grid-template-columns: repeat(3, auto);
+    justify-content: start;
+    gap: calc(5 * var(--u)) calc(22 * var(--u));
+    padding: calc(10 * var(--u)) calc(14 * var(--u));
+    border: 1px solid rgb(169 200 223 / 0.4);
+    background-color: var(--p-deep);
+    font-size: calc(9 * var(--u));
+  }
+
+  .d-node {
+    position: relative;
+    color: var(--p-fog);
+    white-space: nowrap;
+  }
+
+  .d-node.is-root {
+    grid-column: 1 / -1;
+    color: var(--p-porc);
+  }
+
+  .d-node.is-leaf {
+    padding-left: calc(12 * var(--u));
+  }
+
+  .d-node.is-leaf::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 55%;
+    width: calc(7 * var(--u));
+    height: 1px;
+    background-color: rgb(169 200 223 / 0.6);
+  }
+
+  /* ---------- L5 buttons ---------- */
+  .k-btn {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: calc(8 * var(--u));
+    height: calc(38 * var(--u));
+    padding-inline: calc(18 * var(--u));
+    font-size: calc(10 * var(--u));
+    font-stretch: 112%;
+    font-weight: 540;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+  }
+
+  .k-btn svg {
+    width: calc(11 * var(--u));
+    height: calc(11 * var(--u));
+  }
+
+  .k-book {
+    left: calc(40 * var(--u));
+    top: calc(276 * var(--u));
+    background-color: var(--p-glacier);
+    color: #ffffff;
+  }
+
+  .k-call {
+    left: calc(168 * var(--u));
+    top: calc(276 * var(--u));
+    gap: calc(5 * var(--u));
+    border: 1px solid rgb(13 26 34 / 0.28);
+    background-color: var(--p-porc);
+    color: var(--p-ink);
+  }
+
+  .k-pre {
+    color: var(--p-ink-2);
+    font-weight: 420;
+  }
+
+  .k-wa {
+    right: calc(32 * var(--u));
+    top: calc(12 * var(--u));
+    height: calc(28 * var(--u));
+    padding-inline: calc(12 * var(--u));
+    gap: calc(6 * var(--u));
+    border: 1px solid rgb(13 26 34 / 0.2);
+    background-color: var(--p-porc);
+    color: var(--p-ink);
+    font-size: calc(9 * var(--u));
+  }
+
+  .k-wa svg {
+    color: var(--p-glacier);
+  }
+
+  /* ---------- L6 events ---------- */
+  .e-pin {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    gap: calc(5 * var(--u));
+  }
+
+  .e-pin i {
+    width: calc(7 * var(--u));
+    height: calc(7 * var(--u));
+    border-radius: 50%;
+    background-color: var(--p-ice);
+  }
+
+  .e-chip {
+    padding: calc(2 * var(--u)) calc(6 * var(--u));
+    background-color: var(--p-glacier);
+    color: #ffffff;
+    font-size: calc(8 * var(--u));
+    font-weight: 560;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+
+  .e-pin--book {
+    left: calc(42 * var(--u));
+    top: calc(324 * var(--u));
+  }
+
+  .e-pin--call {
+    left: calc(170 * var(--u));
+    top: calc(324 * var(--u));
+  }
+
+  .e-pin--wa {
+    right: calc(34 * var(--u));
+    top: calc(46 * var(--u));
+  }
+
+  /* ---------- quiet life: scan line + breathing status dot ----------
+     Only where the plate is a finished site (not the build teardown), only
+     when the engine runs; paused offscreen / while dragged. */
+  :global(html.js:not(.motion-reduced):not(.motion-failed) :is(.cp--hero, .cp--mini, .cp--static)) .s-scan {
+    display: block;
+    animation: p-scan 7.2s cubic-bezier(0.45, 0, 0.25, 1) 1.6s infinite;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed) :is(.cp--hero, .cp--mini, .cp--static)) .s-ring {
+    display: block;
+    animation: p-breathe 3.2s cubic-bezier(0.16, 1, 0.3, 1) 0.8s infinite;
+  }
+
+  :global(:is(.cp.is-offscreen, .cp.is-paused)) .s-scan,
+  :global(:is(.cp.is-offscreen, .cp.is-paused)) .s-ring {
+    animation-play-state: paused;
+  }
+
+  @keyframes p-scan {
+    0% {
+      opacity: 0;
+      transform: translate3d(0, -80%, 0);
+    }
+    8% {
+      opacity: 1;
+    }
+    52% {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+    }
+    60%,
+    100% {
+      opacity: 0;
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  @keyframes p-breathe {
+    0% {
+      opacity: 0.7;
+      transform: scale(1);
+    }
+    70%,
+    100% {
+      opacity: 0;
+      transform: scale(2.8);
+    }
+  }
+</style>

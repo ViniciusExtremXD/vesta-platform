@@ -1,26 +1,41 @@
 ---
 /**
  * Site navigation (SPEC §4 Nav, Mobile menu; §3.5 hover; §3.7 nav behaviour;
- * SPEC_COSMOS §5 orbit progress).
+ * SPEC_COSMOS §5 orbit progress; ROUND2 §1, §5; ROUND3 brand).
  *
- * Desktop ≥1100 (76px): wordmark + orbit · Services Pricing Process About ·
- * WhatsApp. Tablet 768–1099: wordmark · WhatsApp · Menu. Mobile (60px):
- * wordmark · 40px WhatsApp icon · Menu.
+ * Desktop >=1100 (76px): owner's logo | orbit · Services Pricing Process
+ * About · Email (hairline) + WhatsApp (violet). Tablet 768-1099: logo ·
+ * Email · WhatsApp · Menu. Mobile (60px): logo · two 40px icon buttons · Menu.
+ *
+ * ALWAYS DARK: the owner's logo is white + violet on transparent, so the bar
+ * is transparent only at the top of a dark section and solid void (with a
+ * hairline) everywhere else, including over paper sections. There is no
+ * light theme; the engine's data-theme="light" only forces the solid bar.
  *
  * The engine (motion.ts) owns the scroll states on [data-nav]: .is-solid after
- * 12px, .is-hidden on the way down past 60vh, data-theme="dark|light" from the
- * [data-nav-theme] section underneath. This file styles those states and runs
- * three things inside the shared rAF loop: the orbit progress planet beside
- * the wordmark, the shared active bar, and the full-screen mobile menu.
+ * 12px, .is-hidden on the way down past 60vh, data-theme from the
+ * [data-nav-theme] section underneath. This file runs, inside the shared
+ * rAF loop:
+ *   - the orbit progress planet — a small separate mark beside the logo,
+ *     never drawn over the artwork — with a short fading trail whose length
+ *     follows the scroll speed (one full lap on load and on logo hover);
+ *   - the active bar: an elastic underline on two springs (the leading edge
+ *     runs ahead, the trailing edge catches up) that leans toward the pointer;
+ *   - letter-roll labels on the links and buttons (CSS, hover/focus only);
+ *     magnetic Email / WhatsApp buttons whose contents travel further (depth);
+ *   - the full-screen menu: an iris opening from the Menu button, the list
+ *     plane swinging up out of depth while each word flips up on its
+ *     baseline, one after another, and a planet circling the big orbit.
  *
  * Progress: the orbit planet replaces the 2px [data-progress] line from
  * Base.astro, which is hidden below (one indicator, not two).
  */
-import { nav, navUi, mobileMenu, primaryCta } from '../data/site';
+import { nav, navUi, mobileMenu, primaryCta, contact, mail } from '../data/site';
 import { url } from '../lib/url';
 import Logo from './Logo.astro';
 import Cosmos from './Cosmos.astro';
 import WaGlyph from './ui/WaGlyph.astro';
+import MailGlyph from './ui/MailGlyph.astro';
 import Arrow from './ui/Arrow.astro';
 
 const path = Astro.url.pathname;
@@ -30,26 +45,83 @@ const isCurrent = (href: string) => {
   const full = url(href);
   return path === full || (href !== '/' && path.startsWith(full));
 };
+
+/** Letters for the roll: each one carries its twin in ::after (data-c). */
+const letters = (s: string) => Array.from(s);
+const mailHref = mail();
+const linkedinLabel = mobileMenu.linkedin.label.replace(/\s*↗\s*$/, '');
+
+/* The orbit progress indicator: a small separate mark beside the owner's
+   logo (never drawn over the artwork). Geometry in px = viewBox units. */
+const OW = 30;
+const OH = 20;
+const ORX = 12.5;
+const ORY = 4.6;
 ---
 
 <header class="nav" data-nav data-theme="dark">
   <div class="nav-in wrap">
-    <a class="nav-home" href={url('/')} aria-label={navUi.homeAria}>
-      <Logo progress />
+    <a class="nav-home" href={url('/')} aria-label={navUi.homeAria} data-nav-home>
+      <span class="nav-logo">
+        <Logo eager alt="" height={36} />
+      </span>
+      <span class="nav-sep" aria-hidden="true"></span>
+      <svg
+        class="nav-orbit"
+        width={OW}
+        height={OH}
+        viewBox={`0 0 ${OW} ${OH}`}
+        aria-hidden="true"
+        focusable="false"
+        data-orbit-mark
+        data-rx={ORX}
+        data-ry={ORY}
+      >
+        <g transform={`rotate(-24 ${OW / 2} ${OH / 2})`}>
+          <ellipse class="nav-orbit-path" cx={OW / 2} cy={OH / 2} rx={ORX} ry={ORY}></ellipse>
+          <circle class="nav-orbit-hearth" cx={OW / 2} cy={OH / 2} r="1.1"></circle>
+          {
+            [1, 2, 3, 4, 5].map((k) => (
+              <circle
+                class="nav-orbit-dot"
+                cx="0"
+                cy="0"
+                r={(2.3 * (1 - k * 0.14)).toFixed(2)}
+                style={`transform: translate(${OW / 2 + ORX}px, ${OH / 2}px); opacity: 0`}
+                data-orbit-trail={k}
+              />
+            ))
+          }
+          <circle
+            class="nav-orbit-dot"
+            cx="0"
+            cy="0"
+            r="2.3"
+            style={`transform: translate(${OW / 2 + ORX}px, ${OH / 2}px)`}
+            data-orbit-planet></circle>
+        </g>
+      </svg>
     </a>
 
     <nav class="nav-primary" aria-label="Primary">
       <ul class="nav-links">
         {
-          nav.map((item) => (
-            <li>
+          nav.map((item, n) => (
+            <li style={`--n:${n}`}>
               <a
                 class="nav-link"
                 href={url(item.href)}
                 data-section={item.section ?? undefined}
                 aria-current={isCurrent(item.href) ? 'page' : undefined}
               >
-                <span class="nav-label label">{item.label}</span>
+                <span class="nav-label label roll" aria-hidden="true">
+                  {letters(item.label).map((c, i) => (
+                    <span class="rc" style={`--c:${i}`} data-c={c}>
+                      {c}
+                    </span>
+                  ))}
+                </span>
+                <span class="visually-hidden">{item.label}</span>
               </a>
             </li>
           ))
@@ -59,16 +131,42 @@ const isCurrent = (href: string) => {
     </nav>
 
     <div class="nav-actions">
+      <a class="btn btn-sm btn-line nav-btn nav-mail" href={mailHref} aria-label={navUi.emailAria} data-magnetic=".3">
+        <span class="nav-btn-in">
+          <MailGlyph size={16} />
+          <span class="nav-btn-text roll" aria-hidden="true">
+            {
+              letters(navUi.email).map((c, i) => (
+                <span class="rc" style={`--c:${i}`} data-c={c}>
+                  {c}
+                </span>
+              ))
+            }
+          </span>
+        </span>
+      </a>
+
       <a
-        class="btn btn-sm nav-wa"
+        class="btn btn-sm nav-btn nav-wa"
         href={primaryCta.href}
         target="_blank"
         rel="noopener"
         aria-label={navUi.whatsappAria}
         data-wa-intent="nav"
+        data-magnetic=".3"
       >
-        <WaGlyph size={16} />
-        <span class="nav-wa-text">{navUi.whatsapp}</span>
+        <span class="nav-btn-in">
+          <WaGlyph size={16} />
+          <span class="nav-btn-text roll" aria-hidden="true">
+            {
+              letters(navUi.whatsapp).map((c, i) => (
+                <span class="rc" style={`--c:${i}`} data-c={c}>
+                  {c}
+                </span>
+              ))
+            }
+          </span>
+        </span>
       </a>
 
       <button class="nav-menu label" type="button" aria-expanded="false" aria-controls="site-menu" data-menu-toggle>
@@ -81,13 +179,25 @@ const isCurrent = (href: string) => {
   </div>
 
   <div class="menu" id="site-menu" data-menu inert>
-    <div class="menu-bg" aria-hidden="true">
+    <div class="menu-bg" aria-hidden="true" data-menu-bg>
       <Cosmos variant="stars" class="menu-cosmos" />
       <svg class="menu-orbit" viewBox="0 0 640 640" focusable="false">
         <ellipse class="menu-orbit-path" cx="320" cy="320" rx="312" ry="116"></ellipse>
         <ellipse class="menu-orbit-path is-inner" cx="320" cy="320" rx="200" ry="74"></ellipse>
         <circle class="menu-orbit-hearth" cx="320" cy="320" r="2.5"></circle>
-        <circle class="menu-orbit-planet" cx="164" cy="420.5" r="5"></circle>
+        {
+          [4, 3, 2, 1].map((k) => (
+            <circle
+              class="menu-orbit-trail"
+              cx="0"
+              cy="0"
+              r={(5 * (1 - k * 0.16)).toFixed(2)}
+              style={`transform: translate(164px, 420.5px); opacity: ${(0.5 - k * 0.1).toFixed(2)}`}
+              data-menu-trail={k}
+            />
+          ))
+        }
+        <circle class="menu-orbit-planet" cx="0" cy="0" r="5" style="transform: translate(164px, 420.5px)" data-menu-planet></circle>
       </svg>
     </div>
 
@@ -115,14 +225,21 @@ const isCurrent = (href: string) => {
       </nav>
 
       <div class="menu-foot">
-        <a class="btn menu-cta" href={mobileMenu.cta.href} target="_blank" rel="noopener" data-wa-intent="menu">
-          <WaGlyph size={16} />
-          <span>{mobileMenu.cta.label}</span>
-          <Arrow />
-        </a>
+        <div class="menu-ctas">
+          <a class="btn menu-cta" href={mobileMenu.cta.href} target="_blank" rel="noopener" data-wa-intent="menu">
+            <WaGlyph size={16} />
+            <span>{mobileMenu.cta.label}</span>
+            <Arrow />
+          </a>
+          <a class="btn btn-line menu-mail" href={mailHref}>
+            <MailGlyph size={16} />
+            <span class="menu-mail-addr">{contact.email.address}</span>
+            <Arrow />
+          </a>
+        </div>
         <div class="menu-meta">
           <a class="tlink menu-li" href={mobileMenu.linkedin.href} target="_blank" rel="noopener">
-            {mobileMenu.linkedin.label.replace(/\s*↗\s*$/, '')}
+            {linkedinLabel}
             <Arrow dir="up-right" size={12} />
           </a>
           <p class="menu-hours small">{mobileMenu.hours}</p>
@@ -149,7 +266,6 @@ const isCurrent = (href: string) => {
     --line-strong: var(--line-dark-strong);
     --nav-bg: var(--void);
     --bar: var(--lilac);
-    --orbit-planet: var(--lilac);
 
     position: fixed;
     inset-block-start: 0;
@@ -166,23 +282,15 @@ const isCurrent = (href: string) => {
       color 240ms linear;
   }
 
-  .nav[data-theme='light'] {
-    --fg: var(--ink);
-    --fg-2: var(--ink-2);
-    --fg-3: var(--ink-3);
-    --line: var(--line-light);
-    --line-strong: var(--line-light-strong);
-    --nav-bg: var(--paper);
-    --bar: var(--violet);
-    --orbit-planet: var(--violet);
-  }
-
-  /* Transparent only over the top of a dark section (the hero). Over paper
-     the bar is always opaque, so ink text never sits on a see-through bar. */
+  /* The owner's logo is white + violet: the bar is ALWAYS dark. It is
+     transparent only at the very top of a dark section (the hero); once the
+     page scrolls, or whenever a paper section sits underneath (the engine
+     still reports data-theme="light"), it is solid void with a hairline.
+     There is no light theme. */
   .nav.is-solid,
   .nav[data-theme='light'] {
-    background-color: var(--nav-bg);
-    border-bottom-color: var(--line);
+    background-color: var(--void);
+    border-bottom-color: var(--line-dark);
   }
 
   .nav.is-hidden {
@@ -202,8 +310,8 @@ const isCurrent = (href: string) => {
     --fg-2: var(--haze);
     --fg-3: var(--dim);
     --line: var(--line-dark);
+    --line-strong: var(--line-dark-strong);
     --bar: var(--lilac);
-    --orbit-planet: var(--lilac);
     z-index: var(--z-menu);
     transform: none;
     background-color: var(--void);
@@ -216,17 +324,122 @@ const isCurrent = (href: string) => {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: var(--s-16);
+    gap: var(--s-12);
     height: 100%;
   }
 
   .nav-home {
     display: inline-flex;
     align-items: center;
+    gap: 14px;
+    flex: 0 0 auto;
     min-height: 44px;
     color: var(--fg);
     text-decoration: none;
-    transition: color 240ms linear;
+  }
+
+  /* the owner's lockup: 30px tall on phones, 36px from tablet up. It lifts
+     a little toward the viewer on hover (the orbit beside it runs a lap). */
+  .nav-logo {
+    display: block;
+    perspective: 600px;
+  }
+
+  .nav-logo :global(.brand-logo) {
+    height: 30px;
+    transform-origin: 30% 50%;
+    transition: transform 900ms var(--ease-expo);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .nav-home:hover .nav-logo :global(.brand-logo) {
+      transform: translate3d(0, -1px, 24px) rotateY(-10deg);
+    }
+  }
+
+  /* hairline between the artwork and the progress orbit */
+  .nav-sep {
+    width: 1px;
+    height: 18px;
+    background-color: var(--line-dark-strong);
+    transform-origin: 50% 50%;
+  }
+
+  .nav-orbit {
+    flex: 0 0 auto;
+    overflow: visible;
+  }
+
+  .nav-orbit-path {
+    fill: none;
+    stroke: var(--haze);
+    stroke-width: 1;
+    stroke-opacity: 0.7;
+  }
+
+  .nav-orbit-hearth {
+    fill: var(--haze);
+  }
+
+  .nav-orbit-dot {
+    fill: var(--lilac);
+    transform-origin: 0 0;
+  }
+
+  /* phones under 360: the lockup and the actions need the room */
+  @media (max-width: 359px) {
+    .nav-sep,
+    .nav-orbit {
+      display: none;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .nav-home {
+      gap: 16px;
+    }
+
+    .nav-logo :global(.brand-logo) {
+      height: 36px;
+    }
+  }
+
+  /* --------------------------------------------------- the letter roll */
+  /* Each letter carries its twin one line below (::after). On hover or
+     keyboard focus the pair rolls up, one letter after the next. */
+
+  .roll {
+    display: inline-flex;
+    overflow: clip;
+    padding-block: 0.3em;
+    margin-block: -0.3em;
+  }
+
+  .rc {
+    position: relative;
+    display: inline-block;
+    white-space: pre;
+    transition: transform 620ms var(--ease-expo);
+    transition-delay: calc(var(--c, 0) * 22ms);
+  }
+
+  .rc::after {
+    content: attr(data-c);
+    position: absolute;
+    left: 0;
+    top: calc(100% + 0.3em);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .nav-link:hover .rc,
+    .nav-btn:hover .rc {
+      transform: translate3d(0, calc(-100% - 0.3em), 0);
+    }
+  }
+
+  .nav-link:focus-visible .rc,
+  .nav-btn:focus-visible .rc {
+    transform: translate3d(0, calc(-100% - 0.3em), 0);
   }
 
   /* ------------------------------------------------------ desktop links */
@@ -256,12 +469,6 @@ const isCurrent = (href: string) => {
     padding-inline-start: 0;
   }
 
-  .nav-label {
-    /* the tracking trails the last letter; keep the box on the ink so the
-       bar spans exactly the word */
-    margin-inline-end: -0.18em;
-  }
-
   .nav-link.is-active,
   .nav-link[aria-current='page'] {
     color: var(--fg);
@@ -278,7 +485,8 @@ const isCurrent = (href: string) => {
     outline-offset: -6px;
   }
 
-  /* the one shared active bar: 100px wide, placed and scaled by the script */
+  /* the one shared active bar: 100px wide; the script places and stretches
+     it every frame on two springs (transform only) */
   .nav-bar {
     position: absolute;
     left: 0;
@@ -291,8 +499,7 @@ const isCurrent = (href: string) => {
     opacity: 0;
     pointer-events: none;
     transition:
-      transform var(--t-ui) var(--ease-expo),
-      opacity var(--t-micro) linear,
+      opacity 260ms linear,
       background-color 240ms linear;
   }
 
@@ -300,37 +507,57 @@ const isCurrent = (href: string) => {
     opacity: 1;
   }
 
-  .nav-bar.no-slide {
-    transition: opacity var(--t-micro) linear;
-  }
-
   /* ------------------------------------------------------------ actions */
 
   .nav-actions {
     display: flex;
     align-items: center;
-    gap: var(--s-16);
+    flex: 0 0 auto;
+    gap: 8px;
   }
 
-  .nav-wa {
+  .nav-btn {
     width: 40px;
+    min-height: 40px;
     padding: 0;
-    gap: 10px;
+    /* magnetic (global [data-magnetic]) replaces .btn's transition; keep
+       the fill fade alongside the pull */
+    transition:
+      transform 520ms var(--ease-expo),
+      background-color var(--t-micro) linear,
+      border-color var(--t-micro) linear;
   }
 
-  .nav-wa-text {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
+  .nav-btn:global(.is-pulling) {
+    transition-duration: 160ms, var(--t-micro), var(--t-micro);
+  }
+
+  /* the contents travel half again as far as the button: depth */
+  .nav-btn-in {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transform: translate3d(calc(var(--mag-x, 0px) * 0.5), calc(var(--mag-y, 0px) * 0.5), 0);
+    transition: transform 520ms var(--ease-expo);
+  }
+
+  .nav-btn:global(.is-pulling) .nav-btn-in {
+    transition-duration: 200ms;
+  }
+
+  .nav-btn-text {
+    display: none;
+  }
+
+  .nav-mail {
+    min-height: 40px;
   }
 
   .nav-menu {
     display: inline-flex;
     align-items: center;
     height: 44px;
+    margin-inline-start: 6px;
     padding-inline: 4px 0;
     color: var(--fg);
     transition: color 240ms linear;
@@ -352,7 +579,7 @@ const isCurrent = (href: string) => {
   }
 
   /* the parked label is also visibility:hidden once it has left, so it is
-     never "text at opacity .02" sitting in the page */
+     never invisible text sitting in the page */
   .nav-menu-b {
     transform: translate3d(0, 110%, 0);
     opacity: 0;
@@ -380,22 +607,32 @@ const isCurrent = (href: string) => {
     transition-delay: 0s;
   }
 
-  @media (min-width: 768px) {
+  @media (max-width: 359px) {
     .nav-actions {
-      gap: var(--s-24);
+      gap: 6px;
     }
 
-    .nav-wa {
+    .nav-menu {
+      margin-inline-start: 2px;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .nav-actions {
+      gap: 12px;
+    }
+
+    .nav-btn {
       width: auto;
       padding: 0 18px 0 16px;
     }
 
-    .nav-wa-text {
-      position: static;
-      width: auto;
-      height: auto;
-      overflow: visible;
-      clip: auto;
+    .nav-btn-text {
+      display: inline-flex;
+    }
+
+    .nav-menu {
+      margin-inline-start: 12px;
     }
   }
 
@@ -413,17 +650,88 @@ const isCurrent = (href: string) => {
 
     .nav-primary {
       display: block;
-      grid-column: 5 / span 6;
+      grid-column: 5 / span 5;
     }
 
     .nav-actions {
-      grid-column: 11 / -1;
+      grid-column: 10 / -1;
       justify-self: end;
     }
 
     .nav-menu {
       display: none;
     }
+  }
+
+  /* ------------------------------------------------------ load entrance */
+  /* The bar settles in after the page head starts: wordmark, links one by
+     one, then the two buttons. Fill mode "backwards" only, so the magnetic
+     transform owns the buttons once the entrance has played. */
+
+  @keyframes nav-drop {
+    from {
+      opacity: 0;
+      transform: translate3d(0, -16px, 0);
+    }
+  }
+
+  :global(html:not(.motion-reduced)) .nav-home,
+  :global(html:not(.motion-reduced)) .nav-links > li,
+  :global(html:not(.motion-reduced)) .nav-actions > * {
+    animation: nav-drop 1000ms var(--ease-expo) backwards;
+  }
+
+  :global(html:not(.motion-reduced)) .nav-home {
+    animation-delay: 80ms;
+  }
+
+  /* the artwork wipes on from the V, the hairline draws, the orbit swings in */
+  @keyframes nav-logo-wipe {
+    from {
+      clip-path: inset(0 100% 0 0);
+      transform: translate3d(-10px, 0, 0);
+    }
+  }
+
+  @keyframes nav-sep-draw {
+    from {
+      transform: scaleY(0);
+    }
+  }
+
+  @keyframes nav-orbit-in {
+    from {
+      opacity: 0;
+      transform: rotate(-120deg) scale(0.4);
+    }
+  }
+
+  :global(html:not(.motion-reduced)) .nav-logo {
+    animation: nav-logo-wipe 1400ms var(--ease-expo) 160ms backwards;
+  }
+
+  :global(html:not(.motion-reduced)) .nav-sep {
+    animation: nav-sep-draw 700ms var(--ease-expo) 620ms backwards;
+  }
+
+  :global(html:not(.motion-reduced)) .nav-orbit {
+    animation: nav-orbit-in 1300ms var(--ease-expo) 700ms backwards;
+  }
+
+  :global(html:not(.motion-reduced)) .nav-links > li {
+    animation-delay: calc(200ms + var(--n, 0) * 70ms);
+  }
+
+  :global(html:not(.motion-reduced)) .nav-actions > .nav-mail {
+    animation-delay: 420ms;
+  }
+
+  :global(html:not(.motion-reduced)) .nav-actions > .nav-wa {
+    animation-delay: 500ms;
+  }
+
+  :global(html:not(.motion-reduced)) .nav-actions > .nav-menu {
+    animation-delay: 580ms;
   }
 
   /* -------------------------------------------------------- mobile menu */
@@ -448,41 +756,52 @@ const isCurrent = (href: string) => {
     background-color: transparent;
     visibility: hidden;
     transition:
-      visibility 0s linear 620ms,
+      visibility 0s linear 760ms,
       background-color 0s linear 0s;
   }
 
-  /* the decorative void layer wipes down on open, back up on close */
+  /* The void layer opens as an iris from the Menu button (the script sets
+     --mx/--my to the button's centre) and closes back into it. While closed
+     it is parked above the viewport, so the star field inside it pauses. */
   .menu-bg {
+    --mx: calc(100% - 44px);
+    --my: 30px;
     position: fixed;
     inset: 0;
     z-index: -1;
     overflow: hidden;
     background-color: var(--void);
-    clip-path: inset(0 0 100% 0);
-    transition: clip-path 460ms var(--ease-quint) 120ms;
+    clip-path: circle(0% at var(--mx) var(--my));
+    transform: translate3d(0, calc(-100% - 200px), 0);
+    transition:
+      clip-path 620ms var(--ease-quint) 140ms,
+      transform 0s linear 780ms;
   }
 
   .nav.is-open .menu {
     visibility: visible;
-    /* opaque once the wipe has landed, so text always sits on void */
+    /* opaque once the iris has landed, so text always sits on void */
     background-color: var(--void);
     transition:
       visibility 0s linear 0s,
-      background-color 0s linear 520ms;
+      background-color 0s linear 620ms;
   }
 
   .nav.is-open .menu-bg {
-    clip-path: inset(0 0 0 0);
-    transition: clip-path 520ms var(--ease-quint) 0ms;
+    clip-path: circle(145% at var(--mx) var(--my));
+    transform: none;
+    transition:
+      clip-path 1000ms var(--ease-expo) 0ms,
+      transform 0s linear 0s;
   }
 
-  /* a faint star field; the sheet stays quiet behind the links */
+  /* the star field, a touch brighter than a section backdrop: the sheet is
+     mostly empty sky */
   .menu-bg :global(.menu-cosmos) {
-    opacity: 0.55;
+    opacity: 0.8;
   }
 
-  /* a large tilted orbit, low right, drifting into its −24° rest on open */
+  /* a large tilted orbit, low right, swinging into its −24° rest on open */
   .menu-orbit {
     position: absolute;
     right: -70%;
@@ -491,7 +810,7 @@ const isCurrent = (href: string) => {
     max-width: 980px;
     height: auto;
     overflow: visible;
-    transform: rotate(-32deg) scale(0.94);
+    transform: rotate(-44deg) scale(0.8);
     opacity: 0;
     transition:
       transform 300ms var(--ease-quint),
@@ -502,8 +821,8 @@ const isCurrent = (href: string) => {
     transform: rotate(-24deg);
     opacity: 1;
     transition:
-      transform 1800ms var(--ease-expo) 180ms,
-      opacity 900ms linear 180ms;
+      transform 2000ms var(--ease-expo) 160ms,
+      opacity 900ms linear 160ms;
   }
 
   .menu-orbit-path {
@@ -521,8 +840,10 @@ const isCurrent = (href: string) => {
     fill: var(--haze);
   }
 
-  .menu-orbit-planet {
+  .menu-orbit-planet,
+  .menu-orbit-trail {
     fill: var(--lilac);
+    transform-origin: 0 0;
   }
 
   .menu-in {
@@ -535,9 +856,26 @@ const isCurrent = (href: string) => {
     padding-block: var(--s-16) calc(var(--s-24) + env(safe-area-inset-bottom));
   }
 
+  /* The list is one plane in depth: closed, it lies tilted back and far
+     away (rotateX + rotateY + translateZ); on open it swings up to face the
+     visitor while each word flips up on its own baseline, one after another. */
+  .menu-nav {
+    perspective: 1100px;
+    perspective-origin: 20% 0%;
+  }
+
   .menu-list {
     margin: 0;
     border-top: 1px solid transparent;
+    transform-origin: 0% 0%;
+    transform-style: preserve-3d;
+    transform: translate3d(0, 80px, -320px) rotateX(38deg) rotateY(-20deg);
+    transition: transform 320ms var(--ease-quint);
+  }
+
+  .nav.is-open .menu-list {
+    transform: none;
+    transition: transform 1700ms var(--ease-expo) 140ms;
   }
 
   .menu-item {
@@ -569,12 +907,13 @@ const isCurrent = (href: string) => {
   .menu-idx-mask {
     flex: 0 0 2.5rem;
     display: block;
-    overflow: clip;
+    perspective: 400px;
   }
 
   .menu-idx {
     display: block;
     color: var(--dim);
+    transform-origin: 50% 0;
     transition:
       transform var(--t-ui) var(--ease-expo),
       color var(--t-micro) linear,
@@ -585,12 +924,12 @@ const isCurrent = (href: string) => {
     color: var(--lilac);
   }
 
+  /* each word hinges on its baseline and swings up out of the floor */
   .menu-mask {
     display: block;
     flex: 1 1 auto;
-    overflow: clip;
-    padding-block: 0.1em;
-    margin-block: -0.1em;
+    perspective: 760px;
+    perspective-origin: 30% 100%;
   }
 
   .menu-txt {
@@ -600,8 +939,10 @@ const isCurrent = (href: string) => {
     font-weight: 600;
     line-height: 1.04;
     letter-spacing: -0.025em;
+    transform-origin: 50% 100%;
+    backface-visibility: hidden;
     transition:
-      transform 240ms var(--ease-quint),
+      transform 380ms var(--ease-quint),
       opacity 200ms linear;
   }
 
@@ -610,22 +951,22 @@ const isCurrent = (href: string) => {
     align-self: center;
     color: var(--dim);
     opacity: 0;
-    transform: translate3d(-8px, 0, 0);
+    transform: translate3d(-12px, 0, 0);
     transition:
       transform var(--t-ui) var(--ease-expo),
       opacity 200ms linear,
       color var(--t-micro) linear;
   }
 
-  /* closed: words and indices sit below their masks (the sheet is
-     visibility:hidden, so nothing is ever on screen in this state) */
+  /* closed: words lie flat below the line, indices hang above theirs (the
+     sheet is visibility:hidden, so nothing is ever on screen in this state) */
   .menu .menu-txt {
-    transform: translate3d(0, 108%, 0);
+    transform: translate3d(0, 60%, -140px) rotateX(-104deg);
     opacity: 0;
   }
 
   .menu .menu-idx {
-    transform: translate3d(0, 110%, 0);
+    transform: translate3d(0, -30%, 0) rotateX(95deg);
     opacity: 0;
   }
 
@@ -633,31 +974,35 @@ const isCurrent = (href: string) => {
     transform: none;
     opacity: 1;
     transition:
-      transform 1000ms var(--ease-expo),
-      opacity 240ms linear;
-    transition-delay: calc(180ms + var(--i, 0) * 60ms);
+      transform 1300ms var(--ease-expo),
+      opacity 420ms linear;
+    transition-delay: calc(240ms + var(--i, 0) * 85ms);
   }
 
   .nav.is-open .menu-idx {
     transform: none;
     opacity: 1;
     transition:
-      transform 900ms var(--ease-expo),
+      transform 1100ms var(--ease-expo),
       color var(--t-micro) linear,
-      opacity 240ms linear;
-    transition-delay: calc(240ms + var(--i, 0) * 60ms), 0ms, calc(240ms + var(--i, 0) * 60ms);
+      opacity 300ms linear;
+    transition-delay: calc(360ms + var(--i, 0) * 85ms), 0ms, calc(360ms + var(--i, 0) * 85ms);
   }
 
   .nav.is-open .menu-arrow {
     opacity: 1;
     transform: none;
-    transition-delay: calc(420ms + var(--i, 0) * 60ms);
+    transition:
+      transform 900ms var(--ease-expo),
+      opacity 300ms linear,
+      color var(--t-micro) linear;
+    transition-delay: calc(520ms + var(--i, 0) * 85ms), calc(520ms + var(--i, 0) * 85ms), 0ms;
   }
 
   .nav.is-open .menu-item::after {
     transform: scaleX(1);
     transition: transform var(--t-line) var(--ease-quint);
-    transition-delay: calc(120ms + var(--i, 0) * 60ms);
+    transition-delay: calc(160ms + var(--i, 0) * 85ms);
   }
 
   @media (hover: hover) and (pointer: fine) {
@@ -689,7 +1034,7 @@ const isCurrent = (href: string) => {
     transition:
       transform 240ms var(--ease-quint),
       opacity 200ms linear;
-    transform: translate3d(0, var(--rise), 0);
+    transform: translate3d(0, 24px, 0);
     opacity: 0;
   }
 
@@ -697,17 +1042,35 @@ const isCurrent = (href: string) => {
     transform: none;
     opacity: 1;
     transition:
-      transform var(--t-reveal) var(--ease-expo) 460ms,
-      opacity 400ms linear 460ms;
+      transform 1100ms var(--ease-expo) 640ms,
+      opacity 500ms linear 640ms;
   }
 
-  .menu-cta {
+  .menu-ctas {
+    display: grid;
+    gap: 12px;
+  }
+
+  .menu-cta,
+  .menu-mail {
     width: 100%;
     justify-content: flex-start;
   }
 
-  .menu-cta :global(.arrow) {
+  .menu-mail {
+    min-height: 52px;
+    letter-spacing: 0.02em;
+  }
+
+  .menu-cta :global(.arrow),
+  .menu-mail :global(.arrow) {
     margin-inline-start: auto;
+  }
+
+  .menu-mail-addr {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .menu-meta {
@@ -742,17 +1105,23 @@ const isCurrent = (href: string) => {
       flex-basis: 4rem;
     }
 
-    .menu-foot {
-      grid-template-columns: auto 1fr;
-      align-items: center;
-      gap: var(--s-32);
+    .menu-ctas {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
     }
 
-    .menu-cta {
+    .menu-cta,
+    .menu-mail {
       width: auto;
     }
 
-    .menu-cta :global(.arrow) {
+    .menu-mail {
+      min-height: 56px;
+    }
+
+    .menu-cta :global(.arrow),
+    .menu-mail :global(.arrow) {
       margin-inline-start: 0;
     }
 
@@ -777,12 +1146,16 @@ const isCurrent = (href: string) => {
 
   :global(html.motion-reduced) .nav,
   :global(html.motion-reduced) .nav-bar,
+  :global(html.motion-reduced) .nav-btn-in,
+  :global(html.motion-reduced) .rc,
   :global(html.motion-reduced) .nav-menu-a,
   :global(html.motion-reduced) .nav-menu-b,
   :global(html.motion-reduced) .menu,
   :global(html.motion-reduced) .menu-bg,
   :global(html.motion-reduced) .menu-orbit,
   :global(html.motion-reduced) .menu-txt,
+  :global(html.motion-reduced) .menu-list,
+  :global(html.motion-reduced) .nav-logo :global(.brand-logo),
   :global(html.motion-reduced) .menu-idx,
   :global(html.motion-reduced) .menu-arrow,
   :global(html.motion-reduced) .menu-item::after,
@@ -795,6 +1168,8 @@ const isCurrent = (href: string) => {
   import { addFrame, requestFrame, isReduced } from '../scripts/motion';
 
   const root = document.documentElement;
+  const TAU = Math.PI * 2;
+  const fine = window.matchMedia('(hover: hover) and (pointer: fine)');
   const nav = document.querySelector<HTMLElement>('[data-nav]');
   if (nav) {
     initOrbit(nav);
@@ -803,31 +1178,43 @@ const isCurrent = (href: string) => {
   }
 
   /* ------------------------------------------------------------------ */
-  /* the orbit progress planet beside the wordmark                      */
+  /* the orbit progress planet beside the wordmark, with its trail      */
   /* ------------------------------------------------------------------ */
 
   function initOrbit(nav: HTMLElement): void {
     const svg = nav.querySelector<SVGSVGElement>('[data-orbit-mark]');
     const planet = svg?.querySelector<SVGCircleElement>('[data-orbit-planet]');
     if (!svg || !planet) return;
+    const trail = Array.from(svg.querySelectorAll<SVGCircleElement>('[data-orbit-trail]'));
     const vb = svg.viewBox.baseVal;
     const cx = vb.width / 2;
     const cy = vb.height / 2;
     const rx = Number(svg.dataset.rx) || 12.5;
     const ry = Number(svg.dataset.ry) || 4.6;
-    const TAU = Math.PI * 2;
 
     let target = 0;
     let shown = -1;
+    let lastTh: number | null = null;
+    let speed = 0;
+    /** one extra lap on load and on hover: start time, or 0 when idle */
+    let spinAt = 0;
+    const SPIN_MS = 1500;
 
-    const place = (p: number) => {
-      // one prograde lap from the rest position (right end); the far half of
-      // the orbit reads smaller, the near half larger — depth without 3D
-      const th = -TAU * p;
-      const x = cx + rx * Math.cos(th);
-      const y = cy + ry * Math.sin(th);
+    const pos = (th: number) => {
+      // the far half of the orbit reads smaller, the near half larger
       const s = 1 + 0.2 * Math.sin(th);
-      planet.style.transform = `translate(${x.toFixed(2)}px, ${y.toFixed(2)}px) scale(${s.toFixed(3)})`;
+      return `translate(${(cx + rx * Math.cos(th)).toFixed(2)}px, ${(cy + ry * Math.sin(th)).toFixed(2)}px) scale(${s.toFixed(3)})`;
+    };
+
+    /** −1 → 0 laps on an expo-out curve: fast start, long settle. */
+    const spin = (now: number): number => {
+      if (!spinAt) return 0;
+      const t = Math.min(1, (now - spinAt) / SPIN_MS);
+      if (t >= 1) {
+        spinAt = 0;
+        return 0;
+      }
+      return -Math.pow(2, -10 * t);
     };
 
     addFrame({
@@ -836,18 +1223,45 @@ const isCurrent = (href: string) => {
         target = docH > 0 ? Math.min(1, Math.max(0, y / docH)) : 0;
       },
       write() {
-        if (shown < 0 || isReduced()) shown = target;
+        const reduced = isReduced();
+        if (shown < 0 || reduced) shown = target;
         else shown += (target - shown) * 0.2;
         if (Math.abs(target - shown) < 0.0004) shown = target;
-        place(shown);
-        // ease toward the scroll position over a few frames
-        if (shown !== target) requestFrame();
+        if (reduced) spinAt = 0;
+
+        const th = -TAU * (shown + spin(performance.now()));
+        const v = lastTh === null ? 0 : th - lastTh;
+        lastTh = th;
+        speed = speed * 0.55 + Math.abs(v) * 0.45;
+        planet.style.transform = pos(th);
+
+        // the trail: five dots behind the planet, spaced by its speed
+        const moving = !reduced && speed > 0.0005;
+        const gap = Math.min(0.26, speed * 6) * (v >= 0 ? -1 : 1);
+        const alpha = Math.min(1, speed * 32);
+        trail.forEach((dot, i) => {
+          const k = i + 1;
+          dot.style.transform = pos(th + gap * k);
+          dot.style.opacity = moving ? (alpha * (1 - k / 6) * 0.85).toFixed(3) : '0';
+        });
+
+        // keep drawing while the planet eases, spins or the trail fades
+        if (shown !== target || spinAt || moving) requestFrame();
       },
     });
+
+    const lap = () => {
+      if (isReduced() || spinAt) return;
+      spinAt = performance.now();
+      requestFrame();
+    };
+    // one lap as the page arrives, and one whenever the wordmark is hovered
+    window.setTimeout(lap, 380);
+    if (fine.matches) nav.querySelector('[data-nav-home]')?.addEventListener('pointerenter', lap);
   }
 
   /* ------------------------------------------------------------------ */
-  /* the shared active bar                                              */
+  /* the active bar: an elastic underline on two springs                */
   /* ------------------------------------------------------------------ */
 
   function initBar(nav: HTMLElement): void {
@@ -864,8 +1278,16 @@ const isCurrent = (href: string) => {
     let visible = false;
     let sectionIndex = -1;
     let hoverIndex = -1;
-    let shown = -1;
     let activeClass = -2;
+    let pointerX: number | null = null;
+
+    // spring state: the two edges of the bar, in px from the nav's left
+    let L = 0;
+    let R = 0;
+    let vL = 0;
+    let vR = 0;
+    let on = false;
+    let last = 0;
 
     /** The home section a link points at, only when it's on this page. */
     const sectionOf = (a: HTMLAnchorElement): HTMLElement | null => {
@@ -878,14 +1300,10 @@ const isCurrent = (href: string) => {
       const base = primary.getBoundingClientRect();
       geo = labels.map((l) => {
         const r = l.getBoundingClientRect();
-        return { x: r.left - base.left, w: r.width };
+        // the tracking trails the last letter: keep the bar on the ink
+        const trail = parseFloat(getComputedStyle(l).letterSpacing) || 0;
+        return { x: r.left - base.left, w: Math.max(0, r.width - trail) };
       });
-    };
-
-    const place = (i: number, scale: number) => {
-      const g = geo[i];
-      if (!g) return;
-      bar.style.transform = `translate3d(${g.x.toFixed(1)}px,0,0) scaleX(${((g.w * scale) / 100).toFixed(4)})`;
     };
 
     addFrame({
@@ -912,29 +1330,68 @@ const isCurrent = (href: string) => {
           links.forEach((a, i) => a.classList.toggle('is-active', i === active));
           activeClass = active;
         }
-        const target = hoverIndex >= 0 ? hoverIndex : active;
-        if (target === shown) return;
-        if (target < 0) {
-          bar.classList.remove('is-on');
-          shown = -1;
-          return;
-        }
-        if (shown < 0) {
-          // appearing: draw from the word's left edge instead of sliding in
-          bar.classList.add('no-slide');
-          place(target, 0);
-          bar.classList.add('is-on');
-          const t = target;
-          requestAnimationFrame(() =>
-            requestAnimationFrame(() => {
-              bar.classList.remove('no-slide');
-              if (shown === t) place(t, 1);
-            })
-          );
+        const t = hoverIndex >= 0 ? hoverIndex : active;
+        const g = t >= 0 ? geo[t] : undefined;
+
+        let tl: number;
+        let tr: number;
+        if (g) {
+          tl = g.x;
+          tr = g.x + g.w;
+          // lean: the edge on the pointer's side reaches toward it
+          if (t === hoverIndex && pointerX !== null) {
+            const lean = Math.max(-12, Math.min(12, (pointerX - (g.x + g.w / 2)) * 0.16));
+            if (lean < 0) tl += lean;
+            else tr += lean;
+          }
+          if (!on) {
+            // appear: grow out of the word's centre
+            L = R = g.x + g.w / 2;
+            vL = vR = 0;
+            on = true;
+            bar.classList.add('is-on');
+          }
         } else {
-          place(target, 1);
+          // no target: collapse to the middle and fade
+          const mid = (L + R) / 2;
+          tl = tr = mid;
+          if (on) {
+            on = false;
+            bar.classList.remove('is-on');
+          }
         }
-        shown = target;
+
+        const now = performance.now();
+        const dt = last ? Math.min(2, Math.max(0.5, (now - last) / 16.667)) : 1;
+        last = now;
+
+        if (isReduced()) {
+          L = tl;
+          R = tr;
+          vL = vR = 0;
+        } else {
+          // the edge moving in the direction of travel is stiffer: it leads,
+          // overshoots a touch, and the other edge stretches after it
+          const dir = Math.sign(tl + tr - (L + R));
+          const kL = dir < 0 ? 0.22 : 0.1;
+          const kR = dir > 0 ? 0.22 : 0.1;
+          const damp = Math.pow(0.56, dt);
+          vL = (vL + (tl - L) * kL * dt) * damp;
+          vR = (vR + (tr - R) * kR * dt) * damp;
+          L += vL * dt;
+          R += vR * dt;
+          if (R < L) R = L;
+        }
+
+        const settled = Math.abs(tl - L) < 0.1 && Math.abs(tr - R) < 0.1 && Math.abs(vL) < 0.05 && Math.abs(vR) < 0.05;
+        if (settled) {
+          L = tl;
+          R = tr;
+          vL = vR = 0;
+          last = 0;
+        }
+        bar.style.transform = `translate3d(${L.toFixed(2)}px,0,0) scaleX(${((R - L) / 100).toFixed(4)})`;
+        if (!settled) requestFrame();
       },
     });
 
@@ -942,9 +1399,16 @@ const isCurrent = (href: string) => {
       hoverIndex = i;
       requestFrame();
     };
-    if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+    if (fine.matches) {
       links.forEach((a, i) => a.addEventListener('pointerenter', () => point(i)));
-      primary.addEventListener('pointerleave', () => point(-1));
+      primary.addEventListener('pointermove', (e) => {
+        pointerX = e.clientX - primary.getBoundingClientRect().left;
+        requestFrame();
+      });
+      primary.addEventListener('pointerleave', () => {
+        pointerX = null;
+        point(-1);
+      });
     }
     links.forEach((a, i) => {
       a.addEventListener('focus', () => point(i));
@@ -954,7 +1418,6 @@ const isCurrent = (href: string) => {
     // web font swap changes the word widths
     document.fonts?.ready.then(() => {
       measuredAt = -1;
-      if (shown >= 0) shown = -3; // force a re-place (no draw-in)
       requestFrame();
     });
   }
@@ -967,11 +1430,48 @@ const isCurrent = (href: string) => {
     const toggle = nav.querySelector<HTMLButtonElement>('[data-menu-toggle]');
     const menu = nav.querySelector<HTMLElement>('[data-menu]');
     if (!toggle || !menu) return;
+    const bg = menu.querySelector<HTMLElement>('[data-menu-bg]');
     const openLabel = toggle.querySelector<HTMLElement>('[data-menu-open-label]');
     const closeLabel = toggle.querySelector<HTMLElement>('[data-menu-close-label]');
+    const planet = menu.querySelector<SVGCircleElement>('[data-menu-planet]');
+    const trail = Array.from(menu.querySelectorAll<SVGCircleElement>('[data-menu-trail]'));
 
     let open = false;
     let inerted: HTMLElement[] = [];
+
+    /* the planet on the big orbit circles while the sheet is open */
+    let raf = 0;
+    let t0 = 0;
+    const A0 = 2.06; // the resting position, low left on the ellipse
+    const orbitAt = (a: number) => {
+      const s = 1 + 0.35 * Math.sin(a);
+      return `translate(${(320 + 312 * Math.cos(a)).toFixed(1)}px, ${(320 + 116 * Math.sin(a)).toFixed(1)}px) scale(${s.toFixed(3)})`;
+    };
+    const spinOrbit = (now: number) => {
+      raf = 0;
+      if (!open || !planet) return;
+      if (!t0) t0 = now;
+      const secs = (now - t0) / 1000;
+      // a quick first sweep that settles into a slow cruise (one lap ≈ 40 s)
+      const a = A0 + 1.9 * (1 - Math.exp(-secs / 0.9)) + (secs * TAU) / 40;
+      planet.style.transform = orbitAt(a);
+      const lagSpeed = 0.05 + 0.3 * Math.exp(-secs / 0.9);
+      trail.forEach((dot) => {
+        const k = Number(dot.dataset.menuTrail) || 1;
+        dot.style.transform = orbitAt(a - k * lagSpeed);
+      });
+      if (!document.hidden) raf = requestAnimationFrame(spinOrbit);
+    };
+    const startOrbit = () => {
+      if (raf || isReduced() || !planet) return;
+      t0 = 0;
+      raf = requestAnimationFrame(spinOrbit);
+    };
+    const stopOrbit = () => {
+      if (raf) cancelAnimationFrame(raf);
+      raf = 0;
+    };
+    document.addEventListener('visibilitychange', () => (document.hidden ? stopOrbit() : open && startOrbit()));
 
     const focusables = () =>
       Array.from(nav.querySelectorAll<HTMLElement>('a[href], button:not([disabled])')).filter(
@@ -1005,9 +1505,18 @@ const isCurrent = (href: string) => {
       }
     };
 
+    /** The iris opens from (and closes into) the centre of the Menu button. */
+    const aimIris = () => {
+      if (!bg) return;
+      const r = toggle.getBoundingClientRect();
+      bg.style.setProperty('--mx', `${(r.left + r.width / 2).toFixed(1)}px`);
+      bg.style.setProperty('--my', `${(r.top + r.height / 2).toFixed(1)}px`);
+    };
+
     const setOpen = (next: boolean, restoreFocus = true) => {
       if (next === open) return;
       open = next;
+      aimIris();
       nav.classList.toggle('is-open', open);
       root.classList.toggle('menu-open', open);
       toggle.setAttribute('aria-expanded', String(open));
@@ -1017,9 +1526,11 @@ const isCurrent = (href: string) => {
       if (open) {
         lock();
         setInert(true);
+        startOrbit();
       } else {
         unlock();
         setInert(false);
+        window.setTimeout(() => !open && stopOrbit(), 800);
         if (restoreFocus) toggle.focus({ preventScroll: true });
       }
       requestFrame();
@@ -1027,7 +1538,7 @@ const isCurrent = (href: string) => {
 
     toggle.addEventListener('click', () => setOpen(!open, false));
 
-    // any link in the sheet closes it first, so an anchor can scroll the page
+    // any link in the sheet closes it first, so an anchor can travel the page
     menu.addEventListener('click', (e) => {
       const a = (e.target as HTMLElement | null)?.closest('a');
       if (a) setOpen(false, false);
@@ -1065,4 +1576,3 @@ const isCurrent = (href: string) => {
     window.addEventListener('pagehide', () => setOpen(false, false));
   }
 </script>
-

@@ -1,40 +1,54 @@
 ---
 /**
- * #process · 08 PROCESS (spec §5.9).
+ * #process · 08 PROCESS (spec §5.9; round 2/3: cleaner, bolder).
  *
  * A proportional timing rail with plan tabs. Each milestone sits at the
  * midpoint of its business-day span, scaled so the first milestone is at the
  * rail's start and launch is at the end of the working stretch (0..S); a
- * post-launch milestone ("After") sits past it on the light tail.
+ * post-launch milestone ("After") sits past it on the dotted tail.
  *
- * Desktop (≥1100px): the rail spans columns 1–12. Time labels above, titles
- * and bodies below in two alternating rows. The layout is a CSS subgrid, so
- * each row is as tall as its tallest block and every milestone column is one
- * element (FLIP target) positioned with `margin-inline-start: x · 100%`.
- * Below 1100px: a vertical rail at the left edge, milestones stacked.
+ * The rail shows times and titles only. The detail lives behind them:
+ *   ≥1100px  one readout under the rail. It follows the comet (the milestone
+ *            the scroll-linked fill last reached), shows whatever milestone
+ *            the pointer or focus is on, and stays on one that is clicked.
+ *            It slides along the rail to sit under its milestone and its
+ *            words flip in.
+ *   <1100px  each title is a button that opens its own line in place (one at
+ *            a time).
+ *   no JS    every line is printed under its title, as before.
+ * "What you bring" is an Expand box.
  *
- * Motion: the rail fill is scroll-linked through the shared rAF loop
- * (`addFrame`, transform only); nodes fill as the fill passes them. A tab
- * change FLIPs nodes and labels to their new positions (600ms mech) and
- * collapses milestones a plan doesn't have (grid-template-rows 1fr→0fr, then
- * visibility hidden + inert).
+ * Motion: data-scene on the wrapper (3D entrance). The rail fill is
+ * scroll-linked through the shared rAF loop (`addFrame`, transform only);
+ * a violet comet head rides its leading edge; nodes ignite (fill + a
+ * hairline ring bursting out) as it passes them. A tab change slides the
+ * ink indicator between tabs and FLIPs the milestones to their new places
+ * on a 3D arc (they lift toward the viewer and swing as they travel);
+ * changed labels flip over. Milestones a plan doesn't have collapse
+ * (grid-template-rows 1fr→0fr, then visibility hidden + inert).
  *
- * No-JS: the default plan (+ Google) renders statically, fully filled; the
- * other two plans render as one summary line each.
+ * Desktop (≥1100px): the rail spans columns 1–12, time labels above, titles
+ * below in two alternating rows (a CSS subgrid, so each row is as tall as
+ * its tallest block and every milestone column is one element positioned
+ * with `margin-inline-start: x · 100%`). Below 1100px: a vertical rail at
+ * the left edge, milestones stacked.
  */
 import SectionLabel from '../ui/SectionLabel.astro';
 import SplitText from '../ui/SplitText.astro';
+import Expand from '../ui/Expand.astro';
 import { process as processData } from '../../data/site';
 import type { Milestone, PackageId, ProcessPlan } from '../../data/site';
 
 /* Missing from site.ts (aria-only). Report to the data owner. */
 const TODO_SITE = {
   tabsLabel: 'Timeline by package',
+  readLabel: 'Milestone detail',
 };
 
 /* Desktop geometry, in fractions of the rail width. BW is mirrored in CSS
-   as --bw; keep them equal. */
+   as --bw; keep them equal. RW is the readout's width (CSS --rw). */
 const BW = 0.17; // one milestone column
+const RW = 0.44; // the readout under the rail
 const AFTER_ROOM = 0.1; // extra room between launch and the post-launch milestone
 const GAP = 0.016; // minimum clear space between two blocks in the same row
 
@@ -129,8 +143,17 @@ const cur = layouts[def];
 /* Present slots of the default plan, for the reveal stagger. */
 const order = union.filter((k) => cur.slots[k]);
 const lastKey = order[order.length - 1];
+const firstSlot = cur.slots[order[0]]!;
 
-const clientData = JSON.stringify({ def, plans: layouts }).replace(/</g, '\\u003c');
+const clientData = JSON.stringify({ def, plans: layouts, rw: RW }).replace(/</g, '\\u003c');
+
+/* Every distinct readout text across the plans: stacked invisibly in one
+   cell, they hold the readout at its tallest so nothing below it moves. */
+const sizers = [
+  ...new Map(
+    ORDER.flatMap((id) => Object.values(layouts[id].slots).filter(Boolean) as Slot[]).map((s) => [`${s.time}|${s.title}|${s.body}`, s])
+  ).values(),
+];
 
 /* No-JS: "Landing Page: Day 0 Conversation · …" with the plan name set bold. */
 const summaries = ORDER.filter((id) => id !== def).map((id) => {
@@ -145,12 +168,13 @@ const pad = (n: number) => String(n).padStart(2, '0');
 
 <section id={processData.id} class="s-paper section process" data-nav-theme="light" data-process aria-labelledby="process-title">
   <script is:inline type="application/json" data-process-plans set:html={clientData} />
-  <div class="wrap g">
+  <div class="wrap g p-grid" data-scene>
     <SectionLabel n={processData.label.index} name={processData.label.name} class="p-label" />
     <SplitText as="h2" id="process-title" class="d2 p-h2" text={processData.h2} />
     <p class="lead p-sub" data-reveal style="--d:160ms">{processData.sub}</p>
 
     <div class="p-tabs" role="tablist" aria-label={TODO_SITE.tabsLabel} data-plan={def} data-reveal style="--d:240ms">
+      <span class="p-ind" aria-hidden="true"></span>
       {
         ORDER.map((id) => (
           <button
@@ -163,7 +187,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
             tabindex={id === def ? 0 : -1}
             data-plan-tab={id}
           >
-            {layouts[id].tab}
+            <span class="p-tab-t">{layouts[id].tab}</span>
           </button>
         ))
       }
@@ -184,6 +208,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
         <span class="tl-base" data-reveal="draw" aria-hidden="true"></span>
         <span class="tl-work" data-reveal="draw" aria-hidden="true"></span>
         <span class="tl-fill" aria-hidden="true"></span>
+        <span class="tl-comet" aria-hidden="true"><span class="tl-head"></span></span>
 
         <ol class="tl-list" role="list">
           {
@@ -202,12 +227,23 @@ const pad = (n: number) => String(n).padStart(2, '0');
                     <span class="ms-time label" data-reveal style={`--d:${k * 80}ms`}>
                       {s?.time}
                     </span>
-                    <span class="ms-node" data-reveal="fade" style={`--d:${Math.round(180 + (s?.x ?? 0) * 900)}ms`} aria-hidden="true" />
+                    <span class="ms-node" data-reveal="fade" style={`--d:${Math.round(180 + (s?.x ?? 0) * 900)}ms`} aria-hidden="true">
+                      <i class="ms-ring" />
+                    </span>
                     <div class="ms-text">
                       <div class="ms-clip">
                         <div class="ms-in" data-reveal style={`--d:${120 + k * 80}ms`}>
-                          <h3 class="ms-title">{s?.title}</h3>
-                          <p class="ms-body">{s?.body}</p>
+                          <h3 class="ms-title">
+                            <button type="button" class="ms-btn" aria-expanded="false" aria-controls={`ms-b-${key}`} data-ms-btn>
+                              <span class="ms-t">{s?.title}</span>
+                              <span class="ms-plus" aria-hidden="true" />
+                            </button>
+                          </h3>
+                          <div class="ms-bw" id={`ms-b-${key}`}>
+                            <div class="ms-bc">
+                              <p class="ms-body">{s?.body}</p>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -217,6 +253,28 @@ const pad = (n: number) => String(n).padStart(2, '0');
             })
           }
         </ol>
+      </div>
+
+      <div class="tl-read" data-reveal style="--d:300ms">
+        <span class="tl-read-rule" aria-hidden="true"><span class="tl-read-mk"></span></span>
+        <div class="tl-read-box" id="process-read" role="region" aria-label={TODO_SITE.readLabel} aria-live="polite">
+          <div class="tl-read-stack">
+            {
+              sizers.map((s) => (
+                <div class="tl-read-in tl-read-sz" aria-hidden="true">
+                  <span class="label tl-read-t">{s.time}</span>
+                  <p class="tl-read-h">{s.title}</p>
+                  <p class="tl-read-b">{s.body}</p>
+                </div>
+              ))
+            }
+            <div class="tl-read-in tl-read-live" data-read>
+              <span class="label tl-read-t" data-read-time>{firstSlot.time}</span>
+              <p class="tl-read-h" data-read-title>{firstSlot.title}</p>
+              <p class="tl-read-b" data-read-body>{firstSlot.body}</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -232,21 +290,22 @@ const pad = (n: number) => String(n).padStart(2, '0');
 
     <p class="small p-note" data-reveal>{processData.note}</p>
 
-    <div class="bring" data-reveal>
-      <h3 class="bring-h" id="process-bring">{wyb.title}</h3>
-      <ol class="bring-list" role="list" aria-labelledby="process-bring">
-        {
-          wyb.items.map((item, i) => (
-            <li class="bring-row" data-reveal style={`--d:${140 + i * 60}ms`}>
-              <span class="bring-i label" aria-hidden="true">
-                {pad(i + 1)}
-              </span>
-              <span>{item}</span>
-            </li>
-          ))
-        }
-      </ol>
-      <p class="bring-close" data-reveal style="--d:480ms">{wyb.closing}</p>
+    <div class="p-bring">
+      <Expand title={wyb.title} keywords={wyb.keywords} class="bring" i={1}>
+        <ol class="bring-list" role="list">
+          {
+            wyb.items.map((item, i) => (
+              <li class="bring-row">
+                <span class="bring-i label" aria-hidden="true">
+                  {pad(i + 1)}
+                </span>
+                <span>{item}</span>
+              </li>
+            ))
+          }
+        </ol>
+        <p class="bring-close">{wyb.closing}</p>
+      </Expand>
     </div>
   </div>
 </section>
@@ -270,10 +329,32 @@ const pad = (n: number) => String(n).padStart(2, '0');
 
   /* ------------------------------------------------------------------ tabs */
 
+  /* The selected tab is an ink block that slides between tabs (transform
+     only). Paint order inside the isolated tablist: tab surfaces, then the
+     ink block (z 1), then every label (z 2). */
   .p-tabs {
+    position: relative;
+    isolation: isolate;
     display: flex;
     gap: 1px;
     margin-top: 40px;
+  }
+
+  .p-ind {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 1;
+    width: 100px;
+    background-color: var(--ink);
+    transform-origin: 0 50%;
+    transform: translate3d(var(--ix, 0px), 0, 0) scaleX(var(--iw, 0));
+    pointer-events: none;
+  }
+
+  .p-tabs.is-sliding .p-ind {
+    transition: transform 620ms var(--ease-expo);
   }
 
   .p-tab {
@@ -292,16 +373,29 @@ const pad = (n: number) => String(n).padStart(2, '0');
     line-height: 1.2;
     text-align: left;
     -webkit-tap-highlight-color: transparent;
+    transition: background-color 0s linear 0s;
+  }
+
+  /* the tab's own ink arrives with the sliding block, so at rest every label
+     sits on its own opaque surface */
+  .p-tab[aria-selected='true'] {
+    background-color: var(--ink);
+    cursor: default;
+    transition-delay: 560ms;
+  }
+
+  .p-tab-t {
+    position: relative;
+    z-index: 2;
+    display: block;
     transition:
-      background-color var(--t-micro) linear,
-      color var(--t-micro) linear,
+      color 200ms linear 120ms,
       transform 120ms var(--ease-expo);
   }
 
-  .p-tab[aria-selected='true'] {
-    background-color: var(--ink);
+  .p-tab[aria-selected='true'] .p-tab-t {
     color: var(--paper);
-    cursor: default;
+    transition-delay: 240ms;
   }
 
   /* hover: a 2px ink bar draws along the bottom edge */
@@ -325,12 +419,11 @@ const pad = (n: number) => String(n).padStart(2, '0');
   }
 
   .p-tab:focus-visible {
-    z-index: 1;
     outline-color: var(--ink);
   }
 
-  .p-tab:active {
-    transform: scale(0.98);
+  .p-tab:active .p-tab-t {
+    transform: scale(0.97);
   }
 
   /* No-JS: tabs can't work, so the plan's name stands in their place and the
@@ -368,6 +461,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
 
   .tl {
     --bw: 17%;
+    --rw: 0.44;
     position: relative;
     margin-top: 56px;
   }
@@ -441,7 +535,8 @@ const pad = (n: number) => String(n).padStart(2, '0');
 
   .tl-base,
   .tl-work,
-  .tl-fill {
+  .tl-fill,
+  .tl-comet {
     display: block;
     pointer-events: none;
   }
@@ -460,6 +555,60 @@ const pad = (n: number) => String(n).padStart(2, '0');
 
   .tl-fill {
     background-color: var(--violet);
+  }
+
+  /* the comet: a violet head on the fill's leading edge, a hairline ring
+     breathing out of it while it travels. Live rail only. */
+  .tl-comet {
+    display: none;
+  }
+
+  .tl.is-live .tl-comet {
+    display: block;
+    position: relative;
+    z-index: 2;
+  }
+
+  .tl-head {
+    position: absolute;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background-color: var(--violet);
+  }
+
+  .tl-head::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border: 1px solid var(--violet);
+    border-radius: 50%;
+    opacity: 0;
+  }
+
+  .tl.is-moving .tl-head::after {
+    animation: tl-breathe 1600ms var(--ease-expo) infinite;
+  }
+
+  @keyframes tl-breathe {
+    from {
+      opacity: 0.9;
+      transform: scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: scale(3.4);
+    }
+  }
+
+  /* at rest on launch, the head folds into the node */
+  .tl.is-landed .tl-head {
+    transform: scale(0);
+    transition: transform 500ms var(--ease-expo);
+  }
+
+  .tl-head {
+    transition: transform 400ms var(--ease-settle);
   }
 
   .tl-list {
@@ -488,6 +637,44 @@ const pad = (n: number) => String(n).padStart(2, '0');
   .ms.is-on:not(.is-after) .ms-node {
     background-color: var(--violet);
     border-color: var(--violet);
+  }
+
+  /* ignition: the node pops and a hairline ring bursts out of it, once, as
+     the comet passes */
+  .ms-ring {
+    position: absolute;
+    inset: -1px;
+    border: 1px solid var(--violet);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .tl.is-live .ms.is-on:not(.is-after) .ms-node {
+    animation: ms-pop 700ms var(--ease-settle) both;
+  }
+
+  .tl.is-live .ms.is-on:not(.is-after) .ms-ring {
+    animation: ms-ignite 1100ms var(--ease-expo) both;
+  }
+
+  @keyframes ms-pop {
+    from {
+      transform: scale(1.9) rotate(45deg);
+    }
+    to {
+      transform: none;
+    }
+  }
+
+  @keyframes ms-ignite {
+    from {
+      opacity: 1;
+      transform: scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: scale(4.2) rotate(45deg);
+    }
   }
 
   /* post-launch node: the site is in orbit. The orbit mark (hairline ellipse
@@ -572,23 +759,113 @@ const pad = (n: number) => String(n).padStart(2, '0');
     font-weight: 640;
     line-height: 1.3;
     letter-spacing: 0;
+  }
+
+  /* the title is the milestone's control */
+  .ms-btn {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    width: 100%;
+    padding: 0;
+    background-color: var(--paper);
+    color: var(--ink);
+    font: inherit;
+    text-align: left;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .ms-t {
+    display: block;
     text-wrap: balance;
+    transition: transform var(--t-ui) var(--ease-expo);
+  }
+
+  /* the plus (below 1100px): turns into a minus when the line is open */
+  .ms-plus {
+    position: relative;
+    flex: none;
+    width: 11px;
+    height: 11px;
+    margin-top: 5px;
+  }
+
+  .ms-plus::before,
+  .ms-plus::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 5px;
+    width: 11px;
+    height: 1px;
+    background-color: var(--ink);
+    transition: transform 420ms var(--ease-expo);
+  }
+
+  .ms-plus::after {
+    transform: rotate(90deg);
+  }
+
+  .ms.is-open .ms-plus::after {
+    transform: rotate(0deg);
+  }
+
+  :global(html:not(.js)) .ms-plus {
+    display: none;
   }
 
   .ms-body {
-    margin-top: 8px;
+    padding-top: 8px;
     color: var(--ink-2);
     font-size: 0.9375rem;
     line-height: 1.55;
     text-wrap: pretty;
   }
 
+  /* the line under a title: printed without JS; with JS it opens in place
+     (below 1100px) or is shown by the readout (1100px and up) */
+  .ms-bw {
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows 560ms var(--ease-expo);
+  }
+
+  .ms-bc {
+    min-height: 0;
+    overflow: hidden;
+    perspective: 700px;
+  }
+
+  .ms-body {
+    transform-origin: 50% 0;
+    transition:
+      opacity 360ms linear 120ms,
+      transform 700ms var(--ease-expo) 60ms,
+      visibility 0s linear 0s;
+  }
+
+  :global(html.js) .ms:not(.is-open) .ms-bw {
+    grid-template-rows: 0fr;
+  }
+
+  :global(html.js) .ms:not(.is-open) .ms-body {
+    visibility: hidden;
+    opacity: 0;
+    transform: rotateX(-70deg) translate3d(0, -6px, 0);
+    transition:
+      opacity 160ms linear,
+      transform 300ms var(--ease-expo),
+      visibility 0s linear 300ms;
+  }
+
   /* absent from the current plan: fade, then hidden + inert (set by JS).
      Arriving milestones wait until the movers have nearly settled (FLIP is
-     600ms), so nothing crosses a block that is still travelling. */
+     700ms), so nothing crosses a block that is still travelling. */
   .ms {
     transition:
-      opacity 320ms linear 380ms,
+      opacity 320ms linear 420ms,
       visibility 0s linear 0s;
   }
 
@@ -600,23 +877,29 @@ const pad = (n: number) => String(n).padStart(2, '0');
       visibility 0s linear 200ms;
   }
 
-  /* a changed label/text re-enters instead of popping */
+  /* a changed label flips over instead of popping */
   .is-swap {
-    animation: ms-swap 520ms var(--ease-expo) both;
+    transform-origin: 50% 100%;
+    animation: ms-swap 640ms var(--ease-expo) both;
   }
 
   @keyframes ms-swap {
     from {
       opacity: 0;
-      transform: translate3d(0, 8px, 0);
+      transform: perspective(500px) translate3d(0, 30%, 0) rotateX(-80deg);
     }
-    40% {
+    35% {
       opacity: 1;
     }
     to {
       opacity: 1;
       transform: none;
     }
+  }
+
+  /* the readout: desktop with JS only */
+  .tl-read {
+    display: none;
   }
 
   /* ------------------------------------------------ rail, below 1100px */
@@ -629,7 +912,8 @@ const pad = (n: number) => String(n).padStart(2, '0');
 
     .tl-base,
     .tl-work,
-    .tl-fill {
+    .tl-fill,
+    .tl-comet {
       position: absolute;
       left: 4px;
       top: var(--rail-top, 5px);
@@ -652,6 +936,17 @@ const pad = (n: number) => String(n).padStart(2, '0');
       width: 2px;
       height: var(--rail-work, calc(100% - 5px));
       transform: scaleY(var(--p, 1));
+    }
+
+    .tl.is-live .tl-comet {
+      position: absolute;
+      height: 1px;
+      transform: translate3d(0, calc(var(--p, 1) * var(--rail-work, 0px)), 0);
+    }
+
+    .tl-head {
+      left: -5px;
+      top: -5.5px;
     }
 
     :global(html.js:not(.motion-reduced):not(.motion-failed)) .tl-base:not(.is-in),
@@ -685,7 +980,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
 
     /* spacing sits inside the collapsing wrapper, so a collapsed slot is 0px */
     .ms-text {
-      padding-bottom: 40px;
+      padding-bottom: 30px;
     }
 
     .ms.is-last .ms-text {
@@ -762,7 +1057,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
     .ms-text {
       grid-column: 2;
       grid-row: 2;
-      margin-top: 12px;
+      margin-top: 10px;
     }
 
     .ms-in {
@@ -772,6 +1067,21 @@ const pad = (n: number) => String(n).padStart(2, '0');
 
     .ms-title {
       font-size: 1.0625rem;
+    }
+
+    /* the whole title row is the target: 44px tall at least */
+    .ms-btn {
+      min-height: 30px;
+    }
+
+    :global(html.js) .ms-btn {
+      cursor: pointer;
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .ms-btn:hover .ms-t {
+        transform: translateX(4px);
+      }
     }
   }
 
@@ -804,7 +1114,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
       grid-column: 3;
       grid-row: 1;
       margin-top: 0;
-      padding-bottom: 36px;
+      padding-bottom: 30px;
     }
 
     .ms-in {
@@ -823,7 +1133,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
     .tl {
       display: grid;
       grid-template-columns: minmax(0, 1fr);
-      grid-template-rows: auto auto 9px auto auto;
+      grid-template-rows: auto auto 9px auto auto auto;
     }
 
     .tl-dim {
@@ -842,7 +1152,8 @@ const pad = (n: number) => String(n).padStart(2, '0');
 
     .tl-base,
     .tl-work,
-    .tl-fill {
+    .tl-fill,
+    .tl-comet {
       grid-row: 2;
       grid-column: 1;
       align-self: start;
@@ -861,10 +1172,23 @@ const pad = (n: number) => String(n).padStart(2, '0');
       transform: scaleX(calc(var(--p, 1) * var(--S)));
     }
 
+    /* the comet spans the rail; its head sits at the left edge and the
+       element travels with the fill (percent of its own width = the rail) */
+    .tl.is-live .tl-comet {
+      height: 2px;
+      transform: translate3d(calc(var(--p, 1) * var(--S) * 100%), 0, 0);
+    }
+
+    .tl-head {
+      left: -5.5px;
+      top: -4.5px;
+    }
+
     .tl.is-switching .tl-work,
     .tl.is-switching .tl-fill,
+    .tl.is-switching .tl-comet,
     .tl.is-switching .tl-dim-line {
-      transition: transform 600ms var(--ease-mech);
+      transition: transform 700ms var(--ease-mech);
     }
 
     .tl-list {
@@ -906,6 +1230,153 @@ const pad = (n: number) => String(n).padStart(2, '0');
       grid-row: 4;
       margin-top: 44px;
     }
+
+    /* with JS the rail carries titles only: tighter rows, no plus, the line
+       goes to the readout */
+    :global(html.js) .ms-text {
+      margin-top: 26px;
+    }
+
+    :global(html.js) .ms[data-row='1'] .ms-text {
+      margin-top: 20px;
+    }
+
+    :global(html.js) .ms-bw,
+    :global(html.js) .ms-plus {
+      display: none;
+    }
+
+    :global(html.js) .ms {
+      cursor: pointer;
+    }
+
+    /* the milestone on show: its title steps in, a 2px violet bar draws
+       under it */
+    .ms-btn::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: -8px;
+      width: 32px;
+      height: 2px;
+      background-color: var(--violet);
+      transform: scaleX(0);
+      transform-origin: left center;
+      transition: transform 520ms var(--ease-expo);
+    }
+
+    .ms.is-cur .ms-btn::after {
+      transform: scaleX(1);
+    }
+
+    .ms.is-cur .ms-t {
+      transform: translateX(3px);
+    }
+
+    :global(html.js) .tl-read {
+      display: block;
+      grid-row: 6;
+      grid-column: 1;
+      margin-top: 56px;
+    }
+
+    /* a hairline the width of the rail, a violet marker under the node on
+       show, and the readout box sliding along under it */
+    .tl-read-rule {
+      position: relative;
+      display: block;
+      height: 1px;
+      background-color: var(--line);
+    }
+
+    .tl-read-mk {
+      position: absolute;
+      left: 0;
+      top: -1px;
+      width: 100%;
+      height: 3px;
+      transform: translate3d(calc(var(--mx, 0) * 100%), 0, 0);
+      transition: transform 760ms var(--ease-expo);
+    }
+
+    .tl-read-mk::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 40px;
+      height: 3px;
+      background-color: var(--violet);
+    }
+
+    .tl-read-box {
+      width: calc(var(--rw) * 100%);
+      padding-top: 26px;
+      transform: translate3d(calc(var(--rx, 0) / var(--rw) * 100%), 0, 0);
+      transition: transform 760ms var(--ease-expo);
+    }
+
+    .tl-read-stack {
+      display: grid;
+      perspective: 900px;
+    }
+
+    .tl-read-in {
+      grid-area: 1 / 1;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      column-gap: 28px;
+      align-content: start;
+    }
+
+    .tl-read-sz {
+      visibility: hidden;
+    }
+
+    .tl-read-t {
+      grid-row: 1 / span 2;
+      padding-top: 7px;
+      min-width: 9ch;
+      color: var(--violet-ink);
+    }
+
+    .tl-read-h {
+      font-stretch: var(--wd-display);
+      font-size: var(--t-d3);
+      font-weight: 600;
+      line-height: 1.15;
+      letter-spacing: -0.01em;
+      color: var(--ink);
+      text-wrap: balance;
+    }
+
+    .tl-read-b {
+      margin-top: 10px;
+      max-width: 46ch;
+      font-size: 1.0625rem;
+      line-height: 1.55;
+      color: var(--ink-2);
+      text-wrap: pretty;
+    }
+
+    .tl-read-live {
+      transform-origin: 50% 0;
+    }
+
+    .tl-read-live.is-flip {
+      animation: tl-read-flip 720ms var(--ease-expo) both;
+    }
+
+    @keyframes tl-read-flip {
+      from {
+        opacity: 0;
+        transform: translate3d(0, 18px, -40px) rotateX(-38deg);
+      }
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
   }
 
   /* ------------------------------------------------------ what you bring */
@@ -916,20 +1387,11 @@ const pad = (n: number) => String(n).padStart(2, '0');
     max-width: 40ch;
   }
 
-  .bring {
-    margin-top: 32px;
-    padding: 32px 24px 36px;
-    background-color: var(--paper-2);
-    color: var(--ink);
-    clip-path: var(--chamfer);
-  }
-
-  .bring-h {
-    font-size: var(--t-d3);
+  .p-bring {
+    margin-top: 24px;
   }
 
   .bring-list {
-    margin-top: 24px;
     border-top: 1px solid var(--line);
   }
 
@@ -937,7 +1399,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
     display: grid;
     grid-template-columns: 40px minmax(0, 1fr);
     align-items: baseline;
-    padding-block: 14px;
+    padding-block: 12px;
     border-bottom: 1px solid var(--line);
     font-size: 0.9375rem;
     line-height: 1.45;
@@ -952,18 +1414,15 @@ const pad = (n: number) => String(n).padStart(2, '0');
   }
 
   .bring-close {
-    margin-top: 24px;
+    margin-top: 20px;
     font-stretch: var(--wd-display);
     font-size: 1.0625rem;
     font-weight: 640;
     line-height: 1.3;
+    color: var(--ink);
   }
 
   @media (min-width: 768px) {
-    .bring {
-      padding: 40px 40px 44px;
-    }
-
     .p-tabs {
       max-width: 560px;
     }
@@ -976,15 +1435,15 @@ const pad = (n: number) => String(n).padStart(2, '0');
     .p-note {
       grid-column: 1 / span 2;
       align-self: start;
-      margin-top: 72px;
+      margin-top: 64px;
       padding-top: 16px;
       border-top: 1px solid var(--line);
     }
 
     /* its left edge continues the milestone text column */
-    .bring {
+    .p-bring {
       grid-column: 3 / -1;
-      margin-top: 72px;
+      margin-top: 64px;
     }
   }
 
@@ -1031,7 +1490,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
     .tl {
       grid-column: 1 / -1;
       grid-row: 4;
-      margin-top: 112px;
+      margin-top: 104px;
     }
 
     .tl-alt {
@@ -1043,29 +1502,44 @@ const pad = (n: number) => String(n).padStart(2, '0');
     .p-note {
       grid-column: 1 / span 4;
       grid-row: 6;
-      margin-top: 96px;
+      margin-top: 88px;
       padding-top: 16px;
       border-top: 1px solid var(--line);
       align-self: start;
     }
 
-    .bring {
+    .p-bring {
       grid-column: 7 / -1;
       grid-row: 6;
-      margin-top: 96px;
+      margin-top: 88px;
     }
   }
 
   @media (min-width: 1380px) {
     .p-tabs,
     .p-static,
-    .bring {
+    .p-bring {
       grid-column: 8 / -1;
     }
 
     .p-tab {
       padding-inline: 16px;
     }
+  }
+
+  /* the script failed: print every line, drop the readout */
+  .process.is-static .ms-bw {
+    display: grid !important;
+  }
+
+  .process.is-static .tl-read {
+    display: none !important;
+  }
+
+  :global(html.motion-reduced) .process *,
+  :global(html.motion-reduced) .process *::before,
+  :global(html.motion-reduced) .process *::after {
+    animation-duration: 0s !important;
   }
 </style>
 
@@ -1091,10 +1565,23 @@ const pad = (n: number) => String(n).padStart(2, '0');
   interface Data {
     def: string;
     plans: Record<string, Plan>;
+    rw: number;
   }
 
-  const FLIP_MS = 600;
+  const FLIP_MS = 700;
   const MECH = 'cubic-bezier(0.65, 0, 0.35, 1)';
+
+  /** Layout offset of `el` inside `box` (ignores transforms: the section
+      swings in on a 3D plane, and rects would read its projection). */
+  function offsetTopIn(el: HTMLElement, box: HTMLElement): number {
+    let y = 0;
+    let n: HTMLElement | null = el;
+    while (n && n !== box) {
+      y += n.offsetTop;
+      n = n.offsetParent as HTMLElement | null;
+    }
+    return n === box ? y : NaN;
+  }
 
   function initProcess(section: HTMLElement): void {
     const raw = section.querySelector('[data-process-plans]')?.textContent;
@@ -1111,13 +1598,20 @@ const pad = (n: number) => String(n).padStart(2, '0');
     }
 
     const tabs = Array.from(section.querySelectorAll<HTMLButtonElement>('[data-plan-tab]'));
+    const tablist = section.querySelector<HTMLElement>('.p-tabs');
     const items = Array.from(tl.querySelectorAll<HTMLElement>('.ms[data-key]'));
     const dimLabel = tl.querySelector<HTMLElement>('[data-dim-label]');
     const flipDim = Array.from(tl.querySelectorAll<HTMLElement>('[data-flip]'));
+    const read = tl.querySelector<HTMLElement>('[data-read]');
+    const readTime = tl.querySelector<HTMLElement>('[data-read-time]');
+    const readTitle = tl.querySelector<HTMLElement>('[data-read-title]');
+    const readBody = tl.querySelector<HTMLElement>('[data-read-body]');
+    const readWrap = tl.querySelector<HTMLElement>('.tl-read');
     const desktop = window.matchMedia('(min-width: 1100px)');
 
     const q = (li: HTMLElement, sel: string) => li.querySelector<HTMLElement>(sel);
     const textOf = (li: HTMLElement) => q(li, '.ms-text');
+    const keyOf = (li: HTMLElement) => li.dataset.key || '';
 
     let current = tl.dataset.plan && data.plans[tl.dataset.plan] ? tl.dataset.plan : data.def;
     let p = 1;
@@ -1129,8 +1623,134 @@ const pad = (n: number) => String(n).padStart(2, '0');
     let railDirty = false;
     const thresholds = new Map<HTMLElement, number | null>();
     let timer = 0;
+    let moveTimer = 0;
+    /* readout: the comet's milestone, unless the pointer/focus is on one
+       (hover) or one was clicked (pinned) */
+    let auto = '';
+    let hover = '';
+    let pinned = '';
+    let shownKey = '';
 
     tl.classList.add('is-live');
+
+    /* ---- readout (desktop) ---------------------------------------------- */
+
+    function showRead(key: string): void {
+      const plan = data.plans[current];
+      const s = plan.slots[key];
+      if (!s || !read) return;
+      items.forEach((li) => li.classList.toggle('is-cur', keyOf(li) === key && desktop.matches));
+      if (key === shownKey) return;
+      const first = shownKey === '';
+      shownKey = key;
+      if (readTime) readTime.textContent = s.time;
+      if (readTitle) readTitle.textContent = s.title;
+      if (readBody) readBody.textContent = s.body;
+      const rx = Math.max(0, Math.min(1 - data.rw, s.x));
+      readWrap?.style.setProperty('--rx', String(rx));
+      readWrap?.style.setProperty('--mx', String(s.x));
+      items.forEach((li) => {
+        const btn = q(li, '[data-ms-btn]');
+        if (!btn || !desktop.matches) return;
+        btn.setAttribute('aria-controls', 'process-read');
+        btn.setAttribute('aria-expanded', String(keyOf(li) === key));
+      });
+      if (!first && !isReduced()) {
+        read.classList.remove('is-flip');
+        void read.offsetWidth;
+        read.classList.add('is-flip');
+      }
+    }
+
+    function syncRead(): void {
+      if (!desktop.matches) return;
+      const plan = data.plans[current];
+      const want = [hover, pinned, auto].find((k) => k && plan.slots[k]);
+      const firstKey = items.map(keyOf).find((k) => plan.slots[k]) || '';
+      showRead(want || firstKey);
+    }
+
+    /* ---- in-place lines (below 1100px) --------------------------------- */
+
+    function setOpen(li: HTMLElement | null): void {
+      items.forEach((it) => {
+        const on = it === li;
+        it.classList.toggle('is-open', on);
+        const btn = q(it, '[data-ms-btn]');
+        if (btn) {
+          btn.setAttribute('aria-controls', `ms-b-${keyOf(it)}`);
+          btn.setAttribute('aria-expanded', String(on));
+        }
+      });
+      dirty = true;
+      requestFrame();
+      /* the rail's geometry changes while the line opens: re-measure as it
+         settles */
+      window.setTimeout(remeasure, 600);
+    }
+
+    function applyMode(): void {
+      if (desktop.matches) {
+        items.forEach((it) => it.classList.remove('is-open'));
+        shownKey = '';
+        syncRead();
+      } else {
+        items.forEach((it) => it.classList.remove('is-cur'));
+        setOpen(null);
+      }
+    }
+
+    items.forEach((li) => {
+      const btn = q(li, '[data-ms-btn]');
+      const key = keyOf(li);
+      btn?.addEventListener('click', () => {
+        if (desktop.matches) {
+          pinned = pinned === key ? '' : key;
+          hover = '';
+          syncRead();
+          if (!pinned) showRead(key);
+        } else {
+          setOpen(li.classList.contains('is-open') ? null : li);
+        }
+      });
+      btn?.addEventListener('focus', () => {
+        if (!desktop.matches) return;
+        hover = key;
+        syncRead();
+      });
+      btn?.addEventListener('blur', () => {
+        if (hover !== key) return;
+        hover = '';
+        syncRead();
+      });
+      li.addEventListener('pointerenter', (e) => {
+        if (!desktop.matches || e.pointerType === 'touch') return;
+        hover = key;
+        syncRead();
+      });
+      /* a click anywhere on the column (time, node) is a click on the title */
+      li.addEventListener('click', (e) => {
+        if (!desktop.matches || !btn || (e.target as HTMLElement).closest('[data-ms-btn]')) return;
+        btn.click();
+      });
+    });
+    tl.querySelector('.tl-list')?.addEventListener('pointerleave', () => {
+      if (!hover) return;
+      hover = '';
+      syncRead();
+    });
+
+    /* ---- tab indicator ---------------------------------------------------- */
+
+    function placeInd(animate: boolean): void {
+      if (!tablist) return;
+      const sel = tabs.find((t) => t.getAttribute('aria-selected') === 'true');
+      if (!sel) return;
+      tablist.classList.toggle('is-sliding', animate && !isReduced());
+      tablist.style.setProperty('--ix', `${sel.offsetLeft}px`);
+      tablist.style.setProperty('--iw', String(sel.offsetWidth / 100));
+      tablist.classList.add('is-live');
+    }
 
     /* ---- measuring (reads only) ---------------------------------------- */
 
@@ -1138,23 +1758,23 @@ const pad = (n: number) => String(n).padStart(2, '0');
       const plan = data.plans[current];
       if (desktop.matches) {
         items.forEach((li) => {
-          const s = plan.slots[li.dataset.key || ''];
+          const s = plan.slots[keyOf(li)];
           thresholds.set(li, s && !s.after ? s.t : null);
         });
         return;
       }
-      /* vertical rail: from the first node to launch (work) and to the last node */
-      const tr = track!.getBoundingClientRect();
+      /* vertical rail: from the first node to launch (work) and to the last
+         node, in layout pixels */
       const ys = new Map<HTMLElement, number>();
       let first: number | null = null;
       let work: number | null = null;
       let last: number | null = null;
       items.forEach((li) => {
-        const s = plan.slots[li.dataset.key || ''];
+        const s = plan.slots[keyOf(li)];
         const node = q(li, '.ms-node');
         if (!s || !node) return;
-        const r = node.getBoundingClientRect();
-        const cy = r.top + r.height / 2 - tr.top;
+        const cy = offsetTopIn(node, track!) + node.offsetHeight / 2;
+        if (!Number.isFinite(cy)) return;
         ys.set(li, cy);
         if (first === null) first = cy;
         if (!s.after) work = cy;
@@ -1164,7 +1784,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
       const workH = Math.max(0, (work ?? top) - top);
       const lineH = Math.max(0, (last ?? top) - top);
       items.forEach((li) => {
-        const s = plan.slots[li.dataset.key || ''];
+        const s = plan.slots[keyOf(li)];
         const cy = ys.get(li);
         thresholds.set(li, !s || s.after || cy === undefined ? null : workH > 0 ? (cy - top) / workH : 0);
       });
@@ -1173,6 +1793,8 @@ const pad = (n: number) => String(n).padStart(2, '0');
     }
 
     /* ---- the scroll-linked fill ------------------------------------------ */
+
+    let lastOn = '';
 
     addFrame({
       read(_y, vh) {
@@ -1208,12 +1830,27 @@ const pad = (n: number) => String(n).padStart(2, '0');
         }
         if (Math.abs(p - written) > 0.0005) {
           tl.style.setProperty('--p', p.toFixed(4));
+          /* the comet breathes while it travels */
+          if (written >= 0 && !isReduced()) {
+            tl.classList.add('is-moving');
+            window.clearTimeout(moveTimer);
+            moveTimer = window.setTimeout(() => tl.classList.remove('is-moving'), 900);
+          }
           written = p;
+          tl.classList.toggle('is-landed', p >= 0.999);
         }
+        let reached = '';
         items.forEach((li) => {
           const t = thresholds.get(li);
-          li.classList.toggle('is-on', t != null && p > 0.001 && p >= t - 0.0005);
+          const on = t != null && p > 0.001 && p >= t - 0.0005;
+          li.classList.toggle('is-on', on);
+          if (on) reached = keyOf(li);
         });
+        if (reached !== lastOn) {
+          lastOn = reached;
+          auto = reached;
+          syncRead();
+        }
       },
     });
 
@@ -1230,26 +1867,31 @@ const pad = (n: number) => String(n).padStart(2, '0');
     if ('ResizeObserver' in window) {
       new ResizeObserver(() => {
         dirty = true;
+        placeInd(false);
         requestFrame();
       }).observe(track);
     }
 
-    const remeasure = () => {
+    function remeasure(): void {
       dirty = true;
       requestFrame();
-    };
-    desktop.addEventListener?.('change', remeasure);
+    }
+    desktop.addEventListener?.('change', () => {
+      applyMode();
+      placeInd(false);
+      remeasure();
+    });
     document.addEventListener('vesta:motion', remeasure);
+    document.fonts?.ready.then(() => placeInd(false));
 
     /* ---- plan change ------------------------------------------------------ */
 
     function apply(plan: Plan): HTMLElement[] {
       const swaps: HTMLElement[] = [];
-      const setText = (el: HTMLElement | null, text: string, animate: boolean, target?: HTMLElement | null) => {
+      const setText = (el: HTMLElement | null, text: string, animate: boolean) => {
         if (!el || el.textContent === text) return;
         el.textContent = text;
-        const t = target ?? el;
-        if (animate && !swaps.includes(t)) swaps.push(t);
+        if (animate && !swaps.includes(el)) swaps.push(el);
       };
 
       tl.dataset.plan = plan.id;
@@ -1264,10 +1906,10 @@ const pad = (n: number) => String(n).padStart(2, '0');
 
       let lastPresent: HTMLElement | null = null;
       items.forEach((li) => {
-        const s = plan.slots[li.dataset.key || ''];
+        const s = plan.slots[keyOf(li)];
         if (!s) {
           li.classList.add('is-out');
-          li.classList.remove('is-on');
+          li.classList.remove('is-on', 'is-open', 'is-cur');
           li.setAttribute('inert', '');
           return;
         }
@@ -1275,10 +1917,10 @@ const pad = (n: number) => String(n).padStart(2, '0');
         li.style.setProperty('--x', String(s.x));
         li.dataset.row = String(s.row);
         li.classList.toggle('is-after', s.after);
-        const inner = q(li, '.ms-in');
         setText(q(li, '.ms-time'), s.time, !wasOut);
-        setText(q(li, '.ms-title'), s.title, !wasOut, inner);
-        setText(q(li, '.ms-body'), s.body, !wasOut, inner);
+        setText(q(li, '.ms-t'), s.title, !wasOut);
+        const body = q(li, '.ms-body');
+        if (body) body.textContent = s.body;
         if (wasOut) {
           /* entering: make sure its reveals don't wait on the observer */
           li.querySelectorAll('[data-reveal]').forEach((el) => el.classList.add('is-in'));
@@ -1301,7 +1943,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
       const firsts = new Map<HTMLElement, DOMRect>();
       if (animate) {
         items.forEach((li) => {
-          if (!prev.slots[li.dataset.key || '']) return;
+          if (!prev.slots[keyOf(li)]) return;
           firsts.set(li, li.getBoundingClientRect());
           const t = textOf(li);
           if (t) firsts.set(t, t.getBoundingClientRect());
@@ -1309,32 +1951,43 @@ const pad = (n: number) => String(n).padStart(2, '0');
         flipDim.forEach((el) => firsts.set(el, el.getBoundingClientRect()));
       }
       const flipEls = [...items, ...(items.map(textOf).filter(Boolean) as HTMLElement[]), ...flipDim];
-      flipEls.forEach((el) => {
-        el.style.transition = '';
-        el.style.transform = '';
-      });
+      flipEls.forEach((el) => el.getAnimations?.().forEach((a) => a.cancel()));
 
       current = id;
       tl.classList.add('is-switching');
       const swaps = apply(plan);
+      placeInd(true);
+      /* the readout follows: pinned/hovered keys may not exist in this plan */
+      if (pinned && !plan.slots[pinned]) pinned = '';
+      shownKey = '';
+      syncRead();
 
-      /* Last + Invert */
-      const moved: HTMLElement[] = [];
+      /* Last, Invert, Play: each mover travels on a 3D arc — it lifts toward
+         the viewer and swings a little in the direction of travel */
       if (animate) {
-        const plays: [HTMLElement, string][] = [];
         firsts.forEach((a, el) => {
           const li = el.closest<HTMLElement>('.ms');
-          if (li && !plan.slots[li.dataset.key || '']) return;
+          if (li && !plan.slots[keyOf(li)]) return;
           const b = el.getBoundingClientRect();
           const isText = el.classList.contains('ms-text');
           const d = isText ? a.top - b.top : a.left - b.left;
-          if (Math.abs(d) < 0.5) return;
-          plays.push([el, isText ? `translate3d(0, ${d.toFixed(1)}px, 0)` : `translate3d(${d.toFixed(1)}px, 0, 0)`]);
-        });
-        plays.forEach(([el, tf]) => {
-          el.style.transition = 'none';
-          el.style.transform = tf;
-          moved.push(el);
+          if (Math.abs(d) < 0.5 || typeof el.animate !== 'function') return;
+          const sign = d > 0 ? 1 : -1;
+          const frames = isText
+            ? [
+                { transform: `translate3d(0, ${d.toFixed(1)}px, 0)` },
+                { transform: `perspective(700px) translate3d(0, ${(d / 2).toFixed(1)}px, 40px) rotateX(${(-sign * 22).toFixed(0)}deg)`, offset: 0.45 },
+                { transform: 'none' },
+              ]
+            : [
+                { transform: `translate3d(${d.toFixed(1)}px, 0, 0)` },
+                {
+                  transform: `perspective(900px) translate3d(${(d / 2).toFixed(1)}px, -12px, 70px) rotateY(${(sign * 16).toFixed(0)}deg)`,
+                  offset: 0.45,
+                },
+                { transform: 'none' },
+              ];
+          el.animate(frames, { duration: FLIP_MS, easing: MECH });
         });
       }
 
@@ -1342,20 +1995,9 @@ const pad = (n: number) => String(n).padStart(2, '0');
       void tl.offsetWidth;
       if (!isReduced()) swaps.forEach((el) => el.classList.add('is-swap'));
 
-      /* Play */
-      if (moved.length) {
-        requestAnimationFrame(() => {
-          moved.forEach((el) => {
-            el.style.transition = `transform ${FLIP_MS}ms ${MECH}`;
-            el.style.transform = '';
-          });
-        });
-      }
-
       window.clearTimeout(timer);
       timer = window.setTimeout(() => {
         tl.classList.remove('is-switching');
-        moved.forEach((el) => (el.style.transition = ''));
         swaps.forEach((el) => el.classList.remove('is-swap'));
         remeasure();
       }, FLIP_MS + 120);
@@ -1376,8 +2018,21 @@ const pad = (n: number) => String(n).padStart(2, '0');
         select(tabs[n].dataset.planTab || '');
       });
     });
+
+    placeInd(false);
+    applyMode();
   }
 
   const section = document.querySelector<HTMLElement>('[data-process]');
-  if (section) initProcess(section);
+  if (section) {
+    try {
+      initProcess(section);
+    } catch (err) {
+      /* never leave the rail half-armed: fall back to the printed layout */
+      section.querySelector('[data-timeline]')?.classList.remove('is-live');
+      section.classList.add('is-static');
+      section.querySelectorAll('.ms').forEach((li) => li.classList.add('is-open'));
+      console.warn('[process] timeline disabled; showing the printed layout.', err);
+    }
+  }
 </script>

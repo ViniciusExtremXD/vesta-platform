@@ -1,0 +1,477 @@
+---
+/**
+ * Concept 02 BEFORE — Pellwood Dental Studio (fictional) on a plausible
+ * 2015 dental template. Dated, not a parody: grey top bar with the phone
+ * number in 7px type, teal logo with a clip-art tooth, a stock-photo slider
+ * of a smiling family under a teal "Welcome to…" box, a row of three
+ * identical tooth-icon boxes, "Insurance forms (PDF)" links, grey footer.
+ * Every text pair passes AA on its own fill. Findings A1–A4: data file.
+ * Sizes use --u (one reference px of the 760×475 drawing).
+ */
+import { dental, dentalArt } from '../../../data/concepts/dental';
+
+export interface Props {
+  class?: string;
+}
+const { class: cls = '' } = Astro.props;
+
+const B = dental.before;
+const X = dentalArt.before;
+---
+
+<div class:list={['b-site', cls]} aria-hidden="true">
+  <div class="b-top">
+    <span class="b-hours">{B.topBar}</span>
+    <span class="b-phone">{X.phone}</span>
+    <span class="b-social">{X.social.map((s) => <span class="b-sq">{s}</span>)}</span>
+  </div>
+
+  <div class="b-head">
+    <span class="b-logo">
+      <svg class="b-tooth" viewBox="0 0 26 28" aria-hidden="true">
+        <path
+          d="M13 4.2C10.6 2.2 7.6 1.6 5.2 2.8 2.2 4.3 1.4 8.2 2.6 12c.9 2.8 1.6 5.2 2 8.4.4 3 .9 5.6 2.6 5.6 2 0 2.2-3 2.8-6 .5-2.4 1.4-3.6 3-3.6s2.5 1.2 3 3.6c.6 3 .8 6 2.8 6 1.7 0 2.2-2.6 2.6-5.6.4-3.2 1.1-5.6 2-8.4 1.2-3.8.4-7.7-2.6-9.2C18.4 1.6 15.4 2.2 13 4.2Z"
+          fill="#13707A"></path>
+        <path d="M6.6 7.4c.8-1.4 2.2-2 3.6-1.8" fill="none" stroke="#FFFFFF" stroke-width="1.2" stroke-linecap="round"></path>
+      </svg>
+      <span class="b-logotype">
+        <span class="b-logo-name">{B.logo}</span>
+        <span class="b-tagline">{X.tagline}</span>
+      </span>
+    </span>
+    <span class="b-nav">
+      {B.nav.map((l, i) => <span class:list={['b-navl', i === 0 && 'is-on']}>{l}</span>)}
+    </span>
+  </div>
+
+  <div class="b-slide">
+    <svg class="b-photo" viewBox="0 0 760 228" preserveAspectRatio="none" aria-hidden="true">
+      <rect x="392" y="0" width="368" height="228" fill="#E6F0F0" fill-opacity=".7"></rect>
+      <rect x="610" y="18" width="120" height="120" fill="#F4F8F8"></rect>
+      <path d="M670 18V138M610 78H730" stroke="#DCE8E8" stroke-width="4"></path>
+      <circle cx="430" cy="40" r="22" fill="#FFFFFF" fill-opacity=".45"></circle>
+      <circle cx="470" cy="70" r="12" fill="#FFFFFF" fill-opacity=".4"></circle>
+      <circle cx="728" cy="178" r="16" fill="#FFFFFF" fill-opacity=".35"></circle>
+      <rect x="392" y="176" width="368" height="52" fill="#B8CDD0"></rect>
+      <!-- the family: back row, then the children in front -->
+      <g>
+        <path d="M586 228v-74c0-20 22-34 54-34s54 14 54 34v74Z" fill="#8FB0B8"></path>
+        <circle cx="640" cy="92" r="24" fill="#D8AE90"></circle>
+        <path d="M616 88c0-17 11-26 24-26s24 9 24 26c-6-9-14-12-24-12s-18 3-24 12Z" fill="#4A3A2E"></path>
+        <circle cx="632" cy="91" r="1.6" fill="#6B5040"></circle><circle cx="648" cy="91" r="1.6" fill="#6B5040"></circle>
+        <path d="M630 99q10 10 20 0q-10 4-20 0Z" fill="#F6F1EA"></path>
+        <path d="M498 228v-68c0-18 20-30 48-30s48 12 48 30v68Z" fill="#F1F4F3"></path>
+        <circle cx="546" cy="102" r="22" fill="#E6C2A6"></circle>
+        <path d="M522 104c-2-20 10-30 24-30s27 10 24 30c-1 14-4 22-4 22l-2-24c-5-6-11-9-18-9s-14 3-18 9l-2 24s-3-8-4-22Z" fill="#7A5A40"></path>
+        <circle cx="539" cy="101" r="1.5" fill="#6B5040"></circle><circle cx="553" cy="101" r="1.5" fill="#6B5040"></circle>
+        <path d="M537 109q9 9 18 0q-9 3.6-18 0Z" fill="#F6F1EA"></path>
+        <path d="M562 228v-44c0-13 13-22 30-22s30 9 30 22v44Z" fill="#E7C7A0"></path>
+        <circle cx="592" cy="144" r="17" fill="#EAC9AE"></circle>
+        <path d="M575 142c0-12 8-19 17-19s17 7 17 19c-4-6-10-8-17-8s-13 2-17 8Z" fill="#A07A55"></path>
+        <circle cx="586" cy="143" r="1.3" fill="#6B5040"></circle><circle cx="598" cy="143" r="1.3" fill="#6B5040"></circle>
+        <path d="M585.5 149q6.5 7 13 0q-6.5 2.6-13 0Z" fill="#F6F1EA"></path>
+        <path d="M460 228v-40c0-12 12-20 28-20s28 8 28 20v40Z" fill="#B7CBB0"></path>
+        <circle cx="488" cy="150" r="16" fill="#D4A98A"></circle>
+        <path d="M472 150c-1-12 6-19 16-19s17 7 16 19c-3-5-9-8-16-8s-13 3-16 8Z" fill="#3A2C24"></path>
+        <circle cx="482" cy="150" r="1.3" fill="#6B5040"></circle><circle cx="494" cy="150" r="1.3" fill="#6B5040"></circle>
+        <path d="M481.5 156q6.5 6.5 13 0q-6.5 2.6-13 0Z" fill="#F6F1EA"></path>
+      </g>
+      <rect width="760" height="228" fill="#13707A" fill-opacity=".1"></rect>
+    </svg>
+    <i class="b-shade"></i>
+    <span class="b-arrow b-arrow--l">
+      <svg viewBox="0 0 10 16" aria-hidden="true"><path d="M7 2 2 8l5 6" fill="none" stroke="#FFFFFF" stroke-width="1.8"></path></svg>
+    </span>
+    <span class="b-arrow b-arrow--r">
+      <svg viewBox="0 0 10 16" aria-hidden="true"><path d="m3 2 5 6-5 6" fill="none" stroke="#FFFFFF" stroke-width="1.8"></path></svg>
+    </span>
+    <div class="b-caption">
+      <span class="b-welcome">{B.welcome}</span>
+      <span class="b-sub">{B.heroSub}</span>
+      <span class="b-more">{B.heroButton}</span>
+    </div>
+    <span class="b-dots"><i class="is-on"></i><i></i><i></i><i></i></span>
+  </div>
+
+  <div class="b-icons">
+    {
+      B.boxes.map((t) => (
+        <div class="b-box">
+          <span class="b-icon">
+            <svg viewBox="0 0 26 28" aria-hidden="true">
+              <path
+                d="M13 4.2C10.6 2.2 7.6 1.6 5.2 2.8 2.2 4.3 1.4 8.2 2.6 12c.9 2.8 1.6 5.2 2 8.4.4 3 .9 5.6 2.6 5.6 2 0 2.2-3 2.8-6 .5-2.4 1.4-3.6 3-3.6s2.5 1.2 3 3.6c.6 3 .8 6 2.8 6 1.7 0 2.2-2.6 2.6-5.6.4-3.2 1.1-5.6 2-8.4 1.2-3.8.4-7.7-2.6-9.2C18.4 1.6 15.4 2.2 13 4.2Z"
+                fill="#FFFFFF"
+              />
+            </svg>
+          </span>
+          <span class="b-copy">
+            <span class="b-title">{t}</span>
+            <span class="b-text">{B.boxText}</span>
+            <span class="b-link">{B.boxLink}</span>
+          </span>
+        </div>
+      ))
+    }
+  </div>
+
+  <div class="b-forms">
+    <span class="b-forms-lead">{X.formsLead}</span>
+    <span class="b-pdf"><i>PDF</i></span>
+    <span class="b-flink">{X.forms}</span>
+    <span class="b-sep">|</span>
+    <span class="b-flink">{X.forms2}</span>
+    <span class="b-ins">{X.insurance}</span>
+  </div>
+
+  <div class="b-foot">{B.footer}</div>
+</div>
+
+<style>
+  .b-site {
+    --u: calc(100cqi / 760);
+    --b-teal: #13707a;
+    --b-grey: #3e4a4d;
+    --b-band: #eef2f2;
+    --b-text: #444444;
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    background-color: #ffffff;
+    color: var(--b-text);
+    font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
+    font-stretch: 100%;
+    font-weight: 400;
+    line-height: 1.25;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  /* ---- top bar: hours, email, the 7px phone number, social squares ---- */
+  .b-top {
+    position: absolute;
+    inset: 0 0 auto;
+    height: calc(18 * var(--u));
+    display: flex;
+    align-items: center;
+    padding-inline: calc(40 * var(--u));
+    background-color: var(--b-grey);
+    color: #ffffff;
+    font-size: calc(7 * var(--u));
+    white-space: pre;
+  }
+
+  .b-phone {
+    margin-left: auto;
+    margin-right: calc(10 * var(--u));
+    color: #d5ddde;
+  }
+
+  .b-social {
+    display: flex;
+    gap: calc(3 * var(--u));
+  }
+
+  .b-sq {
+    display: grid;
+    place-items: center;
+    width: calc(11 * var(--u));
+    height: calc(11 * var(--u));
+    background-color: var(--b-teal);
+    color: #ffffff;
+    font-size: calc(6.5 * var(--u));
+    font-weight: 700;
+  }
+
+  /* ---- header: clip-art tooth, teal logotype, boxed nav ---- */
+  .b-head {
+    position: absolute;
+    top: calc(18 * var(--u));
+    left: 0;
+    right: 0;
+    height: calc(54 * var(--u));
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-inline: calc(40 * var(--u));
+    border-bottom: calc(3 * var(--u)) solid var(--b-teal);
+    background-color: #ffffff;
+  }
+
+  .b-logo {
+    display: flex;
+    align-items: center;
+    gap: calc(8 * var(--u));
+  }
+
+  .b-tooth {
+    width: calc(24 * var(--u));
+    height: calc(26 * var(--u));
+  }
+
+  .b-logotype {
+    display: flex;
+    flex-direction: column;
+    gap: calc(2 * var(--u));
+  }
+
+  .b-logo-name {
+    color: var(--b-teal);
+    font-size: calc(18 * var(--u));
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  .b-tagline {
+    color: #666666;
+    font-size: calc(7.5 * var(--u));
+  }
+
+  .b-nav {
+    display: flex;
+    align-items: center;
+    gap: calc(4 * var(--u));
+  }
+
+  .b-navl {
+    padding: calc(6 * var(--u)) calc(8 * var(--u));
+    color: var(--b-text);
+    font-size: calc(8 * var(--u));
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .b-navl.is-on {
+    background-color: var(--b-teal);
+    color: #ffffff;
+  }
+
+  /* ---- the stock-photo slider ---- */
+  .b-slide {
+    position: absolute;
+    top: calc(72 * var(--u));
+    left: 0;
+    right: 0;
+    height: calc(228 * var(--u));
+    overflow: hidden;
+    background-color: #d3e3e5;
+    background-image: radial-gradient(ellipse 60% 90% at 84% 28%, #f7fafa 0%, #e2eded 45%, #cfe0e2 100%);
+  }
+
+  /* a stock photo, seen soft: the whole picture slightly out of focus */
+  .b-photo {
+    position: absolute;
+    inset: calc(-4 * var(--u));
+    display: block;
+    width: calc(100% + 8 * var(--u));
+    height: calc(100% + 8 * var(--u));
+    filter: blur(calc(1.5 * var(--u))) saturate(0.88);
+  }
+
+  /* window light from the right, a soft teal shade on the left */
+  .b-shade {
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(90deg, rgb(19 112 122 / 0.22), rgb(19 112 122 / 0) 58%);
+  }
+
+  .b-arrow {
+    position: absolute;
+    top: calc(101 * var(--u));
+    display: grid;
+    place-items: center;
+    width: calc(26 * var(--u));
+    height: calc(26 * var(--u));
+    border-radius: 50%;
+    background-color: #2b3538;
+  }
+
+  .b-arrow svg {
+    width: calc(7 * var(--u));
+    height: calc(11 * var(--u));
+  }
+
+  .b-arrow--l {
+    left: calc(12 * var(--u));
+  }
+
+  .b-arrow--r {
+    right: calc(14 * var(--u));
+  }
+
+  .b-caption {
+    position: absolute;
+    left: calc(56 * var(--u));
+    top: calc(44 * var(--u));
+    width: calc(300 * var(--u));
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: calc(8 * var(--u));
+    padding: calc(18 * var(--u)) calc(18 * var(--u)) calc(20 * var(--u));
+    background-color: var(--b-teal);
+    color: #ffffff;
+  }
+
+  .b-welcome {
+    font-size: calc(19 * var(--u));
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+  }
+
+  .b-sub {
+    font-size: calc(10 * var(--u));
+  }
+
+  .b-more {
+    margin-top: calc(6 * var(--u));
+    padding: calc(7 * var(--u)) calc(14 * var(--u));
+    background-color: #ffffff;
+    color: var(--b-teal);
+    font-size: calc(8 * var(--u));
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .b-dots {
+    position: absolute;
+    left: 50%;
+    bottom: calc(12 * var(--u));
+    display: flex;
+    gap: calc(6 * var(--u));
+    transform: translateX(-50%);
+  }
+
+  .b-dots i {
+    width: calc(7 * var(--u));
+    height: calc(7 * var(--u));
+    border-radius: 50%;
+    background-color: #9db9bd;
+  }
+
+  .b-dots i.is-on {
+    background-color: #ffffff;
+  }
+
+  /* ---- three identical tooth-icon boxes ---- */
+  .b-icons {
+    position: absolute;
+    top: calc(300 * var(--u));
+    left: 0;
+    right: 0;
+    height: calc(112 * var(--u));
+    display: flex;
+    justify-content: space-between;
+    padding: calc(20 * var(--u)) calc(40 * var(--u)) 0;
+    background-color: var(--b-band);
+  }
+
+  .b-box {
+    display: flex;
+    align-items: flex-start;
+    gap: calc(10 * var(--u));
+    width: calc(212 * var(--u));
+  }
+
+  .b-icon {
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    width: calc(36 * var(--u));
+    height: calc(36 * var(--u));
+    border-radius: 50%;
+    background-color: var(--b-teal);
+  }
+
+  .b-icon svg {
+    width: calc(16 * var(--u));
+    height: calc(17 * var(--u));
+  }
+
+  .b-copy {
+    display: flex;
+    flex-direction: column;
+    gap: calc(5 * var(--u));
+    padding-top: calc(2 * var(--u));
+  }
+
+  .b-title {
+    color: #333333;
+    font-size: calc(11 * var(--u));
+    font-weight: 700;
+  }
+
+  .b-text {
+    font-size: calc(8.5 * var(--u));
+    line-height: 1.4;
+  }
+
+  .b-link {
+    color: var(--b-teal);
+    font-size: calc(8.5 * var(--u));
+  }
+
+  /* ---- the forms strip: paperwork as PDF downloads ---- */
+  .b-forms {
+    position: absolute;
+    top: calc(412 * var(--u));
+    left: 0;
+    right: 0;
+    height: calc(35 * var(--u));
+    display: flex;
+    align-items: center;
+    gap: calc(5 * var(--u));
+    padding-inline: calc(40 * var(--u));
+    border-top: 1px solid #d8dfdf;
+    background-color: #ffffff;
+    font-size: calc(8 * var(--u));
+  }
+
+  .b-forms-lead {
+    font-weight: 700;
+  }
+
+  .b-pdf {
+    display: grid;
+    place-items: end center;
+    width: calc(10 * var(--u));
+    height: calc(12 * var(--u));
+    padding-bottom: calc(1.5 * var(--u));
+    background-color: #b03a2e;
+  }
+
+  .b-pdf i {
+    color: #ffffff;
+    font-size: calc(3.8 * var(--u));
+    font-style: normal;
+    font-weight: 700;
+  }
+
+  .b-flink {
+    color: var(--b-teal);
+    text-decoration: underline;
+  }
+
+  .b-sep {
+    color: #666666;
+  }
+
+  .b-ins {
+    margin-left: auto;
+    color: var(--b-text);
+  }
+
+  .b-foot {
+    position: absolute;
+    inset: auto 0 0;
+    height: calc(28 * var(--u));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--b-grey);
+    color: #ffffff;
+    font-size: calc(7.5 * var(--u));
+  }
+</style>

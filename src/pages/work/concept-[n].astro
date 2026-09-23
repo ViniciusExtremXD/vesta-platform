@@ -1,0 +1,679 @@
+---
+/**
+ * /work/concept-01/ … /work/concept-05/ — the five concept STUDIES (noindex).
+ * Every business here is fictional, and the page never lets that slip:
+ * persistent banner, .example domain, 555-01xx number, "Fictional" status.
+ * Data: src/data/concepts (one file per niche); strings: site.ts conceptPage.study.
+ *
+ *   banner (night)   sticky under the nav, takes the top edge when it hides
+ *   head (void)      label · H1 · lead · brief in an Expand | live compare plate
+ *   before (paper)   the 2016 template, A1–A4
+ *   after (void)     the rebuild, B1–B4, mirrored
+ *   layers (night)   the six layers, scroll-scrubbed exploded view
+ *   priced (paper)   "Priced after a free analysis." + WhatsApp / email
+ *   next (void)      the next study as a large tilting plate, 01–05 index
+ */
+import Base from '../../layouts/Base.astro';
+import ConceptPlate from '../../components/ConceptPlate.astro';
+import AnnotatedPlate from '../../components/work/AnnotatedPlate.astro';
+import ExplodedPlate from '../../components/work/ExplodedPlate.astro';
+import DimensionLine from '../../components/DimensionLine.astro';
+import Cosmos from '../../components/Cosmos.astro';
+import SplitText from '../../components/ui/SplitText.astro';
+import Expand from '../../components/ui/Expand.astro';
+import Arrow from '../../components/ui/Arrow.astro';
+import WaGlyph from '../../components/ui/WaGlyph.astro';
+import MailGlyph from '../../components/ui/MailGlyph.astro';
+import { concepts, type Concept } from '../../data/concepts';
+import { conceptPage, getPackage, pricing, wa, mail, waMessages } from '../../data/site';
+import { url } from '../../lib/url';
+
+export function getStaticPaths() {
+  return concepts.map((c) => ({ params: { n: c.number }, props: { c } }));
+}
+
+const { c } = Astro.props as { c: Concept };
+const S = conceptPage.study;
+const idx = concepts.findIndex((k) => k.id === c.id);
+const next = concepts[(idx + 1) % concepts.length];
+const pkg = getPackage('complete');
+
+/* banner: the first sentence carries the weight, the rest reads in haze */
+const banner = S.banner(c.name);
+const cut = banner.indexOf('. ');
+const bannerA = cut > 0 ? banner.slice(0, cut + 1) : banner;
+const bannerB = cut > 0 ? banner.slice(cut + 2) : '';
+
+const facts = [
+  { label: S.facts.niche, value: c.niche },
+  { label: S.facts.city, value: c.city },
+  { label: S.facts.domain, value: c.domain },
+  { label: S.facts.phone, value: c.phone },
+  { label: S.facts.status, value: S.status },
+];
+const mailSubject = `Price analysis · ${c.niche}`;
+---
+
+<Base title={S.seoTitle(c.number)} description={S.seoDescription(c.niche, c.city)} canonical={c.href} noindex>
+  <div class="cbn s-night" role="note">
+    <div class="wrap cbn-in" data-load>
+      <span class="stripe cbn-mark" aria-hidden="true"></span>
+      <p class="small cbn-text">
+        <strong class="cbn-a">{bannerA}</strong>
+        {bannerB && <span class="cbn-b"> {bannerB}</span>}
+      </p>
+    </div>
+  </div>
+
+  {/* ---------------------------------------------------------------- head */}
+  <section class="s-void st-head" data-nav-theme="dark" aria-labelledby="st-h1">
+    <Cosmos variant="stars" />
+    <div class="wrap g st-head-g">
+      <div class="st-row">
+        <p class="sec-label label st-label" data-load>
+          <span class="stripe" aria-hidden="true"></span>
+          <span>{c.label} · {c.niche}</span>
+        </p>
+        <p class="label st-meta" data-load style="--d:120ms">{c.city}</p>
+        <span class="st-rule" data-load="draw" style="--d:60ms" aria-hidden="true"></span>
+      </div>
+
+      <div class="st-copy">
+        <SplitText as="h1" id="st-h1" load delay={80} class="st-h1" text={c.study.h1} />
+        <p class="lead st-lead" data-load style="--d:420ms">{c.study.lead}</p>
+      </div>
+
+      <div class="st-plate" data-load style="--d:260ms">
+        <div class="st-plate-3d" data-tilt="5">
+          <ConceptPlate concept={c.id} mode="hero" />
+        </div>
+      </div>
+
+      <div class="st-brief" data-load style="--d:560ms">
+        <Expand title={conceptPage.brief.title} keywords={[c.niche, c.city, S.status]} reveal={false}>
+          <p class="body st-brief-t">{c.study.brief}</p>
+          <dl class="st-facts">
+            {
+              facts.map((f) => (
+                <div class="st-fact">
+                  <dt class="small">{f.label}</dt>
+                  <dd class="small">{f.value}</dd>
+                </div>
+              ))
+            }
+          </dl>
+        </Expand>
+      </div>
+    </div>
+  </section>
+
+  {/* -------------------------------------------------------------- before */}
+  <section id="before" class="s-paper section st-sec" data-nav-theme="light" aria-labelledby="before-title">
+    <div class="wrap" data-scene="soft">
+      <AnnotatedPlate
+        concept={c.id}
+        kicker={S.before.kicker}
+        title={S.before.title}
+        titleId="before-title"
+        state="before"
+        notes={c.annotations.before}
+        side="right"
+      />
+    </div>
+  </section>
+
+  {/* --------------------------------------------------------------- after */}
+  <section id="after" class="s-void section st-sec st-after" data-nav-theme="dark" aria-labelledby="after-title">
+    <div class="wrap" data-scene="soft">
+      <AnnotatedPlate
+        concept={c.id}
+        kicker={S.after.kicker}
+        title={S.after.title}
+        titleId="after-title"
+        state="after"
+        notes={c.annotations.after}
+        side="left"
+      />
+    </div>
+  </section>
+
+  {/* -------------------------------------------------------------- layers */}
+  <section id="layers" class="s-night section st-sec st-layers" data-nav-theme="dark" aria-labelledby="layers-title">
+    <div class="wrap">
+      <div class="st-layers-head">
+        <p class="label st-kicker" data-reveal><span class="node" aria-hidden="true"></span><span>{S.layers.kicker}</span></p>
+        <SplitText as="h2" id="layers-title" class="d2 st-layers-title" text={S.layers.title} />
+      </div>
+      <ExplodedPlate concept={c.id} />
+    </div>
+  </section>
+
+  {/* -------------------------------------------------------------- priced */}
+  <section id="priced" class="s-paper section st-sec st-price" data-nav-theme="light" aria-labelledby="price-title">
+    <div class="wrap g st-price-g" data-scene="soft">
+      <div class="st-price-copy">
+        <p class="label st-kicker" data-reveal><span class="node" aria-hidden="true"></span><span>{S.pricing.kicker}</span></p>
+        <SplitText as="h2" id="price-title" class="d2 st-price-title" text={S.pricing.title} />
+        <Expand title={pkg.name} keywords={pricing.keys.complete} i={3} class="st-price-more">
+          <p class="body st-price-text">{S.pricing.text}</p>
+        </Expand>
+      </div>
+
+      <div class="st-card-wrap" data-reveal style="--d:160ms">
+      <div class="st-card" data-tilt="4">
+        <p class="label st-card-name">{pkg.name}</p>
+        <p class="st-card-line">{S.pricing.line}</p>
+        <DimensionLine label={pkg.daysLabel} ratio={pkg.dayRange[1] / pricing.dayScaleMax} delay={300} class="st-card-dim" />
+        <div class="btn-row st-card-cta">
+          <a class="btn" href={wa(waMessages.pricing.complete)} target="_blank" rel="noopener" data-wa-intent="concept-pricing" data-magnetic=".25">
+            <WaGlyph size={16} />
+            <span>{S.pricing.cta}</span>
+            <Arrow />
+          </a>
+          <a class="tlink st-mail" href={mail(mailSubject)}>
+            <MailGlyph size={14} />
+            <span>{S.pricing.mail}</span>
+          </a>
+        </div>
+      </div>
+      </div>
+    </div>
+  </section>
+
+  {/* ---------------------------------------------------------------- next */}
+  <section class="s-void section st-next" data-nav-theme="dark" aria-labelledby="next-title">
+    <Cosmos variant="stars" />
+    <div class="wrap g st-next-g" data-scene>
+      <div class="st-next-copy">
+        <p class="label st-kicker" data-reveal><span class="node" aria-hidden="true"></span><span>{S.next.label} · {next.label}</span></p>
+        <SplitText as="h2" id="next-title" class="d2 st-next-title" text={next.name} />
+        <p class="label st-next-niche" data-reveal style="--i:2">{next.niche} · {next.city}</p>
+        <p class="st-next-go" data-reveal style="--i:3">
+          <a class="tlink st-next-link" href={url(next.href)}>
+            <span>{conceptPage.study.next.label}</span>
+            <Arrow />
+          </a>
+        </p>
+        <nav class="st-index" aria-label={S.next.all} data-reveal style="--i:4">
+          <a class="label st-index-all" href={url('/work/')}>{S.next.all}</a>
+          <ol class="st-index-list">
+            {
+              concepts.map((k) => (
+                <li>
+                  <a
+                    class:list={['st-dot', { 'is-here': k.id === c.id }]}
+                    href={url(k.href)}
+                    aria-current={k.id === c.id ? 'page' : undefined}
+                    aria-label={`${k.label}: ${k.name}`}
+                  >
+                    <span class="label">{k.number}</span>
+                  </a>
+                </li>
+              ))
+            }
+          </ol>
+        </nav>
+      </div>
+
+      <a class="st-next-plate" href={url(next.href)} tabindex="-1" aria-hidden="true" data-reveal style="--d:140ms">
+        <span class="st-next-3d" data-tilt="7">
+          <ConceptPlate concept={next.id} mode="static" />
+        </span>
+        <svg class="st-next-num" viewBox="0 0 320 200" aria-hidden="true" focusable="false" data-parallax="-0.08"><text x="304" y="178" text-anchor="end">{next.number}</text></svg>
+      </a>
+    </div>
+  </section>
+</Base>
+
+<script>
+  import '../../scripts/compare';
+</script>
+
+<style>
+  /* ============================================================ banner */
+  .cbn {
+    position: sticky;
+    top: 0;
+    z-index: calc(var(--z-nav) - 1);
+    border-bottom: 1px solid var(--line-dark);
+    transform: translate3d(0, var(--nav-h), 0);
+    transition: transform 480ms var(--ease-expo);
+  }
+
+  :global(html:has(.nav.is-hidden:not(:focus-within))) .cbn {
+    transform: none;
+    transition: transform 380ms var(--ease-quint);
+  }
+
+  .cbn-in {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-height: 44px;
+    padding-block: 10px;
+  }
+
+  .cbn-mark {
+    --mark: var(--lilac);
+    flex: none;
+  }
+
+  .cbn-text {
+    color: var(--haze);
+    line-height: 1.4;
+  }
+
+  .cbn-a {
+    color: var(--starlight);
+    font-weight: 620;
+  }
+
+  /* ============================================================== head */
+  .st-head {
+    position: relative;
+    overflow: clip;
+    padding-block: calc(var(--nav-h) + clamp(1.25rem, 0.5rem + 2vw, 2.5rem)) clamp(4.5rem, 2.5rem + 6vw, 8rem);
+    background-image: radial-gradient(48% 60% at 78% 46%, rgb(98 54 232 / 0.1), transparent 72%);
+  }
+
+  .st-head-g {
+    position: relative;
+    z-index: 1;
+    row-gap: 0;
+    align-items: center;
+  }
+
+  .st-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding-bottom: 18px;
+  }
+
+  .st-label {
+    color: var(--lilac);
+  }
+
+  .st-meta {
+    display: none;
+    color: var(--dim);
+    letter-spacing: 0.16em;
+  }
+
+  @media (min-width: 768px) {
+    .st-meta {
+      display: block;
+    }
+  }
+
+  .st-rule {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background-color: var(--line-dark);
+  }
+
+  .st-copy {
+    margin-top: clamp(2rem, 1rem + 4vw, 5.5rem);
+  }
+
+  .st-h1 {
+    font-size: clamp(2.5rem, 1.2rem + 4.4vw, 5rem);
+    font-weight: 640;
+    line-height: 0.98;
+    letter-spacing: -0.03em;
+    max-width: 11ch;
+    color: var(--starlight);
+  }
+
+  .st-lead {
+    margin-top: 24px;
+    max-width: 34ch;
+    color: var(--haze);
+  }
+
+  .st-brief {
+    margin-top: 48px;
+    max-width: 30rem;
+  }
+
+  .st-brief-t {
+    color: var(--starlight);
+    max-width: 40ch;
+  }
+
+  .st-facts {
+    margin-top: 20px;
+  }
+
+  .st-fact {
+    display: grid;
+    grid-template-columns: 6.5rem minmax(0, 1fr);
+    gap: 12px;
+    padding-block: 8px;
+    border-top: 1px solid var(--line-dark);
+  }
+
+  .st-fact dt {
+    color: var(--dim);
+  }
+
+  .st-fact dd {
+    margin: 0;
+    color: var(--haze);
+    overflow-wrap: anywhere;
+  }
+
+  .st-plate {
+    margin-top: 40px;
+    perspective: 1800px;
+  }
+
+  .st-plate-3d {
+    display: block;
+  }
+
+  @media (min-width: 1100px) {
+    .st-copy {
+      grid-column: 1 / span 5;
+    }
+
+    .st-copy {
+      grid-row: 2;
+      align-self: end;
+    }
+
+    .st-brief {
+      grid-column: 1 / span 4;
+      grid-row: 3;
+      align-self: start;
+    }
+
+    .st-plate {
+      grid-column: 6 / -1;
+      grid-row: 2 / span 2;
+      margin-top: clamp(2.5rem, 1.5rem + 4vw, 5.5rem);
+      margin-right: -1%;
+    }
+  }
+
+  /* ========================================================== sections */
+  .st-sec {
+    overflow: clip;
+  }
+
+  .st-after {
+    background-image: radial-gradient(45% 55% at 70% 45%, rgb(98 54 232 / 0.1), transparent 70%);
+  }
+
+  .st-layers {
+    background-image: radial-gradient(40% 50% at 32% 58%, rgb(185 162 255 / 0.06), transparent 70%);
+  }
+
+  .st-kicker {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+    color: var(--accent-text);
+  }
+
+  .st-kicker .node {
+    color: var(--violet);
+  }
+
+  .st-layers-head {
+    margin-bottom: clamp(1rem, 0rem + 2vw, 2rem);
+  }
+
+  .st-layers-title {
+    max-width: 12ch;
+  }
+
+  /* ============================================================ pricing */
+  .st-price-g {
+    row-gap: 56px;
+    align-items: center;
+  }
+
+  .st-price-title {
+    max-width: 11ch;
+  }
+
+  .st-price-copy :global(.st-price-more) {
+    margin-top: 40px;
+  }
+
+  .st-price-text {
+    color: var(--ink-2);
+    max-width: 44ch;
+  }
+
+  /* the price card: a facet of void on paper. The element paints the void
+     itself so the contrast gate reads starlight on void. */
+  .st-card {
+    --fg: var(--starlight);
+    --fg-2: var(--haze);
+    --fg-3: var(--dim);
+    --line: var(--line-dark);
+    --line-strong: var(--line-dark-strong);
+    padding: 36px 28px 32px;
+    background-color: var(--void);
+    background-image: radial-gradient(70% 60% at 100% 100%, rgb(98 54 232 / 0.12), transparent 72%);
+    color: var(--starlight);
+    clip-path: var(--chamfer);
+  }
+
+  .st-card-name {
+    color: var(--lilac);
+  }
+
+  .st-card-line {
+    margin-top: 20px;
+    color: var(--starlight);
+    font-size: clamp(1.75rem, 1.2rem + 2vw, 2.75rem);
+    font-weight: 620;
+    line-height: 1.02;
+    letter-spacing: -0.025em;
+    max-width: 13ch;
+  }
+
+  .st-card :global(.st-card-dim) {
+    margin-top: 32px;
+  }
+
+  .st-card-cta {
+    margin-top: 32px;
+    align-items: center;
+    column-gap: 28px;
+    row-gap: 20px;
+  }
+
+  /* repeat the violet fill on the element (content box, under ::before) so
+     the contrast gate reads white on violet */
+  .st-card-cta .btn {
+    background-color: var(--btn-bg);
+    background-clip: content-box;
+  }
+
+  .st-mail {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--starlight);
+  }
+
+  @media (max-width: 479px) {
+    .st-card-cta .btn {
+      width: 100%;
+      padding-inline: 20px;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .st-card-wrap {
+      grid-column: 1 / span 6;
+    }
+
+    .st-card {
+      padding: 44px 40px 40px;
+    }
+
+    .st-price-copy {
+      grid-column: 1 / span 6;
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .st-price-copy {
+      grid-column: 1 / span 5;
+    }
+
+    .st-card-wrap {
+      grid-column: 7 / -1;
+    }
+  }
+
+  /* =============================================================== next */
+  .st-next {
+    position: relative;
+    overflow: clip;
+    border-top: 1px solid var(--line-dark);
+  }
+
+  .st-next-g {
+    position: relative;
+    z-index: 1;
+    row-gap: 56px;
+    align-items: center;
+  }
+
+  .st-next-title {
+    max-width: 12ch;
+  }
+
+  .st-next-niche {
+    margin-top: 20px;
+    color: var(--haze);
+  }
+
+  .st-next-go {
+    margin-top: 32px;
+  }
+
+  .st-index {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px 20px;
+    margin-top: 48px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line-dark);
+  }
+
+  .st-index-all {
+    color: var(--haze);
+    text-decoration: none;
+    transition: color var(--t-micro) linear;
+  }
+
+  .st-index-all:hover {
+    color: var(--starlight);
+  }
+
+  .st-index-list {
+    display: flex;
+    gap: 6px;
+  }
+
+  .st-dot {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 32px;
+    border: 1px solid var(--line-dark-strong);
+    background-color: var(--void);
+    color: var(--haze);
+    text-decoration: none;
+    transition:
+      background-color var(--t-micro) linear,
+      color var(--t-micro) linear,
+      transform var(--t-ui) var(--ease-expo);
+  }
+
+  .st-dot:hover {
+    color: var(--starlight);
+    transform: translate3d(0, -3px, 0);
+  }
+
+  .st-dot.is-here {
+    border-color: var(--violet);
+    background-color: var(--violet);
+    color: var(--white);
+  }
+
+  .st-next-plate {
+    position: relative;
+    display: block;
+    perspective: 1600px;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .st-next-3d {
+    position: relative;
+    z-index: 2;
+    display: block;
+  }
+
+  .st-next-3d :global(.cp) {
+    transition: transform 900ms var(--ease-expo);
+  }
+
+  /* the next study's numeral, outlined, behind the plate (SVG: decoration) */
+  .st-next-num {
+    position: absolute;
+    right: 0;
+    top: -24%;
+    z-index: 1;
+    width: 44%;
+    height: auto;
+    overflow: visible;
+    pointer-events: none;
+  }
+
+  .st-next-num text {
+    fill: none;
+    stroke: var(--lilac);
+    stroke-opacity: 0.8;
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+    font-size: 220px;
+    font-weight: 700;
+    letter-spacing: -0.05em;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .st-next-g:has(.st-next-link:hover, .st-next-plate:hover) .st-next-3d :global(.cp) {
+      transform: translate3d(0, -10px, 40px);
+    }
+
+    .st-next-g:has(.st-next-plate:hover) .st-next-link::after {
+      animation: underline-redraw 360ms var(--ease-quint) both;
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .st-next-copy {
+      grid-column: 1 / span 5;
+    }
+
+    .st-next-plate {
+      grid-column: 7 / -1;
+    }
+  }
+</style>

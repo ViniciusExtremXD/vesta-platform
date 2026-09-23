@@ -1,26 +1,39 @@
 ---
 /**
  * §5.2 #problem — paper. The first white surface after the deep-space hero.
- * Label + H2 (word mask), three full-width rows (numeral / title / body)
- * whose strong hairlines draw from the left, and one closing line.
  *
- * Deep-space skin: ink on paper, violet only as marks — the orbit in the
- * section label and one larger orbit mark beside the closing line. On tablet
- * it stands in the numeral column (01, 02, 03 … then Vesta's own mark); on
- * desktop it hangs in the margin before the verdict; on phones it sits above
- * it. On reveal its planet travels the orbit once, drawing the ellipse behind
- * it, and comes to rest where it started. Default state = the finished mark.
- * From tablet up the three rows share one height, so the hairlines fall at
- * equal intervals.
+ * Round 2 (owner: "bolder, cleaner"):
+ * - Label + H2 (word flip). The label sits on a slower parallax plane than
+ *   the headline, so the head has depth as it scrolls.
+ * - Three bold numbered Expand boxes: a giant numeral, the title and 2–3
+ *   keywords visible; the explanation lives inside the box. Each row plays
+ *   in as one sequence: its hairline draws from the left, the numeral flips
+ *   up on a baseline hinge, the title rises, the keywords follow, the plus
+ *   spins in. The numerals ride their own scroll plane (a small drift
+ *   against the titles), so the table reads in depth.
+ * - The verdict is the section's moment: a tally rail runs 01 → 02 → 03,
+ *   each node filling as the line reaches it, into Vesta's orbit mark, whose
+ *   planet laps once; then the verdict flips in at display size.
+ *
+ * - Round 3: the wrapper rises out of a tilted, deeper plane (data-scene);
+ *   the verdict is set at display-1 on its own parallax plane, against the
+ *   rail, so the closing reads as the section's climax.
+ *
+ * Default state (no JS, motion off, failed engine) = everything final:
+ * lines drawn, nodes filled, numerals in place, the clean ellipse.
  */
 import SectionLabel from '../ui/SectionLabel.astro';
 import SplitText from '../ui/SplitText.astro';
+import Expand from '../ui/Expand.astro';
 import { problem } from '../../data/site';
 
 /* Typesetting only: tie one-letter words to the next word so no line ends
    on a stranded "A" or "I". The words are unchanged. */
 const NBSP = String.fromCharCode(160);
 const tie = (t: string) => t.replace(/(^|\s)([AaI])\s+/g, (_m, pre: string, w: string) => pre + w + NBSP);
+
+const rows = problem.rows as Array<(typeof problem.rows)[number] & { keywords?: string[] }>;
+const last = rows.length - 1;
 
 /* ---- the orbit mark (same anatomy as the wordmark's: ellipse, hearth,
    planet; tilted −24°). viewBox = rendered desktop size, so user units = px. */
@@ -59,55 +72,114 @@ for (let k = 0, j = 1; k <= STEPS; k++) {
 ---
 
 <section id={problem.id} class="s-paper section problem" data-nav-theme="light" aria-labelledby="problem-title">
-  <div class="wrap">
+  <div class="wrap" data-scene>
     <header class="g p-head">
-      <SectionLabel n={problem.label.index ?? undefined} name={problem.label.name} />
-      <SplitText as="h2" id="problem-title" class="d2" text={problem.h2} />
+      <div class="p-label" data-parallax="0.04">
+        <SectionLabel n={problem.label.index ?? undefined} name={problem.label.name} />
+      </div>
+      <SplitText as="h2" id="problem-title" class="d2 p-h2" text={problem.h2} />
     </header>
 
-    <ol class="p-rows">
+    <ol class="p-rows" role="list" data-p-rows>
       {
-        problem.rows.map((row, r) => (
-          <li class="g p-row" data-inview style={`--r:${r}`}>
+        rows.map((row, r) => (
+          <li class="p-row" data-inview style={`--r:${r}`}>
             <span class="p-line" aria-hidden="true" />
-            <span class="p-num" aria-hidden="true">
-              <span class="p-num-i">{row.index}</span>
-            </span>
-            <h3 class="d3 p-row-title">{tie(row.title)}</h3>
-            <p class="body p-row-body">{tie(row.body)}</p>
-            {r === problem.rows.length - 1 && <span class="p-line p-line-end" aria-hidden="true" />}
+            <Expand title={tie(row.title)} keywords={row.keywords ?? []} index={row.index} size="l" reveal={false} class="p-xp">
+              <p class="body p-body">{tie(row.body)}</p>
+            </Expand>
+            {r === last && <span class="p-line p-line-end" aria-hidden="true" />}
           </li>
         ))
       }
     </ol>
 
-    <div class="g p-foot">
-      <span class="p-mark" data-inview data-orbit-trace={trace.join(' ')} aria-hidden="true">
-        <svg class="pm-svg" width={MW} height={MH} viewBox={`0 0 ${MW} ${MH}`} focusable="false">
-          <g transform={`rotate(-24 ${CX} ${CY})`}>
-            <path class="pm-path" d={orbitD} pathLength="100" />
-            <circle class="pm-hearth" cx={CX} cy={CY} r="1.8" />
-            <circle class="pm-planet" cx="0" cy="0" r="3.4" style={`transform: translate(${CX + RX}px, ${CY}px)`} />
-          </g>
-        </svg>
-      </span>
-      {/* delayed so that, when the whole table arrives at once, the verdict lands last */}
-      <SplitText as="p" class="d3 p-verdict" text={problem.closing} delay={360} />
+    <div class="p-foot" data-inview>
+      <div class="p-tally" aria-hidden="true">
+        {
+          rows.map((row, k) => (
+            <span class="p-tick" style={`--k:${k}`}>
+              <span class="p-node" />
+              <span class="p-tick-n">{row.index}</span>
+              <span class="p-seg" />
+            </span>
+          ))
+        }
+        <span class="p-mark" data-orbit-trace={trace.join(' ')}>
+          <svg class="pm-svg" width={MW} height={MH} viewBox={`0 0 ${MW} ${MH}`} focusable="false">
+            <g transform={`rotate(-24 ${CX} ${CY})`}>
+              <path class="pm-path" d={orbitD} pathLength="100" />
+              <circle class="pm-hearth" cx={CX} cy={CY} r="1.8" />
+              <circle class="pm-planet" cx="0" cy="0" r="3.4" style={`transform: translate(${CX + RX}px, ${CY}px)`} />
+            </g>
+          </svg>
+        </span>
+      </div>
+      {/* the words land while the rail runs; the last ones as the planet sets off */}
+      <div class="p-verdict-plane" data-parallax="-0.05">
+        <SplitText as="p" class="d1 p-verdict" text={tie(problem.closing)} delay={620} />
+      </div>
     </div>
   </div>
 </section>
 
 <script>
-  import { isReduced } from '../../scripts/motion';
+  import { addFrame, requestFrame, isReduced, vestibular } from '../../scripts/motion';
 
-  /* The planet's one lap. CSS draws the stroke (a transition on
+  /* 1. The numerals' scroll plane: each row writes --rp (its centre's offset
+     from the viewport centre, −1…1) and CSS turns it into a small `translate`
+     on the numeral — a separate property from the entry `transform`, so the
+     two never fight. Only while the table is near the viewport. */
+  const list = document.querySelector<HTMLElement>('#problem [data-p-rows]');
+  if (list) {
+    const rows = Array.from(list.querySelectorAll<HTMLElement>('.p-row'));
+    const rp: number[] = rows.map(() => 0);
+    let near = false;
+    let wasStatic = false;
+
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(
+        ([e]) => {
+          near = e.isIntersecting;
+          if (near) requestFrame();
+        },
+        { rootMargin: '20% 0px 20% 0px' }
+      ).observe(list);
+    } else {
+      near = true;
+    }
+
+    addFrame({
+      read(_y, vh) {
+        if (!near) return;
+        rows.forEach((row, i) => {
+          const b = row.getBoundingClientRect();
+          const c = (b.top + b.height / 2 - vh / 2) / (vh / 2);
+          rp[i] = Math.max(-1.2, Math.min(1.2, c));
+        });
+      },
+      write() {
+        if (!near) return;
+        if (vestibular()) {
+          if (!wasStatic) rows.forEach((row) => row.style.setProperty('--rp', '0'));
+          wasStatic = true;
+          return;
+        }
+        wasStatic = false;
+        rows.forEach((row, i) => row.style.setProperty('--rp', rp[i].toFixed(3)));
+      },
+    });
+  }
+
+  /* 2. The planet's one lap. CSS draws the stroke (a transition on
      stroke-dashoffset in arc-length units); this moves the planet along the
      same arc-length samples with the same easing and delay, so it rides the
      head of the line. Transform only; one shot; nothing to pause. */
   const mark = document.querySelector<HTMLElement>('#problem [data-orbit-trace]');
+  const foot = mark?.closest<HTMLElement>('.p-foot');
   const planet = mark?.querySelector<SVGCircleElement>('.pm-planet');
 
-  if (mark && planet && typeof planet.animate === 'function' && !mark.classList.contains('is-in')) {
+  if (mark && foot && planet && typeof planet.animate === 'function' && !foot.classList.contains('is-in')) {
     const frames = (mark.dataset.orbitTrace || '')
       .split(' ')
       .filter(Boolean)
@@ -117,30 +189,35 @@ for (let k = 0, j = 1; k <= STEPS; k++) {
       });
 
     if (frames.length > 2) {
-      mark.addEventListener(
+      foot.addEventListener(
         'vesta:reveal',
-        () => {
-          if (isReduced()) return;
+        (e) => {
+          if (e.target !== foot || isReduced()) return;
           planet.animate(frames, {
             duration: 1600,
-            delay: 150,
+            delay: 1560,
             easing: 'cubic-bezier(0.65, 0, 0.35, 1)',
           });
-        },
-        { once: true }
+        }
       );
     }
   }
 </script>
 
 <style>
+  /* the scene entrance swings the wrapper's lower edge toward the viewer;
+     keep that from ever widening the page */
+  .problem {
+    overflow-x: clip;
+  }
+
   /* ---------------------------------------------------------------- head */
 
   .p-head {
     row-gap: 24px;
   }
 
-  .p-head :global(h2) {
+  .p-head :global(.p-h2) {
     max-width: 18ch;
     color: var(--ink);
   }
@@ -148,22 +225,25 @@ for (let k = 0, j = 1; k <= STEPS; k++) {
   /* ---------------------------------------------------------------- rows */
 
   .p-rows {
-    margin-top: clamp(4rem, 2rem + 5vw, 6.5rem);
+    --numw: 3.2rem;
+    --drift: 10px;
+    margin-top: clamp(3.5rem, 2rem + 4vw, 6rem);
   }
 
   .p-row {
     position: relative;
-    padding-block: 32px;
   }
 
   /* the 1px strong top line; drawn from the left when the row arrives */
   .p-line {
     position: absolute;
+    z-index: 1;
     inset-inline: 0;
     top: 0;
     height: 1px;
     background-color: var(--line-strong);
     transform-origin: left center;
+    pointer-events: none;
   }
 
   /* the last row also closes the table */
@@ -172,51 +252,136 @@ for (let k = 0, j = 1; k <= STEPS; k++) {
     bottom: 0;
   }
 
-  .p-num {
-    display: block;
-    overflow: clip;
-    padding-block: 0.14em;
-    margin-block: -0.14em;
-    color: var(--ink-3);
-    font-stretch: var(--wd-display);
-    font-size: clamp(2.5rem, 2.2rem + 1vw, 3rem);
-    font-weight: 560;
-    line-height: 1;
-    letter-spacing: -0.01em;
-    /* proportional lining figures: the tabular zero is slashed and reads as
-       code. These indices never count, so they don't need tabular widths. */
-    font-variant-numeric: lining-nums proportional-nums;
+  /* the Expand's own top border gives way to the drawn line */
+  .p-row :global(.xp) {
+    border-top-color: transparent;
   }
 
-  .p-num-i {
-    display: inline-block;
+  .p-row :global(.xp-sum) {
+    grid-template-columns: var(--numw) minmax(0, 1fr) auto;
+    column-gap: 14px;
+    padding-block: 26px 28px;
+    /* the numerals and titles hinge in 3D */
+    perspective: 700px;
   }
 
-  .p-row-title {
-    margin-top: 20px;
+  /* the numeral: a bold display figure, not a label */
+  .p-row :global(.xp-idx) {
+    min-width: 0;
+    padding-top: 0;
+    margin-top: -0.04em;
+    font-size: clamp(2.5rem, 1.6rem + 3.6vw, 6.75rem);
+    font-weight: 660;
+    line-height: 0.8;
+    letter-spacing: -0.035em;
+    text-transform: none;
     color: var(--ink);
-    max-width: 22ch;
+    font-variant-numeric: lining-nums proportional-nums;
+    transform-origin: 50% 100%;
+    translate: 0 calc(var(--rp, 0) * var(--drift));
+    transition:
+      transform var(--t-ui) var(--ease-expo),
+      color var(--t-ui) linear;
   }
 
-  .p-row-body {
-    margin-top: 12px;
+  .p-row :global(.xp-title) {
+    max-width: 24ch;
+    font-size: clamp(1.3125rem, 1rem + 1.4vw, 2.375rem);
+    line-height: 1.08;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+    transform-origin: 0 100%;
+  }
+
+  .p-row :global(.xp-keys) {
+    margin-top: 2px;
+  }
+
+  /* phones: the keywords stack as a short spec list (no separators at the
+     start of wrapped lines) */
+  @media (max-width: 767px) {
+    .p-row :global(.xp-keys) {
+      display: grid;
+      gap: 5px;
+    }
+
+    .p-row :global(.xp-key + .xp-key::before) {
+      content: none;
+    }
+  }
+
+  .p-row :global(.xp-key) {
+    color: var(--ink-2);
+  }
+
+  .p-row :global(.xp.is-open .xp-idx) {
+    color: var(--violet-ink);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .p-row :global(.xp-sum:hover .xp-idx) {
+      color: var(--violet-ink);
+    }
+  }
+
+  .p-body {
+    max-width: 52ch;
+    padding-left: calc(var(--numw) + 14px);
     color: var(--ink-2);
   }
 
   /* ------------------------------------------------------------- closing */
 
   .p-foot {
-    margin-top: 56px;
+    margin-top: clamp(4rem, 2.5rem + 4vw, 7rem);
+  }
+
+  .p-tally {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
     align-items: center;
   }
 
-  .p-foot :global(.p-verdict) {
-    margin-top: 20px;
-    color: var(--ink);
-    text-wrap: balance;
+  .p-tick {
+    display: flex;
+    align-items: center;
+    min-width: 0;
   }
 
-  /* the orbit mark: 48px on phones, 60px from tablet up */
+  .p-node {
+    position: relative;
+    flex: 0 0 auto;
+    width: 11px;
+    height: 11px;
+    border: 1px solid var(--ink);
+    background-color: var(--violet);
+    border-color: var(--violet);
+    transition:
+      background-color 200ms linear,
+      border-color 200ms linear;
+  }
+
+  .p-tick-n {
+    flex: 0 0 auto;
+    margin-inline: 10px 12px;
+    font-stretch: var(--wd-display);
+    font-size: var(--t-label);
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: 0.14em;
+    color: var(--ink-3);
+  }
+
+  /* the rail, one segment per tick, each drawn from the left */
+  .p-seg {
+    flex: 1 1 auto;
+    min-width: 12px;
+    height: 1px;
+    margin-inline-end: 10px;
+    background-color: var(--line-strong);
+    transform-origin: left center;
+  }
+
   .p-mark {
     display: block;
     line-height: 0;
@@ -226,9 +391,7 @@ for (let k = 0, j = 1; k <= STEPS; k++) {
     width: 48px;
     height: auto;
     overflow: visible;
-    /* optical: the ellipse's left extreme, not the viewBox edge, meets the
-       column edge that the numerals and text share */
-    margin-inline-start: -4px;
+    margin-inline-end: -4px;
   }
 
   .pm-path {
@@ -248,6 +411,16 @@ for (let k = 0, j = 1; k <= STEPS; k++) {
     fill: var(--mark, var(--violet));
   }
 
+  .p-verdict-plane {
+    margin-top: clamp(32px, 1rem + 3vw, 64px);
+  }
+
+  .p-foot :global(.p-verdict) {
+    max-width: 13ch;
+    color: var(--ink);
+    text-wrap: balance;
+  }
+
   /* -------------------------------------------------------------- tablet */
 
   @media (min-width: 768px) {
@@ -255,158 +428,182 @@ for (let k = 0, j = 1; k <= STEPS; k++) {
       row-gap: 32px;
     }
 
-    /* one row height for all three: the hairlines fall at equal intervals,
-       like a specification sheet, whatever the body wraps to */
     .p-rows {
-      display: grid;
-      grid-auto-rows: 1fr;
+      --numw: 5.5rem;
+      --drift: 16px;
     }
 
-    .p-row {
-      align-items: baseline;
-      /* the spare height of a shorter row collects at its foot */
-      align-content: start;
-      padding-block: 40px;
+    .p-row :global(.xp-sum) {
+      column-gap: 20px;
+      padding-block: 34px 36px;
     }
 
-    .p-num {
-      grid-column: 1 / span 2;
-      grid-row: 1;
-    }
-
-    .p-row-title {
-      grid-column: 3 / -1;
-      grid-row: 1;
-      margin-top: 0;
-    }
-
-    .p-row-body {
-      grid-column: 3 / -1;
-      grid-row: 2;
-      margin-top: 16px;
-      max-width: 52ch;
-      /* two or three lines in a table cell: even them out, no "good work." tails */
-      text-wrap: balance;
-    }
-
-    .p-foot {
-      margin-top: 80px;
-    }
-
-    /* centred on the cap height of the verdict's FIRST line (mark 34px),
-       so it stays put when the sentence wraps at narrow desktop widths */
-    .p-mark {
-      grid-column: 1 / span 2;
-      grid-row: 1;
-      align-self: start;
-      margin-top: calc(var(--t-d3) * 0.65 - 17px);
+    .p-body {
+      padding-left: calc(var(--numw) + 20px);
     }
 
     .pm-svg {
       width: 60px;
-      margin-inline-start: -5px;
-    }
-
-    .p-foot :global(.p-verdict) {
-      grid-column: 3 / -1;
-      grid-row: 1;
-      margin-top: 0;
+      margin-inline-end: -5px;
     }
   }
 
   /* ------------------------------------------------------------- desktop */
 
   @media (min-width: 1100px) {
-    .p-head :global(h2) {
+    .p-head :global(.p-h2) {
       grid-column: 1 / span 9;
     }
 
-    .p-row {
-      padding-block: 48px;
+    .p-rows {
+      --drift: 26px;
     }
 
-    .p-row-title {
-      grid-column: 3 / span 4;
+    /* the summary sits on the page grid: numeral 1–3, title 4–11, the plus
+       in 12. The detail opens under the title column. */
+    .p-row :global(.xp-sum) {
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      column-gap: var(--gap);
+      padding-block: 44px 46px;
     }
 
-    .p-row-body {
-      grid-column: 7 / span 5;
-      grid-row: 1;
-      margin-top: 0;
-      max-width: 62ch;
+    .p-row :global(.xp-idx) {
+      grid-column: 1 / span 3;
     }
 
-    .p-foot {
-      margin-top: 96px;
+    .p-row :global(.xp-head) {
+      grid-column: 4 / span 8;
     }
 
-    /* the verdict takes the body column (spec: 7–12), so the mark leaves the
-       index column and hangs in the margin just before it, like a signature:
-       the sentence keeps the column edge, the mark sits in the gutter. */
-    .p-mark {
-      grid-column: 7 / -1;
-      justify-self: start;
-      margin-inline-start: -84px;
+    .p-row :global(.xp-icon) {
+      grid-column: 12;
+      justify-self: end;
+      margin-top: 4px;
+    }
+
+    .p-row :global(.xp-inner) {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      column-gap: var(--gap);
+    }
+
+    .p-body {
+      grid-column: 4 / span 6;
+      padding-left: 0;
+      font-size: var(--t-lead);
+      line-height: 1.5;
     }
 
     .p-foot :global(.p-verdict) {
-      grid-column: 7 / -1;
+      max-width: 14ch;
     }
   }
 
   /* -------------------------------------------------------------- motion
-     Default = final. Hidden starting states live only under the armed
-     html state, keyed off .is-in (data-inview). Per row: line draws
-     1000ms quint · numeral masks +100 · title +160 · body +240; rows
-     stagger 120ms. The mark: hearth first, then one 1600ms lap. */
+     Default = final. Hidden starting states live only under the armed html
+     state, keyed off .is-in (data-inview). The Expand's parts play in with
+     CSS animations (fill: backwards), so the delays never leak into the
+     box's own hover and open transitions afterwards. */
+
+  @keyframes pb-flip {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 55%, 0) rotateX(-88deg);
+    }
+    30% {
+      opacity: 1;
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes pb-hinge {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 0.5em, 0) rotateX(-52deg);
+    }
+    40% {
+      opacity: 1;
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes pb-rise {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 12px, 0);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes pb-spin {
+    from {
+      opacity: 0;
+      transform: scale(0.2) rotate(-180deg);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes pb-pop {
+    from {
+      transform: scale(0) rotate(45deg);
+    }
+    55% {
+      transform: scale(1.5) rotate(0deg);
+    }
+    to {
+      transform: none;
+    }
+  }
 
   .p-line {
     transition:
       opacity 200ms linear,
-      transform 1000ms var(--ease-quint);
-    transition-delay: calc(var(--r, 0) * 120ms);
+      transform 1100ms var(--ease-quint);
+    transition-delay: calc(var(--r, 0) * 140ms);
   }
 
   .p-line-end {
-    transition-delay: calc(var(--r, 0) * 120ms + 320ms);
+    transition-delay: calc(var(--r, 0) * 140ms + 360ms);
   }
 
-  .p-num-i {
-    transition:
-      opacity 300ms linear,
-      transform var(--t-mask) var(--ease-expo);
-    transition-delay: calc(var(--r, 0) * 120ms + 100ms);
+  .p-row.is-in :global(.xp-idx) {
+    animation: pb-flip 1300ms var(--ease-expo) backwards;
+    animation-delay: calc(var(--r, 0) * 140ms + 90ms);
   }
 
-  .p-row-title,
-  .p-row-body {
-    transition:
-      opacity var(--t-reveal) var(--ease-expo),
-      transform var(--t-reveal) var(--ease-expo);
+  .p-row.is-in :global(.xp-title) {
+    animation: pb-hinge 1100ms var(--ease-expo) backwards;
+    animation-delay: calc(var(--r, 0) * 140ms + 200ms);
   }
 
-  .p-row-title {
-    transition-delay: calc(var(--r, 0) * 120ms + 160ms);
+  .p-row.is-in :global(.xp-key) {
+    animation: pb-rise 800ms var(--ease-expo) backwards;
+    animation-delay: calc(var(--r, 0) * 140ms + 360ms);
   }
 
-  .p-row-body {
-    transition-delay: calc(var(--r, 0) * 120ms + 240ms);
+  .p-row.is-in :global(.xp-key:nth-child(2)) {
+    animation-delay: calc(var(--r, 0) * 140ms + 440ms);
   }
 
-  .pm-path {
-    transition:
-      opacity 200ms linear 150ms,
-      stroke-dashoffset 1600ms var(--ease-mech) 150ms;
+  .p-row.is-in :global(.xp-key:nth-child(3)) {
+    animation-delay: calc(var(--r, 0) * 140ms + 520ms);
   }
 
-  .pm-hearth {
-    transition:
-      opacity 300ms linear,
-      transform 700ms var(--ease-expo);
-  }
-
-  .pm-planet {
-    transition: opacity 200ms linear 150ms;
+  .p-row.is-in :global(.xp-icon) {
+    animation: pb-spin 1000ms var(--ease-expo) backwards;
+    animation-delay: calc(var(--r, 0) * 140ms + 420ms);
   }
 
   :global(html.js:not(.motion-reduced):not(.motion-failed)) .p-row:not(.is-in) .p-line {
@@ -414,15 +611,61 @@ for (let k = 0, j = 1; k <= STEPS; k++) {
     transform: scaleX(0);
   }
 
-  :global(html.js:not(.motion-reduced):not(.motion-failed)) .p-row:not(.is-in) .p-num-i {
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .p-row:not(.is-in) :global(:is(.xp-idx, .xp-title, .xp-key, .xp-icon)) {
     opacity: 0;
-    transform: translate3d(0, 104%, 0);
   }
 
-  :global(html.js:not(.motion-reduced):not(.motion-failed)) .p-row:not(.is-in) .p-row-title,
-  :global(html.js:not(.motion-reduced):not(.motion-failed)) .p-row:not(.is-in) .p-row-body {
+  /* the tally: segment k draws after node k lights; node k+1 lights as the
+     line reaches it; the last segment runs into the mark */
+  .p-seg {
+    transition:
+      opacity 150ms linear,
+      transform 620ms var(--ease-expo);
+    transition-delay: calc(220ms + var(--k, 0) * 420ms);
+  }
+
+  .p-tick-n {
+    transition:
+      opacity 400ms linear,
+      transform 800ms var(--ease-expo);
+    transition-delay: calc(120ms + var(--k, 0) * 420ms);
+  }
+
+  .p-foot.is-in .p-node {
+    animation: pb-pop 700ms var(--ease-expo) backwards;
+    animation-delay: calc(60ms + var(--k, 0) * 420ms);
+    transition-delay: calc(60ms + var(--k, 0) * 420ms);
+  }
+
+  .pm-path {
+    transition:
+      opacity 200ms linear 1560ms,
+      stroke-dashoffset 1600ms var(--ease-mech) 1560ms;
+  }
+
+  .pm-hearth {
+    transition:
+      opacity 300ms linear 1380ms,
+      transform 700ms var(--ease-expo) 1380ms;
+  }
+
+  .pm-planet {
+    transition: opacity 200ms linear 1560ms;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .p-foot:not(.is-in) .p-node {
+    background-color: var(--paper);
+    border-color: var(--ink);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .p-foot:not(.is-in) .p-seg {
     opacity: 0;
-    transform: translate3d(0, var(--rise), 0);
+    transform: scaleX(0);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .p-foot:not(.is-in) .p-tick-n {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
   }
 
   /* the stroke is dashed only while armed, so the default is a clean ellipse */
@@ -430,24 +673,29 @@ for (let k = 0, j = 1; k <= STEPS; k++) {
     stroke-dasharray: 100 100;
   }
 
-  :global(html.js:not(.motion-reduced):not(.motion-failed)) .p-mark:not(.is-in) .pm-path {
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .p-foot:not(.is-in) .pm-path {
     opacity: 0;
     stroke-dashoffset: 100;
   }
 
-  :global(html.js:not(.motion-reduced):not(.motion-failed)) .p-mark:not(.is-in) .pm-hearth {
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .p-foot:not(.is-in) .pm-hearth {
     opacity: 0;
     transform: scale(0);
   }
 
   /* opacity only: the planet's resting place is its inline transform */
-  :global(html.js:not(.motion-reduced):not(.motion-failed)) .p-mark:not(.is-in) .pm-planet {
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .p-foot:not(.is-in) .pm-planet {
     opacity: 0;
   }
 
-  /* motion switched off mid-page: land instantly, no late transitions */
+  /* motion switched off mid-page: land instantly, no late transitions, no drift */
   :global(html.motion-reduced) .p-row *,
-  :global(html.motion-reduced) .p-mark * {
+  :global(html.motion-reduced) .p-foot * {
     transition: none;
+  }
+
+  :global(html.motion-reduced) .p-row :global(.xp-idx),
+  :global(html.motion-failed) .p-row :global(.xp-idx) {
+    translate: none;
   }
 </style>

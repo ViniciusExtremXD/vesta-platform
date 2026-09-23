@@ -4,7 +4,10 @@
  *   head (void)        WORK · "No borrowed logos." · lead
  *   founding (paper)   three founding-client places, open, + WhatsApp CTA
  *   cases (void)       only when a collection entry is confirmed: rows
- *   concept (void)     Concept 01 · A study — always labelled fictional
+ *   studies (void)     the five concept studies as a 3D gallery — each card
+ *                      scroll-scrubbed in 3D, pointer-tilted, the 2016 site
+ *                      swinging out from behind on hover; always labelled
+ *                      fictional (label + each plate's .example domain)
  *
  * Gating: case studies render only with `confirmed: true` (client permission
  * + measured numbers, schema-enforced in content.config.ts).
@@ -15,10 +18,13 @@ import PageHead from '../../components/work/PageHead.astro';
 import CaseRow from '../../components/work/CaseRow.astro';
 import ConceptPlate from '../../components/ConceptPlate.astro';
 import SplitText from '../../components/ui/SplitText.astro';
+import Expand from '../../components/ui/Expand.astro';
+import Cosmos from '../../components/Cosmos.astro';
+import { concepts } from '../../data/concepts';
 import Arrow from '../../components/ui/Arrow.astro';
 import WaGlyph from '../../components/ui/WaGlyph.astro';
 import { TODO_SITE_CASES } from '../../components/work/verticals';
-import { work, founding, hero, wa } from '../../data/site';
+import { work, founding, wa } from '../../data/site';
 import { url } from '../../lib/url';
 
 const cases = (await getCollection('cases'))
@@ -40,7 +46,7 @@ const slots = founding.slots.map((s) => ({
 
   {/* ------------------------------------------------ founding clients */}
   <section class="s-paper section wf" data-nav-theme="light" aria-labelledby="wf-title">
-    <div class="wrap g">
+    <div class="wrap g" data-scene="soft">
       <div class="wf-copy">
         <SplitText as="h2" id="wf-title" class="d2 wf-title" text={work.founding.title} />
         <div class="btn-row wf-cta" data-reveal style="--i:2">
@@ -50,6 +56,9 @@ const slots = founding.slots.map((s) => ({
             <Arrow />
           </a>
         </div>
+        <Expand title={work.studies.foundingMore.title} keywords={work.studies.foundingMore.keys} i={3} class="wf-more">
+          <p class="body wf-body">{founding.body}</p>
+        </Expand>
       </div>
 
       <ol class="wf-slots">
@@ -88,39 +97,96 @@ const slots = founding.slots.map((s) => ({
     )
   }
 
-  {/* ------------------------------------------------ Concept 01 entry */}
-  <section class="s-void section wc" data-nav-theme="dark" aria-labelledby="wc-title">
-    <div class="wrap g wc-grid">
-      <div class="wc-copy">
-        <p class="label wc-label" data-reveal>
+  {/* --------------------------------------------- the five studies */}
+  <section class="s-void section wg" data-nav-theme="dark" aria-labelledby="wg-title">
+    <Cosmos variant="stars" />
+    <div class="wrap g wg-grid">
+      <div class="wg-head" data-scene="soft">
+        <p class="label wg-label" data-reveal>
           <span class="stripe" aria-hidden="true"></span>
-          <span>{work.concept.label}</span>
+          <span>{work.studies.label}</span>
         </p>
-        <SplitText as="h2" id="wc-title" class="d2 wc-title" text={work.concept.title} />
-        <p class="body wc-text" data-reveal style="--i:2">{work.concept.text}</p>
-        <p class="wc-go" data-reveal style="--i:3">
-          <a class="tlink wc-link" href={url(work.concept.link.href)}>
-            <span>{bare(work.concept.link.label)}</span>
-            <Arrow />
-          </a>
-        </p>
+        <SplitText as="h2" id="wg-title" class="d2 wg-title" text={work.studies.title} />
+        <p class="body wg-lead" data-reveal style="--i:2">{work.studies.lead}</p>
       </div>
 
-      {/* the plates repeat the study link for pointer users; hidden from
-          assistive tech and the tab order (the text link is the real one) */}
-      <a class="wc-stage" href={url(work.concept.link.href)} tabindex="-1" aria-hidden="true">
-        <div class="wc-after" data-reveal style="--d:120ms">
-          <ConceptPlate mode="static" />
-          <span class="label wc-tag wc-tag--after">{hero.plate.tags.after}</span>
-        </div>
-        <div class="wc-before" data-reveal style="--d:320ms">
-          <ConceptPlate mode="static" state="before" bar={false} />
-          <span class="label wc-tag wc-tag--before">{hero.plate.tags.before}</span>
-        </div>
-      </a>
+      <ol class="wg-list">
+        {
+          concepts.map((c, i) => (
+            <li class:list={['wg-item', i % 2 ? 'wg-item--l' : 'wg-item--r']} data-wg style={`--side:${i % 2 ? -1 : 1}`}>
+              <a class="wg-card" href={url(c.href)} data-reveal="fade">
+                <span class="wg-stage" aria-hidden="true" data-tilt="6" data-wg-light>
+                  <span class="wg-before">
+                    <ConceptPlate concept={c.id} mode="static" state="before" bar={false} />
+                    <span class="label wg-tag">{work.studies.before}</span>
+                  </span>
+                  <span class="wg-after">
+                    <ConceptPlate concept={c.id} mode="static" />
+                  </span>
+                  <span class="wg-light" />
+                </span>
+                <span class="wg-meta">
+                  <span class="wg-num" aria-hidden="true">{c.number}</span>
+                  <span class="wg-txt">
+                    <span class="label wg-niche">{c.label} · {c.niche}</span>
+                    <span class="wg-name">{c.name}</span>
+                    <span class="small wg-city">{c.city}</span>
+                  </span>
+                  <span class="tlink wg-go">
+                    <span>{work.studies.open}</span>
+                    <Arrow />
+                  </span>
+                </span>
+              </a>
+            </li>
+          ))
+        }
+      </ol>
     </div>
   </section>
 </Base>
+
+<script>
+  import { addFrame, vestibular } from '../../scripts/motion';
+
+  const items = Array.from(document.querySelectorAll<HTMLElement>('[data-wg]'));
+
+  /* scroll-scrubbed 3D per card (one shared loop, transform-only) */
+  if (items.length && !vestibular()) {
+    const ps = new Array(items.length).fill(0);
+    const last = new Array(items.length).fill(NaN);
+    addFrame({
+      read(_y, vh) {
+        items.forEach((el, i) => {
+          const r = el.getBoundingClientRect();
+          const mid = r.top + r.height / 2;
+          const p = (mid - vh / 2) / (vh * 0.9);
+          ps[i] = Math.max(-1, Math.min(1, p));
+        });
+      },
+      write() {
+        items.forEach((el, i) => {
+          const v = Math.round(ps[i] * 1000) / 1000;
+          if (v === last[i]) return;
+          last[i] = v;
+          el.style.setProperty('--p', String(v));
+          el.style.setProperty('--pa', String(Math.abs(v)));
+        });
+      },
+    });
+  }
+
+  /* the pointer light inside each plate (fine pointers) */
+  if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+    document.querySelectorAll<HTMLElement>('[data-wg-light]').forEach((el) => {
+      el.addEventListener('pointermove', (e) => {
+        const r = el.getBoundingClientRect();
+        el.style.setProperty('--lx', `${(((e.clientX - r.left) / r.width) * 100).toFixed(1)}%`);
+        el.style.setProperty('--ly', `${(((e.clientY - r.top) / r.height) * 100).toFixed(1)}%`);
+      });
+    });
+  }
+</script>
 
 <style>
   /* ============================================================ founding */
@@ -268,6 +334,16 @@ const slots = founding.slots.map((s) => ({
     }
   }
 
+  .wf-copy :global(.wf-more) {
+    margin-top: 48px;
+    max-width: 32rem;
+  }
+
+  .wf-body {
+    color: var(--ink-2);
+    max-width: 44ch;
+  }
+
   /* ========================================================= client work */
 
   .wk-list {
@@ -275,140 +351,234 @@ const slots = founding.slots.map((s) => ({
     border-bottom: 1px solid var(--line-strong);
   }
 
-  /* ========================================================= concept 01 */
+  /* ============================================================ studies */
 
-  .wc {
-    overflow: clip;
-    /* soft nebula light behind the plates (≤10% alpha) */
-    background-image: radial-gradient(40% 55% at 72% 52%, rgb(98 54 232 / 0.1), transparent 70%);
-  }
-
-  .wc-grid {
+  .wg {
     position: relative;
-    row-gap: 56px;
-    align-items: center;
+    overflow: clip;
+    background-image: radial-gradient(40% 40% at 78% 18%, rgb(98 54 232 / 0.1), transparent 70%);
   }
 
-  .wc-label {
+  .wg-grid {
+    position: relative;
+    z-index: 1;
+    row-gap: 0;
+  }
+
+  .wg-head {
+    position: relative;
+    z-index: 2;
+  }
+
+  .wg-label {
     display: flex;
     align-items: center;
     gap: 12px;
     color: var(--lilac);
   }
 
-  .wc-title {
+  .wg-title {
     margin-top: 24px;
-    max-width: 11ch;
+    max-width: 10ch;
   }
 
-  .wc-text {
+  .wg-lead {
     margin-top: 24px;
     color: var(--haze);
-    max-width: 40ch;
+    max-width: 36ch;
   }
 
-  .wc-go {
-    margin-top: 32px;
+  /* --------------------------------------------------------- the list */
+  .wg-list {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(4rem, 2rem + 6vw, 7rem);
+    margin-top: clamp(3.5rem, 2rem + 4vw, 5rem);
   }
 
-  .wc-link {
-    font-size: 0.9375rem;
+  .wg-item {
+    --p: 0;
+    --pa: 0;
+    position: relative;
+    perspective: 1800px;
   }
 
-  /* two plates: the rebuilt site in front, the 2016 original behind it */
-  .wc-stage {
+  /* scroll-scrubbed 3D: the card turns toward the viewer as it reaches the
+     middle of the screen and away as it leaves (motion.ts frame loop writes
+     --p ∈ [-1, 1] and --pa = |p|; no JS = flat) */
+  .wg-card {
     position: relative;
     display: block;
-    padding-bottom: 22%;
     color: inherit;
     text-decoration: none;
+    transform-style: preserve-3d;
+    transform: rotateX(calc(var(--p) * -9deg)) rotateY(calc(var(--p) * var(--side) * 11deg))
+      translate3d(0, 0, calc(var(--pa) * -160px));
+    transform-origin: 50% 50%;
   }
 
-  .wc-after {
+  .wg-stage {
+    position: relative;
+    display: block;
+    padding: 0 0 12% 10%;
+  }
+
+  .wg-after {
     position: relative;
     z-index: 2;
-    width: 88%;
-    margin-left: auto;
+    display: block;
+    transition: transform 900ms var(--ease-expo);
   }
 
-  .wc-before {
+  /* the 2016 site waits behind the rebuild, lower-left, and swings out */
+  .wg-before {
     position: absolute;
     left: 0;
     bottom: 0;
     z-index: 1;
-    width: 46%;
+    display: block;
+    width: 44%;
+    transform-origin: 100% 50%;
+    transition: transform 1000ms var(--ease-expo);
   }
 
-  .wc-after :global(.cp),
-  .wc-before :global(.cp) {
-    transition: transform 900ms var(--ease-expo);
-  }
-
-  .wc-tag {
+  .wg-tag {
     position: absolute;
-    z-index: 7;
-    padding: 5px 8px 4px;
-    background-color: var(--void);
-    color: var(--starlight);
-    font-size: 11px;
-    letter-spacing: 0.16em;
-    white-space: nowrap;
-  }
-
-  .wc-tag--after {
-    right: 12px;
-    bottom: 12px;
-    display: none;
-  }
-
-  @media (min-width: 768px) {
-    .wc-tag--after {
-      display: block;
-    }
-  }
-
-  .wc-tag--before {
     left: 0;
     top: 100%;
-    margin-top: 10px;
-    padding-inline: 0;
+    margin-top: 8px;
+    color: var(--haze);
     background-color: var(--void);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+  }
+
+  /* a soft light that follows the pointer, inside the plate surface */
+  .wg-light {
+    position: absolute;
+    z-index: 3;
+    inset: 0 0 12% 10%;
+    pointer-events: none;
+    background-image: radial-gradient(360px circle at var(--lx, 50%) var(--ly, 30%), rgb(243 240 250 / 0.1), transparent 62%);
+    opacity: 0;
+    transition: opacity 500ms linear;
+  }
+
+  .wg-meta {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    column-gap: 20px;
+    row-gap: 16px;
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line-dark);
+  }
+
+  .wg-num {
+    color: var(--lilac);
+    font-size: clamp(2.5rem, 1.6rem + 2.6vw, 4.25rem);
+    font-weight: 640;
+    line-height: 0.82;
+    letter-spacing: -0.04em;
+    font-variant-numeric: lining-nums proportional-nums;
+  }
+
+  .wg-txt {
+    display: grid;
+    gap: 8px;
+  }
+
+  .wg-niche {
+    color: var(--lilac);
+  }
+
+  .wg-name {
+    color: var(--starlight);
+    font-size: clamp(1.375rem, 1.1rem + 1vw, 2rem);
+    font-weight: 600;
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+  }
+
+  .wg-city {
     color: var(--haze);
   }
 
-  /* one hover for the entry: plates part, the link redraws */
+  .wg-go {
+    grid-column: 2;
+    justify-self: start;
+    color: var(--starlight);
+  }
+
   @media (hover: hover) and (pointer: fine) {
-    .wc-grid:has(.wc-link:hover, .wc-stage:hover) .wc-after :global(.cp) {
-      transform: translate3d(0, -8px, 0);
+    .wg-card:hover .wg-after,
+    .wg-card:focus-visible .wg-after {
+      transform: translate3d(1.5%, -3%, 50px);
     }
 
-    .wc-grid:has(.wc-link:hover, .wc-stage:hover) .wc-before :global(.cp) {
-      transform: translate3d(-8px, 4px, 0);
+    .wg-card:hover .wg-before,
+    .wg-card:focus-visible .wg-before {
+      transform: translate3d(-8%, -6%, -30px) rotateY(18deg) rotateZ(-2deg);
     }
 
-    .wc-grid:has(.wc-stage:hover) .wc-link::after {
+    .wg-card:hover .wg-light {
+      opacity: 1;
+    }
+
+    .wg-card:hover .wg-go::after {
       animation: underline-redraw 360ms var(--ease-quint) both;
     }
 
-    .wc-grid:has(.wc-stage:hover) .wc-link :global(.arrow) {
+    .wg-card:hover .wg-go :global(.arrow) {
       transform: translateX(4px);
     }
   }
 
   @media (min-width: 768px) {
-    .wc-copy {
+    .wg-head {
       grid-column: 1 / span 6;
+    }
+
+    .wg-item {
+      width: 78%;
+    }
+
+    .wg-item--r {
+      margin-left: auto;
+    }
+
+    .wg-meta {
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      align-items: end;
+      column-gap: 28px;
+    }
+
+    .wg-go {
+      grid-column: 3;
+      padding-bottom: 4px;
     }
   }
 
   @media (min-width: 1100px) {
-    .wc-copy {
+    /* the head sits beside the first plate; the plates zigzag down */
+    .wg-head {
       grid-column: 1 / span 4;
+      grid-row: 1;
+      align-self: start;
+      padding-top: 40px;
     }
 
-    .wc-stage {
-      grid-column: 6 / -1;
-      padding-bottom: 18%;
+    .wg-list {
+      grid-column: 1 / -1;
+      grid-row: 1;
+      margin-top: 0;
+      gap: 64px;
     }
+
+    .wg-item {
+      width: 60%;
+    }
+
   }
 </style>

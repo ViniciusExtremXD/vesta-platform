@@ -5,7 +5,7 @@
  *   npm run og
  */
 import { mkdir } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -31,34 +31,41 @@ function findChrome() {
 const fonts =
   '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mona+Sans:wdth,wght@75..125,200..900&display=swap">';
 
-// Carbon, bone, one livery red — the same system as the site.
+// The owner's logo on deep space, the headline and the offer.
+const logoUri = 'data:image/png;base64,' + readFileSync(path.join(ROOT, 'src/assets/brand/vesta-logo.png')).toString('base64');
+const markUri = 'data:image/png;base64,' + readFileSync(path.join(ROOT, 'src/assets/brand/vesta-mark.png')).toString('base64');
+
+// deterministic star dots (no Math.random in a build asset)
+const stars = Array.from({ length: 140 }, (_, i) => {
+  const x = (i * 7919) % 1200, y = (i * 104729) % 630;
+  const r = i % 11 === 0 ? 1.6 : i % 3 === 0 ? 1 : 0.6;
+  const o = i % 11 === 0 ? 0.9 : 0.35 + ((i * 37) % 40) / 100;
+  return `<i style="left:${x}px;top:${y}px;width:${r * 2}px;height:${r * 2}px;opacity:${o}"></i>`;
+}).join('');
+
 const card = `<!doctype html><html><head>${fonts}<style>
   html,body{margin:0}
-  body{width:1200px;height:630px;background:#0b0b0c;color:#eeeae2;font-family:'Mona Sans',Arial,sans-serif;position:relative;overflow:hidden}
-  .light{position:absolute;inset:0;background:radial-gradient(60% 45% at 70% 15%, rgba(238,234,226,.07), transparent 70%)}
-  .in{position:absolute;inset:72px 80px 80px;display:flex;flex-direction:column;justify-content:space-between}
-  .mark{display:flex;align-items:center;gap:18px;font-stretch:115%;font-weight:760;font-size:22px;letter-spacing:.3em}
-  .stripe{display:inline-block;width:22px;height:6px;background:#d3001c;transform:skewX(-24deg)}
-  h1{margin:0;font-stretch:115%;font-size:84px;line-height:.98;letter-spacing:-.03em;font-weight:640;max-width:13ch}
-  .foot{display:flex;justify-content:space-between;align-items:flex-end;font-stretch:115%;font-size:17px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:#a7a39a}
-  .rule{position:absolute;left:80px;right:80px;bottom:136px;height:1px;background:rgba(238,234,226,.14)}
-  .bar{position:absolute;left:0;bottom:0;width:38%;height:8px;background:#d3001c}
+  body{width:1200px;height:630px;background:#08070d;color:#f3f0fa;font-family:'Mona Sans',Arial,sans-serif;position:relative;overflow:hidden}
+  .sky i{position:absolute;border-radius:50%;background:#f3f0fa}
+  .neb{position:absolute;inset:0;background:radial-gradient(42% 60% at 78% 38%, rgba(98,54,232,.28), transparent 70%),radial-gradient(30% 40% at 18% 90%, rgba(185,162,255,.08), transparent 70%)}
+  .logo{position:absolute;left:80px;top:78px;width:430px}
+  h1{position:absolute;left:80px;top:292px;margin:0;font-stretch:115%;font-size:72px;line-height:.98;letter-spacing:-.03em;font-weight:640;max-width:13ch}
+  .foot{position:absolute;left:80px;right:80px;bottom:64px;display:flex;justify-content:space-between;font-stretch:115%;font-size:17px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:#b4abc8}
+  .rule{position:absolute;left:80px;right:80px;bottom:110px;height:1px;background:rgba(243,240,250,.14)}
+  .bar{position:absolute;left:0;bottom:0;width:38%;height:8px;background:#6236e8}
 </style></head><body>
-<div class="light"></div>
-<div class="in">
-  <div class="mark">VESTA<span class="stripe"></span></div>
-  <h1>Websites built like flagships.</h1>
-  <div class="foot"><span>Fixed prices from $500</span><span>Website design and build studio</span></div>
-</div>
+<div class="neb"></div><div class="sky">${stars}</div>
+<img class="logo" src="${logoUri}">
+<h1>Websites built like flagships.</h1>
 <div class="rule"></div>
+<div class="foot"><span>High-end websites for businesses</span><span>Free price analysis</span></div>
 <div class="bar"></div>
 </body></html>`;
 
-const logo = `<!doctype html><html><head>${fonts}<style>
-  html,body{margin:0}body{width:512px;height:512px;background:#0b0b0c;display:grid;place-items:center;font-family:'Mona Sans',Arial,sans-serif;color:#eeeae2}
-  .m{position:relative;font-stretch:125%;font-weight:700;font-size:230px;line-height:1;letter-spacing:-.02em}
-  .s{position:absolute;left:8%;bottom:-40px;width:84px;height:20px;background:#d3001c;transform:skewX(-24deg)}
-</style></head><body><div class="m">V<span class="s"></span></div></body></html>`;
+const logo = `<!doctype html><html><head><style>
+  html,body{margin:0}body{width:512px;height:512px;background:#08070d;display:grid;place-items:center}
+  img{width:400px}
+</style></head><body><img src="${markUri}"></body></html>`;
 
 await mkdir(OUT, { recursive: true });
 await mkdir('C:\\cmv-og', { recursive: true }).catch(() => {});

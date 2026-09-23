@@ -1,30 +1,45 @@
 ---
 /**
- * Mobile sticky WhatsApp bar (SPEC §4). Below 768px only.
+ * Mobile sticky bar (SPEC §4; ROUND2 §5–6). Below 768px only.
  *
- * 56px + the safe-area inset, night with a top hairline. The engine
- * (motion.ts) owns the state: it adds .is-shown and drops `inert` once the
- * [data-sticky-anchor] element has scrolled above the viewport, and hides it
- * again while any [data-sticky-hide] (finale, footer) covers the bottom of
- * the viewport or the menu is open. Without JS it simply never appears.
+ * 56px + the safe-area inset, night with a top hairline. Two lines on the
+ * left (Free price analysis / reply time), then a 40px hairline Email icon
+ * button (from 360px up — at 320 it would squeeze the copy, so WhatsApp
+ * stands alone there) and the violet WhatsApp button.
+ *
+ * The engine (motion.ts) owns the state: it adds .is-shown and drops `inert`
+ * once the [data-sticky-anchor] element has scrolled above the viewport, and
+ * hides it again while any [data-sticky-hide] (finale, footer) covers the
+ * bottom of the viewport or the menu is open. Without JS it never appears.
+ * Arrival: the bar slides up, then its contents follow one after another and
+ * the orbit mark turns once.
  *
  * The page gets matching bottom padding on mobile (main), so the bar never
  * sits over the last lines of content.
  *
- * Hooks for the configurator (§5.8, "swaps to the build summary"):
- * [data-sticky-copy] holds the left line, [data-sticky-link] the button.
+ * Hooks for the configurator (§5.8, "swaps to the build summary", see
+ * scripts/configure.ts): .sticky-price holds the first line, .sticky-sep and
+ * .sticky-note are hidden there, [data-sticky-link] is the WhatsApp button
+ * and its unclassed <span> the label.
  */
-import { stickyBar, wa } from '../data/site';
+import { stickyBar, wa, mail, navUi } from '../data/site';
 import WaGlyph from './ui/WaGlyph.astro';
+import MailGlyph from './ui/MailGlyph.astro';
 ---
 
 <div class="sticky" data-sticky-cta inert>
   <div class="sticky-in">
     <p class="sticky-copy small" data-sticky-copy>
-      <span class="stripe sticky-mark" aria-hidden="true"></span><span class="sticky-price num">{stickyBar.price}</span><span
-        class="sticky-sep"
-        aria-hidden="true"> · </span><span class="sticky-note">{stickyBar.note}</span>
+      <span class="stripe sticky-mark" aria-hidden="true"></span>
+      <span class="sticky-lines">
+        <span class="sticky-price num">{stickyBar.price}</span><span class="sticky-sep" aria-hidden="true"> · </span><span
+          class="sticky-note">{stickyBar.note}</span
+        >
+      </span>
     </p>
+    <a class="sticky-mail" href={mail()} aria-label={navUi.emailAria}>
+      <MailGlyph size={16} />
+    </a>
     <a class="btn btn-sm sticky-btn" href={wa(stickyBar.text)} target="_blank" rel="noopener" data-wa-intent="sticky" data-sticky-link>
       <WaGlyph size={16} />
       <span>{stickyBar.button}</span>
@@ -47,23 +62,22 @@ import WaGlyph from './ui/WaGlyph.astro';
     transform: translate3d(0, 100%, 0);
     visibility: hidden;
     transition:
-      transform var(--t-ui) var(--ease-quint),
-      visibility 0s linear var(--t-ui);
+      transform 420ms var(--ease-quint),
+      visibility 0s linear 420ms;
   }
 
   .sticky.is-shown {
     transform: none;
     visibility: visible;
     transition:
-      transform var(--t-ui) var(--ease-expo),
+      transform 760ms var(--ease-expo),
       visibility 0s linear 0s;
   }
 
   .sticky-in {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: var(--s-16);
+    gap: 8px;
     height: 56px;
     padding-inline: var(--gut);
   }
@@ -71,9 +85,9 @@ import WaGlyph from './ui/WaGlyph.astro';
   .sticky-copy {
     display: flex;
     align-items: center;
+    flex: 1 1 auto;
     min-width: 0;
-    white-space: nowrap;
-    overflow: hidden;
+    margin-inline-end: 4px;
     color: var(--haze);
     background-color: var(--night);
   }
@@ -82,28 +96,110 @@ import WaGlyph from './ui/WaGlyph.astro';
     margin-inline-end: 12px;
   }
 
-  .sticky-price {
+  /* two lines: the offer, then the reply time */
+  .sticky-lines {
+    display: grid;
+    min-width: 0;
+    line-height: 1.3;
+  }
+
+  .sticky-price,
+  .sticky-note {
     min-width: 0;
     overflow: hidden;
-    color: var(--starlight);
-    font-weight: 600;
     white-space: nowrap;
     text-overflow: ellipsis;
   }
 
+  .sticky-price {
+    color: var(--starlight);
+    font-weight: 600;
+  }
+
   .sticky-sep {
-    white-space: pre;
+    display: none;
   }
 
   .sticky-note {
-    overflow: hidden;
-    text-overflow: ellipsis;
+    display: block;
+    font-size: 0.75rem;
+  }
+
+  /* the configurator hides the note while its summary is on the bar */
+  .sticky-note[hidden] {
+    display: none;
+  }
+
+  .sticky-mail {
+    display: none;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    color: var(--starlight);
+    border: 1px solid var(--line-dark-strong);
+    text-decoration: none;
+    transition: border-color var(--t-micro) linear;
+  }
+
+  .sticky-mail:active {
+    border-color: var(--starlight);
   }
 
   .sticky-btn {
     flex: 0 0 auto;
-    padding: 0 18px 0 16px;
+    padding: 0 16px 0 14px;
     gap: 10px;
+  }
+
+  @media (min-width: 360px) {
+    .sticky-mail {
+      display: inline-flex;
+    }
+  }
+
+  /* ------------------------------------------------------------ arrival */
+  /* the contents follow the bar up, one after another; leaving, they drop
+     with it at once */
+
+  .sticky-copy,
+  .sticky-mail,
+  .sticky-btn {
+    transition:
+      transform 700ms var(--ease-expo),
+      opacity 300ms linear;
+  }
+
+  .sticky:not(.is-shown) .sticky-copy,
+  .sticky:not(.is-shown) .sticky-mail,
+  .sticky:not(.is-shown) .sticky-btn {
+    transform: translate3d(0, 18px, 0);
+    opacity: 0;
+    transition-duration: 0s;
+    transition-delay: 420ms;
+  }
+
+  .sticky.is-shown .sticky-copy {
+    transition-delay: 120ms;
+  }
+
+  .sticky.is-shown .sticky-mail {
+    transition-delay: 190ms;
+  }
+
+  .sticky.is-shown .sticky-btn {
+    transition-delay: 250ms;
+  }
+
+  .sticky-mark {
+    transition: transform 1100ms var(--ease-expo) 200ms;
+  }
+
+  .sticky:not(.is-shown) .sticky-mark {
+    transform: rotate(calc(var(--skew) - 180deg));
+    transition-duration: 0s;
+    transition-delay: 420ms;
   }
 
   @media (max-width: 767px) {
@@ -118,8 +214,11 @@ import WaGlyph from './ui/WaGlyph.astro';
     }
   }
 
-  :global(html.motion-reduced) .sticky {
+  :global(html.motion-reduced) .sticky,
+  :global(html.motion-reduced) .sticky-copy,
+  :global(html.motion-reduced) .sticky-mail,
+  :global(html.motion-reduced) .sticky-btn,
+  :global(html.motion-reduced) .sticky-mark {
     transition: none;
   }
 </style>
-

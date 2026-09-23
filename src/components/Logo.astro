@@ -1,101 +1,61 @@
 ---
 /**
- * The wordmark: VESTA in Display 760 at 18px, tracked .3em, followed by the
- * orbit mark — a hairline ellipse tilted −24° around a tiny central dot (the
- * hearth), with one planet on it. Source text is "Vesta"; CSS sets the caps,
- * so screen readers say the name, not five letters.
+ * The owner's logo (ROUND3 §Brand), rendered from his artwork — never
+ * redrawn, never stretched.
  *
- * `progress`: the nav's scroll indicator. The planet travels once around the
- * orbit as the page scrolls (Nav.astro drives [data-orbit-planet] from the
- * shared rAF loop, transform-only). Without it the planet rests at the right
- * end of the ellipse, like the .orbit mark in section labels.
+ *   <Logo />                   the lockup: violet V, orbit ring, star, VESTA
+ *   <Logo mark />              the symbol alone (compact spots)
+ *   <Logo height={44} />       rendered height in CSS px (width follows)
  *
- * Colour: the ellipse and hearth use currentColor; the planet uses
- * --orbit-planet (lilac on dark, violet on light), falling back to --mark.
+ * The artwork is WHITE + violet on transparent: it only works on dark
+ * surfaces (void / night / plate). The nav therefore stays dark everywhere.
+ *
+ * astro:assets turns the PNG into WebP at 1× and 2× the rendered size, with
+ * explicit width/height (no layout shift). CSS may shrink the height at a
+ * breakpoint; keep `width: auto` so the ratio holds.
  */
-import { brand } from '../data/site';
+import { Image } from 'astro:assets';
+import lockup from '../assets/brand/vesta-logo.png';
+import symbol from '../assets/brand/vesta-mark.png';
 
 export interface Props {
   class?: string;
-  progress?: boolean;
+  /** The symbol only, instead of the lockup. */
+  mark?: boolean;
+  /** Rendered height in px. */
+  height?: number;
+  /** Above the fold (the nav): load eagerly, high priority. */
+  eager?: boolean;
+  /** Empty when a parent already names the link ("Vesta, home"). */
+  alt?: string;
 }
-const { class: cls = '', progress = false } = Astro.props;
 
-/* Geometry in px (viewBox = rendered size, so CSS px = user units). */
-const W = 30;
-const H = 20;
-const RX = 12.5;
-const RY = 4.6;
+const { class: cls = '', mark = false, height = 36, eager = false, alt = 'Vesta' } = Astro.props;
+const src = mark ? symbol : lockup;
+const width = Math.round((height * src.width) / src.height);
 ---
 
-<span class={`logo ${cls}`}>
-  <span class="logo-word">{brand.name}</span>
-  <svg
-    class="logo-orbit"
-    width={W}
-    height={H}
-    viewBox={`0 0 ${W} ${H}`}
-    aria-hidden="true"
-    focusable="false"
-    data-orbit-mark={progress ? '' : undefined}
-    data-rx={RX}
-    data-ry={RY}
-  >
-    <g transform={`rotate(-24 ${W / 2} ${H / 2})`}>
-      <ellipse class="logo-path" cx={W / 2} cy={H / 2} rx={RX} ry={RY}></ellipse>
-      <circle class="logo-hearth" cx={W / 2} cy={H / 2} r="1.1"></circle>
-      <circle
-        class="logo-planet"
-        cx="0"
-        cy="0"
-        r="2.3"
-        style={`transform: translate(${W / 2 + RX}px, ${H / 2}px)`}
-        data-orbit-planet={progress ? '' : undefined}></circle>
-    </g>
-  </svg>
-</span>
+<Image
+  src={src}
+  alt={alt}
+  width={width}
+  height={height}
+  densities={[1, 2]}
+  format="webp"
+  quality={90}
+  loading={eager ? 'eager' : 'lazy'}
+  fetchpriority={eager ? 'high' : undefined}
+  decoding="async"
+  draggable="false"
+  class:list={['brand-logo', mark ? 'is-mark' : 'is-lockup', cls]}
+/>
 
 <style>
-  .logo {
-    display: inline-flex;
-    align-items: center;
-    color: currentColor;
-    font-family: var(--font-sans, Arial, sans-serif);
-    font-stretch: var(--wd-display);
-    font-size: 18px;
-    font-weight: 760;
-    line-height: 1;
-    white-space: nowrap;
-  }
-
-  .logo-word {
-    letter-spacing: 0.3em;
-    text-transform: uppercase;
-    /* the tracking also trails the last letter; the orbit sits in that space */
-    margin-inline-end: calc(-0.3em + 10px);
-  }
-
-  .logo-orbit {
+  .brand-logo {
+    display: block;
     flex: 0 0 auto;
-    overflow: visible;
-    /* optical: the ellipse centre sits on the cap-height middle */
-    transform: translateY(-1px);
-  }
-
-  .logo-path {
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 1;
-    stroke-opacity: 0.72;
-  }
-
-  .logo-hearth {
-    fill: currentColor;
-  }
-
-  .logo-planet {
-    fill: var(--orbit-planet, var(--mark, var(--lilac)));
-    transform-origin: 0 0;
+    max-width: none;
+    width: auto;
+    user-select: none;
   }
 </style>
-

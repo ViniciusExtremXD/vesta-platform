@@ -1,0 +1,904 @@
+---
+/**
+ * Concept 03 AFTER — Trattoria Ombra (fictional), rebuilt, as six stacked
+ * layers. Rendered by ConceptPlate.astro through the registry; DOM contract:
+ * src/components/concepts/README.md.
+ *
+ *   .cp-layer.cp-l1  wireframe rows, arch construction, box tags   --i:0
+ *   .cp-layer.cp-l2  oxblood + cream surfaces, serif headline,
+ *                    the arch with the line illustration            --i:1 (opaque)
+ *   .cp-layer.cp-l3  arch frame + load waterfall (no text)          --i:2
+ *   .cp-layer.cp-l4  JSON-LD card + sitemap tree                    --i:3
+ *   .cp-layer.cp-l5  reserve / call / WhatsApp                      --i:4
+ *   .cp-layer.cp-l6  event pins                                     --i:5
+ *
+ * Voice: a candlelit trattoria. Georgia (system serif) for the display
+ * lines, Mona Sans set wide and spaced for labels, a hand-drawn olive branch
+ * over a pasta nest and a fiasco candle inside a Roman arch. The candle
+ * flickers and the pasta steams (transform/opacity only, paused offscreen).
+ * Everything draws in --u (one reference px of the 760 × 475 drawing).
+ */
+import { restaurant, ombra } from '../../../data/concepts/restaurant';
+
+const A = restaurant.after;
+const lines = A.headline.split(/(?<=\.)\s+/);
+
+/* ---- the olive branch: leaves placed along a quadratic stem (arch coords,
+   280 × 300). Generated at build time so the drawing stays hand-tuned but
+   the markup stays short. */
+const P0 = [32, 132];
+const P1 = [116, -6];
+const P2 = [228, 76];
+const bez = (t: number) => {
+  const m = 1 - t;
+  return [m * m * P0[0] + 2 * m * t * P1[0] + t * t * P2[0], m * m * P0[1] + 2 * m * t * P1[1] + t * t * P2[1]];
+};
+const tan = (t: number) => {
+  const m = 1 - t;
+  return Math.atan2(2 * m * (P1[1] - P0[1]) + 2 * t * (P2[1] - P1[1]), 2 * m * (P1[0] - P0[0]) + 2 * t * (P2[0] - P1[0]));
+};
+const f = (n: number) => n.toFixed(1);
+const leafPath = (L: number) =>
+  `M0 0C${f(L * 0.28)} ${f(-L * 0.22)} ${f(L * 0.74)} ${f(-L * 0.17)} ${f(L)} 0C${f(L * 0.74)} ${f(L * 0.17)} ${f(L * 0.28)} ${f(L * 0.22)} 0 0Z`;
+const leaves = Array.from({ length: 13 }, (_, i) => {
+  const t = 0.07 + i * (0.86 / 12);
+  const [x, y] = bez(t);
+  const side = i % 2 ? 1 : -1;
+  const L = 15 + 7 * Math.sin(Math.PI * t);
+  const deg = (tan(t) * 180) / Math.PI + side * (34 + (i % 3) * 5);
+  return { d: leafPath(L), rib: `M${f(L * 0.12)} 0L${f(L * 0.82)} 0`, tf: `translate(${f(x)} ${f(y)}) rotate(${f(deg)})` };
+});
+const tip = bez(1);
+const olives = [0.3, 0.56, 0.8].map((t, i) => {
+  const [x, y] = bez(t);
+  const a = tan(t) + (i % 2 ? -1 : 1) * 1.35;
+  const ox = x + Math.cos(a) * 9;
+  const oy = y + Math.sin(a) * 9 + 3;
+  return { stalk: `M${f(x)} ${f(y)}Q${f((x + ox) / 2 + 2)} ${f((y + oy) / 2)} ${f(ox)} ${f(oy - 4)}`, cx: f(ox), cy: f(oy + 1) };
+});
+const stem = `M${P0[0]} ${P0[1]}Q${P1[0]} ${P1[1]} ${P2[0]} ${P2[1]}`;
+---
+
+<div class="cp-layer cp-l1" style="--i:0">
+  <svg class="w-grid" viewBox="0 0 760 475" preserveAspectRatio="none" aria-hidden="true">
+    <path
+      d="M0 48.5H760M0 96.5H760M0 144.5H760M0 192.5H760M0 240.5H760M0 288.5H760M0 336.5H760M0 360.5H760M0 408.5H760M0 456.5H760M32 .5V475M448.5 .5V475M728.5 .5V475"
+      fill="none"
+      stroke="#D8B9A0"
+      stroke-opacity=".16"
+      vector-effect="non-scaling-stroke"></path>
+  </svg>
+  <svg class="w-arch" viewBox="0 0 280 300" aria-hidden="true">
+    <circle cx="140" cy="140" r="140" fill="none" stroke="#D8B9A0" stroke-opacity=".42" stroke-dasharray="3 5" vector-effect="non-scaling-stroke"></circle>
+    <path d="M140 0V300M0 140H280M132 140h16M140 132v16" fill="none" stroke="#D9744A" stroke-opacity=".7" vector-effect="non-scaling-stroke"></path>
+  </svg>
+  <span class="w-box w-nav"><span class="w-tag">{A.wireframeTags[0]}</span></span>
+  <span class="w-box w-h1"><span class="w-tag">{A.wireframeTags[1]}</span></span>
+  <span class="w-box w-cta"><span class="w-tag">{A.wireframeTags[2]}</span></span>
+  <span class="w-box w-menu"><span class="w-tag">{A.wireframeTags[3]}</span></span>
+</div>
+
+<div class="cp-layer cp-l4" style="--i:3">
+  <span class="d-card">
+    <span class="d-brace">{'{'}</span>
+    <span class="d-line">{A.jsonLd[0]},</span>
+    <span class="d-line">{A.jsonLd[1]}</span>
+    <span class="d-brace">{'}'}</span>
+  </span>
+  <span class="d-tree">
+    {A.sitemap.map((p, i) => <span class:list={['d-node', i === 0 ? 'is-root' : 'is-leaf']}>{p}</span>)}
+  </span>
+</div>
+
+<div class="cp-layer cp-l6" style="--i:5">
+  <span class="e-pin e-pin--book"><i></i><span class="e-chip">{A.events[2]}</span></span>
+  <span class="e-pin e-pin--call"><span class="e-chip">{A.events[1]}</span><i></i></span>
+  <span class="e-pin e-pin--wa"><i></i><span class="e-chip">{A.events[0]}</span></span>
+</div>
+
+<div class="cp-layer cp-l2" style="--i:1">
+  <div class="s-nav">
+    <span class="s-logo">
+      <svg class="s-mark" viewBox="0 0 20 20" aria-hidden="true">
+        <path d="M3 17C7 12 11 8 17 3" fill="none" stroke="#D9744A" stroke-width="1.4" stroke-linecap="round"></path>
+        <path d="M7.2 12.4C6 9.6 6.6 7.2 8.6 5.9 9.6 8.6 9.1 10.9 7.2 12.4ZM11.6 8.2C12.4 11 14.8 12.3 17.2 11.8 16.2 9.2 14.2 8 11.6 8.2Z" fill="none" stroke="#F5E9D6" stroke-width="1.1" stroke-linejoin="round"></path>
+      </svg>
+      <span class="s-name" data-cp-name>{restaurant.name}</span>
+    </span>
+    <span class="s-links">{A.nav.map((l) => <span class="s-link">{l}</span>)}</span>
+  </div>
+
+  <span class="s-eyebrow"><i></i>{ombra.eyebrow}</span>
+  <span class="s-h1">
+    {lines.map((l, i) => <span class:list={['s-h1-line', i === 1 && 'is-it']}>{l}</span>)}
+  </span>
+  <span class="s-sub">{A.sub}</span>
+  <span class="s-menu">
+    <span class="s-menu-t">{ombra.menuLink}</span>
+    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 8h11M9 4l4 4-4 4" fill="none" stroke="#D9744A" stroke-width="1.5"></path></svg>
+  </span>
+
+  <div class="s-arch">
+    <svg viewBox="0 0 280 300" aria-hidden="true">
+      <path d="M0 300V140a140 140 0 0 1 280 0v160Z" fill="#4A1A1D"></path>
+      <g class="a-glow"><circle class="a-glow-c" cx="66" cy="108" r="34" fill="#F2B35C" fill-opacity=".3"></circle></g>
+      <path d="M11 300V140a129 129 0 0 1 258 0v160" fill="none" stroke="#D9744A" stroke-opacity=".55"></path>
+
+      <!-- olive branch (sways from its stem base) -->
+      <g class="a-branch">
+      <g fill="none" stroke="#EADBC3" stroke-linecap="round" stroke-linejoin="round">
+        <path d={stem} stroke-width="1.5"></path>
+        <path d={`M${f(tip[0])} ${f(tip[1])}q7 3 10 10`} stroke-width="1.2"></path>
+        {
+          leaves.map((l) => (
+            <g transform={l.tf}>
+              <path d={l.d} fill="#4A1A1D" stroke-width="1.1" />
+              <path d={l.rib} stroke-width=".6" stroke-opacity=".7" />
+            </g>
+          ))
+        }
+        {olives.map((o) => <path d={o.stalk} stroke-width=".9" />)}
+      </g>
+      {
+        olives.map((o) => (
+          <g>
+            <ellipse cx={o.cx} cy={o.cy} rx="4.4" ry="5.8" fill="#8C9A55" />
+            <circle cx={Number(o.cx) - 1.4} cy={Number(o.cy) - 2} r="1.1" fill="#F5E9D6" fill-opacity=".8" />
+          </g>
+        ))
+      }
+      </g>
+
+      <!-- table -->
+      <path d="M0 254h280v46H0z" fill="#3B1216"></path>
+      <path d="M8 254.5h264" stroke="#EADBC3" stroke-opacity=".4"></path>
+
+      <!-- fiasco + candle -->
+      <g fill="none" stroke="#EADBC3" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M60 196V156h12v40" fill="#4A1A1D"></path>
+        <circle cx="66" cy="224" r="29" fill="#4A1A1D"></circle>
+        <path d="M58 152h16v5H58z" fill="#4A1A1D"></path>
+        <path d="M40 222c10 5 42 5 52 0" stroke="#D9744A"></path>
+        <path d="M44 234l10 17M54 228l14 25M66 227l12 25M78 228l10 20M47 244l7-15M58 252l10-24M70 253l12-25M84 246l6-14" stroke="#D9744A" stroke-width=".9" stroke-opacity=".85"></path>
+        <path d="M61.5 118h9v34h-9z" fill="#F5E9D6" stroke="none"></path>
+        <path d="M61.5 128c2 3 2 7 0 10M70.5 122c-1.6 4-1.6 9 0 12M60 152c-3 5-2 9 0 14" stroke="#F5E9D6" stroke-width="1.6"></path>
+        <path d="M66 118v-5" stroke="#2A0B0E" stroke-width="1.1"></path>
+      </g>
+      <g class="a-flame">
+        <path d="M66 94c3.8 5.2 6.4 9.4 6.4 12.6a6.4 6.4 0 0 1-12.8 0c0-3.2 2.6-7.4 6.4-12.6Z" fill="#F2B35C"></path>
+        <path d="M66 101.5c1.8 2.6 3 4.6 3 6.2a3 3 0 0 1-6 0c0-1.6 1.2-3.6 3-6.2Z" fill="#FFF1D6"></path>
+      </g>
+
+      <!-- plate + pasta nest + fork -->
+      <ellipse cx="164" cy="246" rx="60" ry="12" fill="#4A1A1D" stroke="#EADBC3" stroke-width="1.3"></ellipse>
+      <ellipse cx="164" cy="246" rx="41" ry="7.5" fill="none" stroke="#EADBC3" stroke-width=".8" stroke-opacity=".5"></ellipse>
+      <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M200 236 222 166" stroke="#EADBC3" stroke-width="2.2"></path>
+        <path d="M218 170l7.5-23M221.5 171.2l7.5-23M225 172.4l7.5-23M216.5 175.5c2.2 3.6 7.4 5.3 11.2 3.6" stroke="#EADBC3" stroke-width="1.2"></path>
+        <path d="M129 244c1-18 18-30 35-30s33 11 35 30Z" fill="#5C2327" stroke="none"></path>
+        <g stroke="#E9BE7A" stroke-width="1.25">
+          <path d="M129 243c2-17 18-29 35-29s32 11 35 29"></path>
+          <path d="M135 241c3-12 15-20 29-20 13 0 25 8 28 20"></path>
+          <path d="M142 242c3-8 12-13 22-13 9 0 18 5 21 13"></path>
+          <path d="M132 234c10-5 18 4 30-2s20-1 32 3"></path>
+          <path d="M138 226c8-4 16 3 26-1s16-2 24 2"></path>
+          <path d="M155 238c0-5 7-8 12-5 4 2 3 7-2 7"></path>
+          <path d="M196 226c4 1 7 0 9-2M199 233c4 0 6-2 7-4"></path>
+        </g>
+        <path d="M160 214c-3-5 1-9 6-9 0 5-3 8-6 9ZM167 213c4-4 9-3 11 1-4 2-8 2-11-1Z" fill="#8C9A55" stroke="none"></path>
+      </g>
+      <g class="a-steam" fill="none" stroke="#EADBC3" stroke-width="1.1" stroke-linecap="round" stroke-opacity=".7">
+        <path class="a-steam-1" d="M150 200c-4-6 4-10 0-17s3-10 1-15"></path>
+        <path class="a-steam-2" d="M166 198c-4-6 4-11 0-18s4-10 1-16"></path>
+        <path class="a-steam-3" d="M182 202c-3-5 3-9 0-15s3-9 1-13"></path>
+      </g>
+
+      <!-- wine glass -->
+      <g fill="none" stroke="#EADBC3" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M239 196c1 12 5 17 11 17.5 6-.5 10-5.5 11-17.5Z" fill="#8E2430" stroke="none"></path>
+        <path d="M236 170c0 26 6 43 14 43s14-17 14-43Z"></path>
+        <path d="M250 213v35M240 250c3-2 17-2 20 0"></path>
+      </g>
+    </svg>
+  </div>
+
+  <div class="s-band">
+    <span class="s-tonight"><i></i>{ombra.tonight}</span>
+    <span class="s-hours">{ombra.hours}</span>
+    <span class="s-days">{ombra.days}</span>
+    <span class="s-dishes">
+      {
+        A.services.map((s, i) => (
+          <span class="s-dish">
+            <span class="s-dish-top">
+              <span class="s-num">{ombra.dishes[i]?.numeral}</span>
+              <span class="s-price">{ombra.dishes[i]?.price}</span>
+            </span>
+            <span class="s-dish-name">{s}</span>
+            <span class="s-note">{ombra.dishes[i]?.note}</span>
+          </span>
+        ))
+      }
+    </span>
+  </div>
+</div>
+
+<div class="cp-layer cp-l3" style="--i:2">
+  <svg class="f-arch" viewBox="0 0 296 316" aria-hidden="true">
+    <path d="M1 315V148a147 147 0 0 1 294 0v167" fill="none" stroke="#D8B9A0" stroke-opacity=".18" vector-effect="non-scaling-stroke"></path>
+    <path d="M1 303v12h12M295 303v12h-12M142 1h12" fill="none" stroke="#D9744A" stroke-width="2" vector-effect="non-scaling-stroke"></path>
+  </svg>
+  <svg class="f-fall" viewBox="0 0 280 300" aria-hidden="true">
+    <g fill="#D8B9A0" fill-opacity=".22">
+      <rect x="120" y="264" width="30" height="3"></rect>
+      <rect x="130" y="271" width="48" height="3"></rect>
+      <rect x="142" y="278" width="34" height="3"></rect>
+      <rect x="152" y="285" width="62" height="3"></rect>
+      <rect x="170" y="292" width="44" height="3"></rect>
+    </g>
+    <rect x="120" y="264" width="12" height="3" fill="#D9744A"></rect>
+    <rect x="152" y="285" width="18" height="3" fill="#D9744A"></rect>
+  </svg>
+</div>
+
+<div class="cp-layer cp-l5" style="--i:4">
+  <span class="k-btn k-book">{A.buttons[0]}</span>
+  <span class="k-btn k-call">
+    <svg viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M4.2 1.8 6 4.9 4.6 6.6a8.6 8.6 0 0 0 4.8 4.8L11.1 10l3.1 1.8-.9 2.6c-5.6.3-11.9-6-11.7-11.7Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"></path>
+    </svg>
+    {A.buttons[1]}
+  </span>
+  <span class="k-btn k-wa">
+    <svg viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M8 1.5a6.5 6.5 0 0 0-5.6 9.8L1.5 14.5l3.3-.9A6.5 6.5 0 1 0 8 1.5Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"></path>
+    </svg>
+    {A.buttons[2]}
+  </span>
+</div>
+
+<style>
+  .cp-layer {
+    --u: calc(100cqi / 760);
+    --o-ox: #3b1216;
+    --o-ox-2: #4a1a1d;
+    --o-deep: #230a0d;
+    --o-cream: #f5e9d6;
+    --o-muted: #d8b9a0; /* 8.9:1 oxblood, 10.9:1 void */
+    --o-band: #f3e6d0;
+    --o-ink-2: #7a3f2e; /* 6.6:1 on the band */
+    --o-terra: #d9744a;
+    --o-on-terra: #2a0b0e; /* 5.7:1 on terracotta */
+    --o-serif: Georgia, 'Times New Roman', Times, serif;
+    position: absolute;
+    inset: 0;
+    color: var(--o-cream);
+    font-family: var(--font-sans);
+    font-stretch: 100%;
+    font-weight: 450;
+    line-height: 1.2;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  /* flat z-order: the invisible parts of a real site sit under l2 */
+  .cp-l1,
+  .cp-l4,
+  .cp-l6 {
+    z-index: 0;
+  }
+
+  .cp-l2 {
+    z-index: 1;
+    background-color: var(--o-ox);
+  }
+
+  .cp-l3 {
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  .cp-l5 {
+    z-index: 3;
+  }
+
+  svg {
+    display: block;
+  }
+
+  /* ---------- L1 wireframe ---------- */
+  .w-grid {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .w-arch,
+  .s-arch,
+  .f-fall {
+    position: absolute;
+    left: calc(448 * var(--u));
+    top: calc(60 * var(--u));
+    width: calc(280 * var(--u));
+    height: calc(300 * var(--u));
+  }
+
+  .w-arch {
+    overflow: visible;
+  }
+
+  .w-box {
+    position: absolute;
+    border: 1px solid rgb(216 185 160 / 0.6);
+  }
+
+  .w-nav {
+    left: calc(8 * var(--u));
+    top: calc(6 * var(--u));
+    width: calc(744 * var(--u));
+    height: calc(36 * var(--u));
+  }
+
+  .w-h1 {
+    left: calc(24 * var(--u));
+    top: calc(96 * var(--u));
+    width: calc(400 * var(--u));
+    height: calc(148 * var(--u));
+  }
+
+  .w-cta {
+    left: calc(24 * var(--u));
+    top: calc(298 * var(--u));
+    width: calc(310 * var(--u));
+    height: calc(48 * var(--u));
+  }
+
+  .w-menu {
+    left: calc(8 * var(--u));
+    top: calc(368 * var(--u));
+    width: calc(744 * var(--u));
+    height: calc(99 * var(--u));
+  }
+
+  .w-tag {
+    position: absolute;
+    left: -1px;
+    bottom: 100%;
+    padding: calc(2 * var(--u)) calc(5 * var(--u));
+    background-color: var(--o-terra);
+    color: var(--o-on-terra);
+    font-size: calc(7.5 * var(--u));
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    white-space: nowrap;
+  }
+
+  .w-nav .w-tag,
+  .w-menu .w-tag {
+    bottom: auto;
+    top: -1px;
+  }
+
+  /* ---------- L2 nav ---------- */
+  .s-nav {
+    position: absolute;
+    inset: 0 0 auto;
+    height: calc(48 * var(--u));
+    display: flex;
+    align-items: center;
+    padding-inline: calc(32 * var(--u));
+    border-bottom: 1px solid rgb(216 185 160 / 0.16);
+    background-color: var(--o-ox);
+  }
+
+  .s-logo {
+    display: flex;
+    align-items: center;
+    gap: calc(8 * var(--u));
+    min-width: 0;
+    max-width: calc(214 * var(--u));
+  }
+
+  .s-mark {
+    flex: 0 0 auto;
+    width: calc(16 * var(--u));
+    height: calc(16 * var(--u));
+  }
+
+  .s-name {
+    overflow: hidden;
+    color: var(--o-cream);
+    font-family: var(--o-serif);
+    font-size: calc(16 * var(--u));
+    font-weight: 400;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .s-links {
+    position: absolute;
+    left: calc(262 * var(--u));
+    display: flex;
+    gap: calc(20 * var(--u));
+  }
+
+  .s-link {
+    color: var(--o-muted);
+    font-size: calc(8 * var(--u));
+    font-stretch: 118%;
+    font-weight: 560;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  /* ---------- L2 hero ---------- */
+  .s-eyebrow {
+    position: absolute;
+    left: calc(32 * var(--u));
+    top: calc(80 * var(--u));
+    display: flex;
+    align-items: center;
+    gap: calc(8 * var(--u));
+    color: var(--o-muted);
+    font-size: calc(8 * var(--u));
+    font-stretch: 125%;
+    font-weight: 600;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+  }
+
+  .s-eyebrow i {
+    width: calc(18 * var(--u));
+    height: calc(2 * var(--u));
+    background-color: var(--o-terra);
+  }
+
+  .s-h1 {
+    position: absolute;
+    left: calc(29 * var(--u));
+    top: calc(100 * var(--u));
+    display: flex;
+    flex-direction: column;
+    color: var(--o-cream);
+    font-family: var(--o-serif);
+    font-size: calc(46 * var(--u));
+    font-weight: 400;
+    line-height: 1.02;
+    letter-spacing: -0.015em;
+    white-space: nowrap;
+  }
+
+  .s-h1-line.is-it {
+    font-style: italic;
+  }
+
+  .s-sub {
+    position: absolute;
+    left: calc(32 * var(--u));
+    top: calc(256 * var(--u));
+    width: calc(300 * var(--u));
+    color: var(--o-muted);
+    font-size: calc(11 * var(--u));
+    line-height: 1.5;
+  }
+
+  .s-menu {
+    position: absolute;
+    left: calc(178 * var(--u));
+    top: calc(304 * var(--u));
+    height: calc(36 * var(--u));
+    display: flex;
+    align-items: center;
+    gap: calc(7 * var(--u));
+  }
+
+  .s-menu-t {
+    padding-bottom: calc(2 * var(--u));
+    border-bottom: 1px solid var(--o-terra);
+    color: var(--o-cream);
+    font-size: calc(10 * var(--u));
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+  }
+
+  .s-menu svg {
+    width: calc(11 * var(--u));
+    height: calc(11 * var(--u));
+  }
+
+  .s-arch {
+    background-color: var(--o-ox);
+  }
+
+  .s-arch svg,
+  .f-fall,
+  .f-arch {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* the candle and the steam: the plate's only internal motion */
+  .a-flame {
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+    animation: ombra-flicker 2.6s ease-in-out infinite;
+  }
+
+  .a-glow {
+    animation: ombra-glow 2.6s ease-in-out infinite;
+  }
+
+  .a-glow-c {
+    filter: blur(18px);
+  }
+
+  .a-branch {
+    transform-box: view-box;
+    transform-origin: 32px 132px;
+    animation: ombra-sway 7s ease-in-out infinite alternate;
+  }
+
+  .a-steam path {
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+    animation: ombra-steam 4.2s ease-in-out infinite;
+  }
+
+  .a-steam .a-steam-2 {
+    animation-delay: -1.4s;
+  }
+
+  .a-steam .a-steam-3 {
+    animation-delay: -2.8s;
+  }
+
+  @keyframes ombra-flicker {
+    0%,
+    100% {
+      transform: scale(1, 1) rotate(0deg);
+    }
+    22% {
+      transform: scale(0.94, 1.08) rotate(-2deg);
+    }
+    46% {
+      transform: scale(1.04, 0.95) rotate(1.5deg);
+    }
+    70% {
+      transform: scale(0.97, 1.05) rotate(-1deg);
+    }
+  }
+
+  @keyframes ombra-sway {
+    from {
+      transform: rotate(-1.2deg);
+    }
+    to {
+      transform: rotate(1.4deg);
+    }
+  }
+
+  @keyframes ombra-glow {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    30% {
+      opacity: 0.72;
+    }
+    60% {
+      opacity: 0.9;
+    }
+  }
+
+  @keyframes ombra-steam {
+    0% {
+      opacity: 0.25;
+      transform: translate3d(0, 3px, 0) scaleY(0.9);
+    }
+    50% {
+      opacity: 0.9;
+    }
+    100% {
+      opacity: 0.25;
+      transform: translate3d(0, -4px, 0) scaleY(1.06);
+    }
+  }
+
+  :global(.cp.is-offscreen) .a-branch,
+  :global(html.motion-reduced) .a-branch,
+  :global(.cp.is-offscreen) .a-flame,
+  :global(.cp.is-offscreen) .a-glow,
+  :global(.cp.is-offscreen) .a-steam path,
+  :global(html.motion-reduced) .a-flame,
+  :global(html.motion-reduced) .a-glow,
+  :global(html.motion-reduced) .a-steam path {
+    animation-play-state: paused;
+  }
+
+  /* ---------- L2 band: tonight ---------- */
+  .s-band {
+    position: absolute;
+    inset: auto 0 0;
+    height: calc(115 * var(--u));
+    background-color: var(--o-band);
+    color: var(--o-ox);
+  }
+
+  .s-tonight {
+    position: absolute;
+    left: calc(32 * var(--u));
+    top: calc(16 * var(--u));
+    display: flex;
+    align-items: center;
+    gap: calc(7 * var(--u));
+    color: var(--o-ink-2);
+    font-size: calc(8 * var(--u));
+    font-stretch: 125%;
+    font-weight: 650;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+  }
+
+  .s-tonight i {
+    width: calc(14 * var(--u));
+    height: calc(2 * var(--u));
+    background-color: var(--o-terra);
+  }
+
+  .s-hours {
+    position: absolute;
+    left: calc(31 * var(--u));
+    top: calc(32 * var(--u));
+    color: var(--o-ox);
+    font-family: var(--o-serif);
+    font-size: calc(17 * var(--u));
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+
+  .s-days {
+    position: absolute;
+    left: calc(32 * var(--u));
+    top: calc(55 * var(--u));
+    color: var(--o-ink-2);
+    font-size: calc(8.5 * var(--u));
+    font-weight: 500;
+  }
+
+  .s-dishes {
+    position: absolute;
+    left: calc(216 * var(--u));
+    top: calc(12 * var(--u));
+    display: flex;
+    gap: calc(16 * var(--u));
+  }
+
+  .s-dish {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: calc(160 * var(--u));
+    padding-top: calc(8 * var(--u));
+    border-top: 1px solid rgb(59 18 22 / 0.22);
+  }
+
+  .s-dish:first-child::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: -1px;
+    width: calc(40 * var(--u));
+    height: 2px;
+    background-color: var(--o-terra);
+  }
+
+  .s-dish-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  .s-num {
+    color: var(--o-ink-2);
+    font-family: var(--o-serif);
+    font-size: calc(10 * var(--u));
+    font-style: italic;
+  }
+
+  .s-price {
+    color: var(--o-ox);
+    font-size: calc(10 * var(--u));
+    font-weight: 620;
+  }
+
+  .s-dish-name {
+    margin-top: calc(3 * var(--u));
+    color: var(--o-ox);
+    font-family: var(--o-serif);
+    font-size: calc(14 * var(--u));
+    line-height: 1.15;
+    white-space: nowrap;
+  }
+
+  .s-note {
+    margin-top: calc(5 * var(--u));
+    color: var(--o-ink-2);
+    font-size: calc(8 * var(--u));
+    line-height: 1.4;
+  }
+
+  /* ---------- L3 frames + waterfall ---------- */
+  .f-arch {
+    position: absolute;
+    left: calc(440 * var(--u));
+    top: calc(52 * var(--u));
+    width: calc(296 * var(--u));
+    height: calc(316 * var(--u));
+    overflow: visible;
+  }
+
+  /* ---------- L4 data ---------- */
+  .d-card {
+    position: absolute;
+    left: calc(468 * var(--u));
+    top: calc(120 * var(--u));
+    display: flex;
+    flex-direction: column;
+    gap: calc(3 * var(--u));
+    width: calc(240 * var(--u));
+    padding: calc(10 * var(--u)) calc(12 * var(--u));
+    border: 1px solid rgb(217 116 74 / 0.6);
+    background-color: var(--o-deep);
+    font-size: calc(9 * var(--u));
+    line-height: 1.35;
+  }
+
+  .d-brace {
+    color: var(--o-muted);
+  }
+
+  .d-line {
+    padding-left: calc(12 * var(--u));
+    color: var(--o-cream);
+    white-space: nowrap;
+  }
+
+  .d-tree {
+    position: absolute;
+    left: calc(216 * var(--u));
+    top: calc(380 * var(--u));
+    display: grid;
+    grid-template-columns: repeat(2, auto);
+    justify-content: start;
+    gap: calc(5 * var(--u)) calc(28 * var(--u));
+    font-size: calc(9 * var(--u));
+  }
+
+  .d-node {
+    position: relative;
+    color: var(--o-muted);
+    white-space: nowrap;
+  }
+
+  .d-node.is-root {
+    grid-column: 1 / -1;
+    color: var(--o-cream);
+  }
+
+  .d-node.is-leaf {
+    padding-left: calc(12 * var(--u));
+  }
+
+  .d-node.is-leaf::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 55%;
+    width: calc(7 * var(--u));
+    height: 1px;
+    background-color: rgb(216 185 160 / 0.6);
+  }
+
+  /* ---------- L5 buttons ---------- */
+  .k-btn {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: calc(6 * var(--u));
+    white-space: nowrap;
+  }
+
+  .k-btn svg {
+    flex: 0 0 auto;
+    color: var(--o-terra);
+  }
+
+  .k-book {
+    left: calc(32 * var(--u));
+    top: calc(304 * var(--u));
+    height: calc(36 * var(--u));
+    padding-inline: calc(18 * var(--u));
+    background-color: var(--o-terra);
+    color: var(--o-on-terra);
+    font-size: calc(10 * var(--u));
+    font-stretch: 108%;
+    font-weight: 680;
+    letter-spacing: 0.02em;
+  }
+
+  .k-call {
+    right: calc(28 * var(--u));
+    top: calc(11 * var(--u));
+    height: calc(26 * var(--u));
+    padding-inline: calc(12 * var(--u));
+    border: 1px solid rgb(217 116 74 / 0.85);
+    background-color: var(--o-ox);
+    color: var(--o-cream);
+    font-size: calc(9 * var(--u));
+    font-weight: 600;
+  }
+
+  .k-call svg {
+    width: calc(10 * var(--u));
+    height: calc(10 * var(--u));
+  }
+
+  .k-wa {
+    left: calc(32 * var(--u));
+    top: calc(436 * var(--u));
+    height: calc(22 * var(--u));
+    padding-inline: calc(10 * var(--u));
+    background-color: var(--o-ox);
+    color: var(--o-cream);
+    font-size: calc(8.5 * var(--u));
+    font-weight: 600;
+  }
+
+  .k-wa svg {
+    width: calc(10 * var(--u));
+    height: calc(10 * var(--u));
+  }
+
+  /* ---------- L6 events ---------- */
+  .e-pin {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    gap: calc(5 * var(--u));
+  }
+
+  .e-pin i {
+    width: calc(7 * var(--u));
+    height: calc(7 * var(--u));
+    background-color: var(--o-terra);
+  }
+
+  .e-chip {
+    padding: calc(2 * var(--u)) calc(5 * var(--u));
+    background-color: var(--o-terra);
+    color: var(--o-on-terra);
+    font-size: calc(8 * var(--u));
+    font-weight: 650;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+
+  .e-pin--book {
+    left: calc(34 * var(--u));
+    top: calc(346 * var(--u));
+  }
+
+  .e-pin--call {
+    right: calc(30 * var(--u));
+    top: calc(42 * var(--u));
+  }
+
+  .e-pin--wa {
+    left: calc(128 * var(--u));
+    top: calc(441 * var(--u));
+  }
+</style>

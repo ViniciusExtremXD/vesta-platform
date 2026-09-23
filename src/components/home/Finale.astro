@@ -1,34 +1,46 @@
 ---
 /**
  * §5.12 #finale (violet) — the close. SPEC.md §5.12, re-skinned by
- * SPEC_COSMOS.md §2: the violet field with a quiet star field behind it, and
- * the ECLIPSE REVEAL in place of the carbon curtain.
+ * SPEC_COSMOS.md §2 and made bolder in rounds 2–3: the violet field with a
+ * living star field behind it (<Cosmos variant="stars">), the ECLIPSE
+ * REVEAL, and WhatsApp + Email side by side.
  *
- * The eclipse. A --void disc (section::after, [data-cover]) covers the whole
- * section and shrinks, scale 1 → 0 on the 1200ms quint curve, into the
- * eclipsed body in the upper right: the night opens and what is left of the
- * dark is one small eclipse with a hairline limb, a faint corona and one
- * bead of light on the −24° diagonal. The disc exists only in the armed
- * state (html.js, motion on, engine alive) and ends at scale 0 + opacity 0 +
- * visibility hidden, so it is never left over content.
+ * The eclipse.
+ *  - The cover: a --void disc (section::after, [data-cover]) with a lilac
+ *    atmospheric limb covers the whole section and shrinks, scale 1 → 0, into
+ *    the eclipsed body in the upper right; the night opens. The disc exists
+ *    only in the armed state (html.js, motion on, engine alive) and ends at
+ *    scale 0 + opacity 0 + visibility hidden, so it is never left over
+ *    content.
+ *  - The body: a starlight sun behind a --void moon with a hairline limb, a
+ *    breathing corona, slow coronal streamers and one bead of light on the
+ *    −24° diagonal. As the section scrolls up the moon slides along that
+ *    diagonal into totality (the crescent and the bead thin out: a "diamond
+ *    ring"); transform-only, written from the shared scroll loop. The body
+ *    also sits at its own depth (data-parallax). Loops pause offscreen.
+ *  - The content plane swings up out of depth as the disc opens (rotateX +
+ *    translateZ on the grid), the H2 words flip up on a hinge, the four
+ *    intent chips fall into place one after another (rotateX from the top
+ *    edge), then the buttons and the number rise.
  *   Trigger: the engine's .is-in on the section (data-inview). Because the
  *   engine marks sections as soon as a sliver shows (and marks everything
  *   after 6s), the script below HOLDS the open (.is-held) until half of the
  *   viewport is violet, then releases it: the content in view plays the
- *   §5.12 choreography, timed to the moment the disc uncovers it (H2 words
- *   from 260ms, chips at 50ms steps, button 660ms); content below the fold
- *   is handed back to the engine and rises on entry.
+ *   choreography, timed to the moment the disc uncovers it; content below
+ *   the fold is handed back to the engine and rises on entry.
  *   The hold is only ever added by this script, so if it fails the disc
  *   simply opens on .is-in; once the section is on screen it is released
  *   within 2.4s whatever happens.
  *
  * Desktop: H2 (D1) in columns 1–10, one sentence per line block; body in
  * columns 1–5 closed by a hairline and the secondary links; the console
- * (intent chips 2×2, the 64px starlight button, the number line) in 7–12.
- * The button is sized for its longest label, so choosing a chip moves
- * nothing. From 960px the same two columns on the 8-column grid (1–4 and
- * 5–8); portrait tablets stack, console in 1–6. 390px: stacked, chips 2×2
- * (one column under 380px), full-width 64px button, number under it.
+ * (intent chips 2×2, the 64px starlight WhatsApp button with the starlight
+ * outline Email button beside it, the number line) in 7–12. The WhatsApp
+ * button is sized for its longest label, so choosing a chip moves nothing.
+ * Choosing a chip also sets the email: subject = the chip's label, body =
+ * the same prefill as the WhatsApp message. When the console is narrower
+ * than 540px (phones, tablets, small laptops) Email sits under WhatsApp,
+ * so the WhatsApp label never breaks mid-phrase.
  *
  * No live clock line (owner decision). Root carries data-sticky-hide so the
  * mobile WhatsApp bar steps aside here.
@@ -37,19 +49,27 @@ import Cosmos from '../Cosmos.astro';
 import SplitText from '../ui/SplitText.astro';
 import Arrow from '../ui/Arrow.astro';
 import WaGlyph from '../ui/WaGlyph.astro';
-import { finale, contact, wa } from '../../data/site';
+import MailGlyph from '../ui/MailGlyph.astro';
+import { finale, contact, wa, mail } from '../../data/site';
 import { url } from '../../lib/url';
 
-/* "Send your current website." / "Get a fixed price." — one sentence per
-   line block, each balanced on its own. */
+/* "Send your current website." / "Get a free price analysis." — one
+   sentence per line block, each balanced on its own. */
 const lines = finale.h2.split(/(?<=\.)\s+/);
+
+const showEmail = contact.email.confirmed;
 
 const intents = finale.intents.map((it) => ({
   id: it.id,
   label: it.label,
   href: wa(it.text),
   cta: finale.button.withIntent(it.label),
+  /* the same request by email: the chip's label as the subject */
+  mail: mail(it.label, it.text),
 }));
+
+const mailDefault = mail(contact.email.subject, finale.button.text);
+const mailAria = `${finale.email.aria} ${finale.email.address}`;
 
 /* The button is sized once for its longest label, so choosing a chip never
    moves anything (the sizer is aria-hidden and visibility: hidden). */
@@ -64,7 +84,7 @@ const copyValue = `+${contact.whatsapp.e164}`;
 /* Choreography offsets (ms after the eclipse opens), used only for content
    that is on screen at that moment. Everything else rises on entry with the
    small default delays in its style attribute. */
-const STAGE = { h2: 260, body: 420, legend: 500, chip: 540, button: 660, number: 740, rule: 700, links: 800 };
+const STAGE = { h2: 240, body: 520, legend: 560, chip: 620, chipStep: 90, button: 1000, number: 1120, rule: 900, links: 1040 };
 ---
 
 <section
@@ -80,9 +100,14 @@ const STAGE = { h2: 260, body: 420, legend: 500, chip: 540, button: 660, number:
   <Cosmos variant="stars" />
 
   <div class="eclipse" data-eclipse aria-hidden="true">
-    <span class="corona"></span>
-    <span class="moon"></span>
-    <span class="bead"></span>
+    <div class="ecl-body" data-parallax="0.08">
+      <span class="streamers"></span>
+      <span class="corona"></span>
+      <span class="sun"></span>
+      <span class="flare"></span>
+      <span class="moon"></span>
+      <span class="bead"></span>
+    </div>
   </div>
 
   <div class="wrap g grid">
@@ -96,8 +121,16 @@ const STAGE = { h2: 260, body: 420, legend: 500, chip: 540, button: 660, number:
         <div class="chips">
           {
             intents.map((it, k) => (
-              <label class="chip" data-reveal style={`--d:${k * 50}ms`} data-stage={STAGE.chip + k * 50}>
-                <input class="visually-hidden" type="radio" name="finale-intent" value={it.id} data-href={it.href} data-cta={it.cta} />
+              <label class="chip" data-reveal style={`--d:${k * STAGE.chipStep}ms`} data-stage={STAGE.chip + k * STAGE.chipStep}>
+                <input
+                  class="visually-hidden"
+                  type="radio"
+                  name="finale-intent"
+                  value={it.id}
+                  data-href={it.href}
+                  data-cta={it.cta}
+                  data-mail={it.mail}
+                />
                 <span class="chip-face">
                   <span class="chip-node" aria-hidden="true" />
                   <span class="chip-text">{it.label}</span>
@@ -108,7 +141,7 @@ const STAGE = { h2: 260, body: 420, legend: 500, chip: 540, button: 660, number:
         </div>
       </fieldset>
 
-      <div class="cta-wrap" data-reveal style="--d:120ms" data-stage={STAGE.button}>
+      <div class:list={['cta-wrap', { 'has-mail': showEmail }]} data-reveal style="--d:120ms" data-stage={STAGE.button}>
         <a
           class="btn btn-star btn-lg cta"
           href={wa(finale.button.text)}
@@ -125,6 +158,15 @@ const STAGE = { h2: 260, body: 420, legend: 500, chip: 540, button: 660, number:
           </span>
           <Arrow />
         </a>
+        {
+          showEmail && (
+            <a class="btn btn-line btn-lg mail" href={mailDefault} aria-label={mailAria} data-magnetic=".2" data-finale-mail>
+              <MailGlyph size={18} />
+              <span class="mail-text">{finale.email.label}</span>
+              <Arrow />
+            </a>
+          )
+        }
       </div>
 
       <div class="numline" data-reveal style="--d:200ms" data-stage={STAGE.number}>
@@ -160,33 +202,44 @@ const STAGE = { h2: 260, body: 420, legend: 500, chip: 540, button: 660, number:
 </section>
 
 <script>
-  import { addFrame, isReduced, observeReveals } from '../../scripts/motion';
+  import { addFrame, isReduced, observeReveals, requestFrame, vestibular } from '../../scripts/motion';
 
   const root = document.querySelector<HTMLElement>('[data-finale]');
   if (root) {
     initIntents(root);
     initCopy(root);
     initEclipse(root);
+    initSky(root);
   }
 
-  /* ---- intent chips: prefill + label ---------------------------------- */
+  /* ---- intent chips: prefill + labels ---------------------------------- */
   function initIntents(section: HTMLElement): void {
     const cta = section.querySelector<HTMLAnchorElement>('[data-finale-cta]');
     const label = section.querySelector<HTMLElement>('[data-finale-label]');
+    const mailBtn = section.querySelector<HTMLAnchorElement>('[data-finale-mail]');
     const radios = Array.from(section.querySelectorAll<HTMLInputElement>('input[name="finale-intent"]'));
     if (!cta || !label || !radios.length) return;
 
-    const sync = () => {
+    const sync = (animate: boolean) => {
       const on = radios.find((r) => r.checked);
       if (!on) return;
       if (on.dataset.href) cta.href = on.dataset.href;
-      if (on.dataset.cta) label.textContent = on.dataset.cta;
+      if (mailBtn && on.dataset.mail) mailBtn.href = on.dataset.mail;
       cta.dataset.waIntent = on.value;
+      if (on.dataset.cta && label.textContent !== on.dataset.cta) {
+        label.textContent = on.dataset.cta;
+        // the new label flips in on its baseline
+        if (animate && !isReduced()) {
+          label.classList.remove('is-flip');
+          void label.offsetWidth;
+          label.classList.add('is-flip');
+        }
+      }
     };
-    radios.forEach((r) => r.addEventListener('change', sync));
+    radios.forEach((r) => r.addEventListener('change', () => sync(true)));
     // a selection restored by back/forward navigation
-    sync();
-    window.addEventListener('pageshow', sync);
+    sync(false);
+    window.addEventListener('pageshow', () => sync(false));
   }
 
   /* ---- copy number ------------------------------------------------------ */
@@ -236,7 +289,7 @@ const STAGE = { h2: 260, body: 420, legend: 500, chip: 540, button: 660, number:
     });
   }
 
-  /* ---- the eclipse -------------------------------------------------------
+  /* ---- the eclipse cover -------------------------------------------------
      Geometry: the disc is centred on the eclipsed body; its diameter is
      measured so it covers the farthest corner of the section.
      Timing: see the component header (hold until half the viewport is
@@ -285,8 +338,22 @@ const STAGE = { h2: 260, body: 420, legend: 500, chip: 540, button: 660, number:
       }
     };
 
+    /* Content that scrolls into view while the night is still opening keeps
+       its place in the choreography: its delay is what is left of its
+       stage offset (the engine adds .is-in and dispatches vesta:reveal in
+       the same task, so the delay lands before the style change). */
+    let openedAt = 0;
+    section.addEventListener('vesta:reveal', (e) => {
+      const el = e.target as HTMLElement;
+      if (el === section || !openedAt || !el.dataset || !el.dataset.stage) return;
+      const since = performance.now() - openedAt;
+      if (since > 1600) return;
+      el.style.setProperty('--d', `${Math.round(Math.max(0, Number(el.dataset.stage) - since))}ms`);
+    });
+
     /* style writes: stage the visible, hand the rest back to the engine */
     const open = () => {
+      openedAt = performance.now();
       for (const el of onScreen) el.style.setProperty('--d', `${el.dataset.stage}ms`);
       const rearm = offScreen.filter((el) => el.classList.contains('is-in'));
       rearm.forEach((el) => el.classList.remove('is-in'));
@@ -308,6 +375,7 @@ const STAGE = { h2: 260, body: 420, legend: 500, chip: 540, button: 660, number:
       survey(vh);
       if (openAt(section.getBoundingClientRect(), vh)) {
         // already half on screen (anchor jump, reload): open right away
+        openedAt = performance.now();
         for (const el of onScreen) el.style.setProperty('--d', `${el.dataset.stage}ms`);
         return;
       }
@@ -338,9 +406,57 @@ const STAGE = { h2: 260, body: 420, legend: 500, chip: 540, button: 660, number:
       },
     });
 
-    // Motion switched off from the footer: nothing may stay held.
+    // Motion switched off: nothing may stay held.
     document.addEventListener('vesta:motion', () => {
       if (isReduced()) forceOpen();
+    });
+  }
+
+  /* ---- the eclipsed body: totality on scroll + loops on/offscreen -------
+     --m (0 … 1) is how far the moon has slid off the sun along the −24°
+     diagonal: 1 while the section is low in the viewport, about 0.4 when
+     its top reaches the top edge (a thin crescent and the bead: the
+     diamond ring while the content is read), 0 (totality) once it has
+     scrolled a little over half a viewport further. */
+  function initSky(section: HTMLElement): void {
+    const body = section.querySelector<HTMLElement>('[data-eclipse]');
+    if (!body) return;
+    let near = false;
+    let m = 0;
+    let wm = NaN;
+
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(
+        (entries) => {
+          near = entries.some((e) => e.isIntersecting);
+          section.classList.toggle('is-live', near && document.visibilityState === 'visible');
+          if (near) requestFrame();
+        },
+        { rootMargin: '10% 0px' }
+      ).observe(section);
+    } else {
+      near = true;
+      section.classList.add('is-live');
+    }
+    document.addEventListener('visibilitychange', () => {
+      section.classList.toggle('is-live', near && document.visibilityState === 'visible');
+    });
+
+    addFrame({
+      read(_y, vh) {
+        if (!near) return;
+        if (vestibular()) {
+          m = 0.35;
+          return;
+        }
+        const t = section.getBoundingClientRect().top / vh;
+        m = Math.min(1, Math.max(0, (t + 0.55) / 1.25));
+      },
+      write() {
+        if (m === wm) return;
+        wm = m;
+        body.style.setProperty('--m', m.toFixed(4));
+      },
     });
   }
 </script>
@@ -351,7 +467,7 @@ const STAGE = { h2: 260, body: 420, legend: 500, chip: 540, button: 660, number:
      body; the covering disc (::after) is centred on the same point, and its
      diameter (--ecl-d) is measured by the script (400vmax until then). */
   .finale {
-    --ecl-size: clamp(76px, 14.5vw, 208px);
+    --ecl-size: clamp(84px, 15vw, 224px);
     --ecl-edge: max(var(--gut), (100% - var(--content-max)) / 2);
     --ecl-cx: calc(100% - var(--ecl-edge) - var(--ecl-size) / 2);
     --ecl-cy: calc(var(--section-y) * 0.4 + var(--ecl-size) / 2);
@@ -376,6 +492,8 @@ const STAGE = { h2: 260, body: 420, legend: 500, chip: 540, button: 660, number:
   }
 
   /* ---- the eclipse cover (data-cover) ------------------------------------ */
+  /* The night: a void disc with a lilac atmospheric limb (a planet's rim
+     catching the light) that sweeps across the field as it shrinks. */
   :global(html.js:not(.motion-reduced):not(.motion-failed)) .finale::after {
     content: '';
     position: absolute;
@@ -384,17 +502,19 @@ const STAGE = { h2: 260, body: 420, legend: 500, chip: 540, button: 660, number:
     top: calc(var(--ecl-cy) - var(--ecl-d) / 2);
     width: var(--ecl-d);
     height: var(--ecl-d);
+    box-sizing: border-box;
+    border: 2px solid rgb(185 162 255 / 0.7);
     border-radius: 50%;
     background-color: var(--void);
     pointer-events: none;
     transform: scale(1);
-    /* 1200ms quint entered 180ms in: the curve's flat first 15% (no visible
-       change) is skipped, so the sky answers the scroll at once. Ends at
-       1020ms, then opacity 0 + visibility hidden. */
+    /* 1400ms quint entered 200ms in: the curve's flat first stretch (no
+       visible change) is skipped, so the sky answers the scroll at once.
+       Ends at 1200ms, then opacity 0 + visibility hidden. */
     transition:
-      transform 1200ms var(--ease-quint) -180ms,
-      opacity 0s linear 1020ms,
-      visibility 0s linear 1020ms;
+      transform 1400ms var(--ease-quint) -200ms,
+      opacity 0s linear 1200ms,
+      visibility 0s linear 1200ms;
   }
 
   :global(html.js:not(.motion-reduced):not(.motion-failed)) .finale.is-in:not(.is-held)::after {
@@ -413,13 +533,20 @@ const STAGE = { h2: 260, body: 420, legend: 500, chip: 540, button: 660, number:
     transform: scaleX(0);
   }
 
-  :global(html.js:not(.motion-reduced):not(.motion-failed)) .finale.is-held [data-split] .w {
-    opacity: 0;
-    transform: translate3d(0, 112%, 0);
+  /* ---- the content plane: swings up out of depth as the night opens ---- */
+  .grid {
+    transform-origin: 50% 0;
+    transition: transform 1900ms var(--ease-expo) 60ms;
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .finale:is(:not(.is-in), .is-held) .grid {
+    transform: perspective(1400px) translate3d(0, 64px, -200px) rotateX(10deg);
+    transition: none;
   }
 
   /* ---- the eclipsed body (decorative) ------------------------------------ */
   .eclipse {
+    --m: 0.35;
     position: absolute;
     z-index: 1;
     left: calc(var(--ecl-cx) - var(--ecl-size) / 2);
@@ -429,13 +556,35 @@ const STAGE = { h2: 260, body: 420, legend: 500, chip: 540, button: 660, number:
     pointer-events: none;
   }
 
-  .eclipse > span {
+  .ecl-body {
+    position: absolute;
+    inset: 0;
+  }
+
+  .ecl-body > span {
     position: absolute;
     border-radius: 50%;
   }
 
+  /* coronal streamers: faint starlight rays from the limb, turning very
+     slowly; masked so they start at the limb and fade out */
+  .streamers {
+    inset: -120%;
+    background-image: repeating-conic-gradient(
+      from 8deg,
+      rgb(243 240 250 / 0) 0deg 9deg,
+      rgb(243 240 250 / 0.07) 11deg,
+      rgb(243 240 250 / 0) 14deg 23deg,
+      rgb(243 240 250 / 0.045) 26deg,
+      rgb(243 240 250 / 0) 31deg 41deg
+    );
+    -webkit-mask-image: radial-gradient(closest-side, transparent 20%, #000 22%, rgb(0 0 0 / 0.35) 45%, transparent 92%);
+    mask-image: radial-gradient(closest-side, transparent 20%, #000 22%, rgb(0 0 0 / 0.35) 45%, transparent 92%);
+    animation: streamers 180s linear infinite;
+  }
+
   /* corona: one radial, ≤10% starlight at the limb, fading out to 2.6× the
-     disc (the moon is 38.5% of its radius) */
+     disc (the moon is 38.5% of its radius); it breathes */
   .corona {
     inset: -80%;
     background-image: radial-gradient(
@@ -447,23 +596,88 @@ const STAGE = { h2: 260, body: 420, legend: 500, chip: 540, button: 660, number:
       rgb(243 240 250 / 0.005) 82%,
       transparent 100%
     );
+    animation: corona 7s ease-in-out infinite alternate;
   }
 
+  .sun {
+    inset: 0;
+    background-color: var(--starlight);
+  }
+
+  /* the moon slides along the −24° diagonal: crescent at m = 1, totality
+     (only the hairline limb left) at m = 0 */
   .moon {
     inset: 0;
     border: 1px solid rgb(243 240 250 / 0.9);
     background-color: var(--void);
+    transform: translate3d(calc(var(--m) * 7.5%), calc(var(--m) * -3.3%), 0);
   }
 
-  /* one bead of light on the limb, on the site's −24° diagonal (lower left) */
-  .bead {
+  /* the bead of light on the limb (lower left, where the sun shows) and
+     its thin flare, which passes behind the moon, so only its outer half
+     shows as a ray: both shrink toward totality */
+  .bead,
+  .flare {
     left: 50%;
     top: 50%;
-    width: 6px;
-    height: 6px;
-    margin: -3px 0 0 -3px;
+  }
+
+  .bead {
+    width: 8px;
+    height: 8px;
+    margin: -4px 0 0 -4px;
     background-color: var(--starlight);
-    transform: rotate(156deg) translateX(calc(var(--ecl-size) / 2));
+    transform: rotate(156deg) translateX(calc(var(--ecl-size) / 2 - 1px)) scale(calc(0.4 + var(--m) * 0.8));
+  }
+
+  .flare {
+    width: calc(var(--ecl-size) * 0.9);
+    height: 1px;
+    margin: -0.5px 0 0 calc(var(--ecl-size) * -0.45);
+    border-radius: 0;
+    background-image: linear-gradient(90deg, transparent, rgb(243 240 250 / 0.55) 50%, transparent);
+    transform: rotate(156deg) translateX(calc(var(--ecl-size) / 2)) rotate(-156deg) rotate(-24deg) scaleX(calc(0.15 + var(--m) * 0.85));
+  }
+
+  /* entrance: once the night has opened, the bead flares once */
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .finale.is-in:not(.is-held) .bead {
+    animation: bead-flare 1600ms var(--ease-expo) 900ms backwards;
+  }
+
+  @keyframes bead-flare {
+    0% {
+      opacity: 0;
+    }
+    35% {
+      opacity: 1;
+      transform: rotate(156deg) translateX(calc(var(--ecl-size) / 2 - 1px)) scale(2.6);
+    }
+  }
+
+  @keyframes streamers {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes corona {
+    from {
+      transform: scale(0.95);
+    }
+    to {
+      transform: scale(1.07);
+    }
+  }
+
+  /* loops run only while the section is near the viewport (script) */
+  .finale:not(.is-live) .streamers,
+  .finale:not(.is-live) .corona {
+    animation-play-state: paused;
+  }
+
+  :global(html.motion-reduced) .streamers,
+  :global(html.motion-reduced) .corona {
+    animation: none;
   }
 
   /* ---- grid -------------------------------------------------------------- */
@@ -475,8 +689,7 @@ const STAGE = { h2: 260, body: 420, legend: 500, chip: 540, button: 660, number:
     align-content: start;
   }
 
-  /* D1, held to one line per sentence down to 320px (the sentence
-     "Get a fixed price." sets the floor: ≈ 8ch wide per 100% of font size). */
+  /* D1, held to one line per sentence block down to 320px. */
   .title {
     grid-row: 1;
     max-width: 16ch;
@@ -488,6 +701,25 @@ const STAGE = { h2: 260, body: 420, legend: 500, chip: 540, button: 660, number:
     text-wrap: balance;
   }
 
+  /* the headline flips up word by word, deeper and slower than the site's
+     default: each word hinges on its baseline out of the page */
+  .title :global(.wm) {
+    perspective: 900px;
+  }
+
+  .title :global(.w) {
+    transition:
+      transform 1700ms var(--ease-expo),
+      opacity 420ms linear;
+    transition-delay: calc(min(var(--i, 0) * 85ms, 900ms) + var(--d, 0ms));
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .finale .title:not(.is-in) :global(.w),
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .finale.is-held .title :global(.w) {
+    opacity: 0;
+    transform: translate3d(0, 108%, -80px) rotateX(-96deg);
+  }
+
   .intro {
     grid-row: 2;
     margin-top: 28px;
@@ -497,6 +729,7 @@ const STAGE = { h2: 260, body: 420, legend: 500, chip: 540, button: 660, number:
   .console {
     grid-row: 3;
     margin-top: 48px;
+    container-type: inline-size;
   }
 
   .foot {
@@ -611,6 +844,21 @@ const STAGE = { h2: 260, body: 420, legend: 500, chip: 540, button: 660, number:
     -webkit-tap-highlight-color: transparent;
   }
 
+  /* the cascade: each chip falls into place on a hinge at its top edge */
+  .chip[data-reveal] {
+    transform-origin: 50% 0;
+    transition:
+      opacity 460ms linear,
+      transform 1200ms var(--ease-expo);
+    transition-delay: var(--d, 0ms);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .finale .chip[data-reveal]:not(.is-in),
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .finale.is-held .chip[data-reveal] {
+    opacity: 0;
+    transform: perspective(700px) rotateX(-92deg) translate3d(0, -4px, 0);
+  }
+
   .chip-face {
     display: flex;
     align-items: center;
@@ -630,16 +878,20 @@ const STAGE = { h2: 260, body: 420, legend: 500, chip: 540, button: 660, number:
     transition:
       background-color var(--t-micro) linear,
       border-color var(--t-micro) linear,
-      color var(--t-micro) linear;
+      color var(--t-micro) linear,
+      transform 160ms var(--ease-expo);
   }
 
+  /* the node is a small facet: it turns into a diamond when chosen */
   .chip-node {
     flex: 0 0 auto;
     width: 9px;
     height: 9px;
     border: 1px solid currentColor;
     background-color: transparent;
-    transition: background-color var(--t-micro) linear;
+    transition:
+      background-color var(--t-micro) linear,
+      transform 520ms var(--ease-expo);
   }
 
   .chip-text {
@@ -651,6 +903,10 @@ const STAGE = { h2: 260, body: 420, legend: 500, chip: 540, button: 660, number:
       border-color: var(--starlight);
       background-color: rgb(243 240 250 / 0.08);
     }
+
+    .chip:hover .chip-node {
+      transform: rotate(45deg);
+    }
   }
 
   .chip input:checked + .chip-face {
@@ -661,6 +917,7 @@ const STAGE = { h2: 260, body: 420, legend: 500, chip: 540, button: 660, number:
 
   .chip input:checked + .chip-face .chip-node {
     background-color: currentColor;
+    transform: rotate(135deg) scale(1.1);
   }
 
   .chip input:focus-visible + .chip-face {
@@ -669,7 +926,7 @@ const STAGE = { h2: 260, body: 420, legend: 500, chip: 540, button: 660, number:
   }
 
   .chip:active .chip-face {
-    transform: scale(0.98);
+    transform: scale(0.97);
   }
 
   @media (min-width: 768px) {
@@ -679,9 +936,20 @@ const STAGE = { h2: 260, body: 420, legend: 500, chip: 540, button: 660, number:
     }
   }
 
-  /* ---- the button -------------------------------------------------------- */
+  /* ---- the buttons ------------------------------------------------------- */
+  /* WhatsApp takes the room; Email sits beside it when the console is wide
+     enough (container query), under it otherwise. */
   .cta-wrap {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
     margin-top: 24px;
+  }
+
+  @container (min-width: 540px) {
+    .cta-wrap.has-mail {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
   }
 
   .cta {
@@ -700,6 +968,7 @@ const STAGE = { h2: 260, body: 420, legend: 500, chip: 540, button: 660, number:
     flex: 1 1 auto;
     min-width: 0;
     line-height: 1.25;
+    perspective: 500px;
   }
 
   .cta-text > * {
@@ -717,7 +986,24 @@ const STAGE = { h2: 260, body: 420, legend: 500, chip: 540, button: 660, number:
      starlight 17:1). It steps aside on hover/focus, where the fill turns
      white and the gleam crosses. */
   .cta-label {
+    justify-self: start;
     background-color: var(--starlight);
+    transform-origin: 50% 100%;
+  }
+
+  .cta-label.is-flip {
+    animation: label-flip 640ms var(--ease-expo) both;
+  }
+
+  @keyframes label-flip {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 60%, 0) rotateX(-80deg);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
   }
 
   .cta:focus-visible .cta-label {
@@ -733,6 +1019,46 @@ const STAGE = { h2: 260, body: 420, legend: 500, chip: 540, button: 660, number:
   @media (min-width: 768px) {
     .cta {
       padding-inline: 28px;
+    }
+  }
+
+  /* Email: the starlight outline. Starlight on the violet field 10.2:1; on
+     hover it fills starlight and the label turns ink (17:1). */
+  .mail {
+    --btn-fg: var(--starlight);
+    --btn-bg-hover: var(--starlight);
+    justify-content: flex-start;
+    gap: 14px;
+    min-height: 64px;
+    padding: 0 24px;
+    border-color: var(--starlight);
+    transition:
+      transform 120ms var(--ease-expo),
+      background-color var(--t-micro) linear,
+      color var(--t-micro) linear;
+  }
+
+  .mail-text {
+    flex: 1 1 auto;
+  }
+
+  .mail::after {
+    background-color: rgb(12 10 18 / 0.35);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .mail:hover {
+      color: var(--ink);
+    }
+  }
+
+  .mail:focus-visible {
+    color: var(--ink);
+  }
+
+  @container (min-width: 540px) {
+    .mail {
+      padding-inline: 24px 22px;
     }
   }
 

@@ -2,13 +2,17 @@
    Vesta · #visibility sequencer (data-serp)
 
    Six checklist <button>s drive the search illustration through six states.
-   - Starts once, when the panel is 35% in view: one item every 1100 ms.
+   - Starts once, when the panel is 35% in view: the query types itself
+     (.q-on), the neighbouring results load, then one item every STEP_MS.
    - Each item ticks first; the panel follows after a short lead (CSS
-     transition-delay via --lead), so the tick reads as the cause.
+     transition-delay via --lead), so the tick reads as the cause. The row
+     that is playing opens its one-line explanation (aria-current) and its
+     bottom hairline fills as a timer until the next item ticks.
    - Clicking an item jumps to that state and stops the run. Replay restarts.
    - Pauses while the whole section is offscreen and while the tab is hidden.
      (The section, not the panel: on phones the checklist sits under the
-     panel and keeps ticking while it is read.)
+     panel and keeps ticking while it is read.) The panel's own loops (caret,
+     orbit) rest whenever the panel is offscreen (.is-vis).
    - Scrolled past (section fully above the viewport) before the run ended,
      or before it began: the remaining states complete instantly, so the
      section is never found half-played or empty on the way back up.
@@ -18,15 +22,20 @@
    no JS, a thrown error, a failed engine or motion off all render complete.
    ========================================================================= */
 
-import { isReduced } from './motion';
+import { isReduced, travelTo } from './motion';
 
 const STEPS = 6;
-const STEP_MS = 1100;
-/** Indicator fill (180 ms) + tick draw (300 ms), overlapped: then the panel moves. */
+/** Time each item holds the stage: long enough to read its explanation. */
+const STEP_MS = 1900;
+/** Indicator fill + tick draw, overlapped: then the panel moves. */
 const LEAD_MS = 360;
-/** Beat between the panel settling into view and the first tick. */
-const FIRST_MS = 520;
-/** Replay: let the panel rewind to empty before ticking again. */
+/** Per typed character (mirrors the CSS: --qn × 52ms). */
+const CHAR_MS = 52;
+/** After typing: the neighbouring results load, then the first item ticks. */
+const AFTER_TYPE_MS = 900;
+/** Beat between the panel settling into view and the typing. */
+const FIRST_MS = 420;
+/** Replay: let the panel rewind to empty before typing again. */
 const REWIND_MS = 900;
 /** The run starts when this share of the panel is visible. */
 const START_RATIO = 0.35;
@@ -44,8 +53,11 @@ export function initSerp(): void {
   const counter = panel.querySelector<HTMLElement>('[data-serp-count]');
   const gaugeNum = panel.querySelector<HTMLElement>('[data-serp-num]');
   const gaugeTarget = Number(gaugeNum?.textContent?.trim() || 0);
+  const qn = Number(getComputedStyle(panel).getPropertyValue('--qn')) || 18;
+  const TYPE_MS = qn * CHAR_MS;
 
   let shown = STEPS;
+  let typed = true;
   let timer = 0;
   let due = 0;
   let left = 0;
@@ -55,6 +67,8 @@ export function initSerp(): void {
   /** The visitor picked a state by hand: leave it exactly as chosen. */
   let picked = false;
   let countRaf = 0;
+
+  root.style.setProperty('--step', `${STEP_MS}ms`);
 
   /* ---- state ----------------------------------------------------------- */
 
@@ -78,12 +92,28 @@ export function initSerp(): void {
     if (gaugeNum && gaugeTarget) gaugeNum.textContent = String(gaugeTarget);
   }
 
+  function setTyped(on: boolean): void {
+    typed = on;
+    panel!.classList.toggle('q-on', on);
+  }
+
+  /** The playing row's bottom hairline fills over one step. */
+  function setTiming(k: number | null): void {
+    items.forEach((btn) => btn.classList.remove('is-timing'));
+    if (k === null || isReduced()) return;
+    const btn = items.find((b) => Number(b.dataset.serpItem) === k);
+    if (!btn) return;
+    void btn.offsetWidth;
+    btn.classList.add('is-timing');
+  }
+
   function go(k: number, lead: number, instant = false): void {
     const prev = shown;
     shown = k;
 
     if (instant) root!.classList.add('is-instant');
 
+    setTyped(k > 0);
     items.forEach((btn) => {
       const n = Number(btn.dataset.serpItem);
       btn.classList.toggle('is-todo', n > k);
@@ -94,7 +124,17 @@ export function initSerp(): void {
     panel!.style.setProperty('--lead', `${lead}ms`);
     panel!.style.setProperty('--k', String(k));
     for (let s = 1; s <= STEPS; s++) panel!.classList.toggle(`s${s}`, s <= k);
-    if (counter) counter.textContent = `${pad(k)}/${pad(STEPS)}`;
+    if (counter) {
+      const text = `${pad(k)}/${pad(STEPS)}`;
+      if (counter.textContent !== text) {
+        counter.textContent = text;
+        counter.classList.remove('is-flip');
+        if (!instant && !isReduced()) {
+          void counter.offsetWidth;
+          counter.classList.add('is-flip');
+        }
+      }
+    }
 
     if (k >= 5 && prev < 5 && !isReduced() && !instant) countUp(lead + 120);
     else if (k < 5 || isReduced() || instant) resetCount();
@@ -115,14 +155,25 @@ export function initSerp(): void {
 
   function step(): void {
     timer = 0;
+    if (!typed) {
+      setTyped(true);
+      schedule(TYPE_MS + AFTER_TYPE_MS);
+      return;
+    }
     const next = shown + 1;
     if (next > STEPS) {
       running = false;
+      setTiming(null);
       return;
     }
     go(next, LEAD_MS);
-    if (next < STEPS) schedule(STEP_MS);
-    else running = false;
+    if (next < STEPS) {
+      setTiming(next);
+      schedule(STEP_MS);
+    } else {
+      setTiming(null);
+      running = false;
+    }
   }
 
   function pause(): void {
@@ -130,10 +181,16 @@ export function initSerp(): void {
     window.clearTimeout(timer);
     timer = 0;
     left = Math.max(0, due - performance.now());
+    setTiming(null);
   }
 
   function resume(): void {
     if (!running || timer || document.hidden || !inView) return;
+    // a resumed step restarts its timer bar for the time that is left
+    if (typed && shown > 0 && shown < STEPS) {
+      root!.style.setProperty('--step', `${Math.round(left || STEP_MS)}ms`);
+      setTiming(shown);
+    }
     schedule(left || STEP_MS);
   }
 
@@ -141,14 +198,16 @@ export function initSerp(): void {
     running = false;
     window.clearTimeout(timer);
     timer = 0;
+    setTiming(null);
+    root!.style.setProperty('--step', `${STEP_MS}ms`);
   }
 
-  function run(from: number, delay: number): void {
+  function run(delay: number): void {
     stop();
     started = true;
     running = true;
     picked = false;
-    if (shown !== from) go(from, 0);
+    if (shown !== 0) go(0, 0);
     left = delay;
     resume();
   }
@@ -179,14 +238,12 @@ export function initSerp(): void {
     if (isReduced()) return;
     // Replay sits under the checklist, so the panel is often half out of
     // view (above the fold on phones): bring it back first. The rewind
-    // beat (REWIND_MS) covers the scroll.
+    // beat (REWIND_MS) covers the travel.
     const r = panel.getBoundingClientRect();
     const vh = window.innerHeight || 1;
     const seen = Math.max(0, Math.min(r.bottom, vh) - Math.max(r.top, 0));
-    if (seen < Math.min(r.height, vh) * 0.6) {
-      panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-    run(0, shown !== 0 ? REWIND_MS : FIRST_MS);
+    if (seen < Math.min(r.height, vh) * 0.6) travelTo(panel);
+    run(shown !== 0 ? REWIND_MS : FIRST_MS);
   });
 
   document.addEventListener('vesta:motion', () => {
@@ -213,7 +270,7 @@ export function initSerp(): void {
           const need = Math.min(START_RATIO * e.boundingClientRect.height, 0.5 * (window.innerHeight || 1));
           if (e.intersectionRect.height < need) continue;
           inView = true;
-          run(0, FIRST_MS);
+          run(FIRST_MS);
           startIo.disconnect();
         }
       },
@@ -231,6 +288,13 @@ export function initSerp(): void {
       }
     });
     viewIo.observe(root);
+
+    // The panel's loops (caret, orbiting planet) run only while it is seen.
+    new IntersectionObserver((entries) => {
+      for (const e of entries) panel.classList.toggle('is-vis', e.isIntersecting);
+    }).observe(panel);
+  } else {
+    panel.classList.add('is-vis');
   }
 
   /* ---- arm ------------------------------------------------------------- */
@@ -252,7 +316,7 @@ export function bootSerp(): void {
     initSerp();
   } catch (err) {
     // Never leave the illustration in a half-armed, hidden state.
-    document.querySelectorAll('[data-serp-root], [data-serp]').forEach((el) => el.classList.remove('is-armed'));
+    document.querySelectorAll('[data-serp-root], [data-serp]').forEach((el) => el.classList.remove('is-armed', 'q-on'));
     console.warn('[serp] sequencer disabled; showing the final state.', err);
   }
 }
