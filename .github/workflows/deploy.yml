@@ -31,9 +31,10 @@ jobs:
       - name: Build
         env:
           # Project site on GitHub Pages lives under /<repo>/. On the custom
-          # domain (vesta.systems) set the SITE_URL repository variable and
-          # add public/CNAME; BASE_PATH then resolves to "".
-          BASE_PATH: ${{ vars.SITE_URL && '' || format('/{0}', github.event.repository.name) }}
+          # domain (vesta-consult.com.br) the SITE_URL repository variable is
+          # set and public/CNAME exists; BASE_PATH then resolves to "".
+          # ('' is falsy in expressions, so the empty branch must come last.)
+          BASE_PATH: ${{ vars.SITE_URL == '' && format('/{0}', github.event.repository.name) || '' }}
           SITE_URL: ${{ vars.SITE_URL || format('https://{0}.github.io/{1}', github.repository_owner, github.event.repository.name) }}
         run: npm run build
 
