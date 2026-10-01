@@ -201,7 +201,7 @@ export const contact = {
  * example_view, detail_open) and configured as GA4 events inside GTM.
  */
 export const tracking = {
-  gtmId: '',
+  gtmId: 'GTM-WLZCG4FQ',
   searchConsoleToken: '',
 };
 
