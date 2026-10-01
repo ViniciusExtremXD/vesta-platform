@@ -3,9 +3,9 @@ import { defineConfig, fontProviders } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 
 // GitHub Pages serves a project site from /<repo>/. On the custom domain
-// (vesta.systems) BASE_PATH is empty. The deploy workflow sets both.
+// (vesta-consult.com.br) BASE_PATH is empty. The deploy workflow sets both.
 const BASE_PATH = process.env.BASE_PATH || '';
-const SITE = process.env.SITE_URL || 'https://viniciusextremxd.github.io/vesta-platform';
+const SITE = process.env.SITE_URL || 'https://vesta-consult.com.br';
 
 export default defineConfig({
   site: SITE,
@@ -18,7 +18,8 @@ export default defineConfig({
   },
   integrations: [
     sitemap({
-      filter: (page) => !page.includes('/404'),
+      // noindex pages (404, fictional concept studies, labs) stay out of the sitemap
+      filter: (page) => !/\/(404|lab\/|work\/concept-)/.test(page),
     }),
   ],
   image: {

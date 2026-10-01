@@ -4,7 +4,7 @@ import '../styles/global.css';
 import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
 import StickyBar from '../components/StickyBar.astro';
-import { brand, contact, founder } from '../data/site';
+import { brand, contact, founder, tracking } from '../data/site';
 import { url, absolute } from '../lib/url';
 
 export interface Props {
@@ -30,7 +30,7 @@ const basePrefix = import.meta.env.BASE_URL.replace(/\/$/, '');
 const path = canonical ?? (Astro.url.pathname.replace(basePrefix, '') || '/');
 const canonicalUrl = absolute(path, Astro.site);
 const ogImageUrl = absolute(ogImage ?? '/og/default.png', Astro.site);
-const siteUrl = Astro.site ? Astro.site.origin + (basePrefix || '') : 'https://vesta.systems';
+const siteUrl = Astro.site ? Astro.site.origin + (basePrefix || '') : 'https://vesta-consult.com.br';
 
 const sameAs = [contact.linkedin.confirmed ? contact.linkedin.url : null].filter(Boolean);
 
@@ -127,6 +127,25 @@ const extraLd = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
 
     <Font cssVariable="--font-sans" preload />
 
+    {tracking.searchConsoleToken && <meta name="google-site-verification" content={tracking.searchConsoleToken} />}
+    {
+      /* Google Tag Manager — loads after the page's own script, never blocks
+         the first paint. Conversion events come from scripts/track.ts. */
+      tracking.gtmId && (
+        <script is:inline define:vars={{ id: tracking.gtmId }}>
+          (function (w, d, s, l, i) {
+            w[l] = w[l] || [];
+            w[l].push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+            var f = d.getElementsByTagName(s)[0],
+              j = d.createElement(s);
+            j.async = true;
+            j.src = 'https://www.googletagmanager.com/gtm.js?id=' + i;
+            f.parentNode.insertBefore(j, f);
+          })(window, document, 'script', 'dataLayer', id);
+        </script>
+      )
+    }
+
     <script is:inline set:html={JSON.stringify(organization)} type="application/ld+json" />
     <script is:inline set:html={JSON.stringify(person)} type="application/ld+json" />
     <script is:inline set:html={JSON.stringify(website)} type="application/ld+json" />
@@ -134,6 +153,13 @@ const extraLd = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
   </head>
 
   <body class={bodyClass}>
+    {
+      tracking.gtmId && (
+        <noscript>
+          <iframe src={`https://www.googletagmanager.com/ns.html?id=${tracking.gtmId}`} height="0" width="0" style="display:none;visibility:hidden" />
+        </noscript>
+      )
+    }
     {
       !bare && (
         <Fragment>
@@ -161,6 +187,7 @@ const extraLd = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
 
     <script>
       import '../scripts/motion';
+      import '../scripts/track';
     </script>
   </body>
 </html>

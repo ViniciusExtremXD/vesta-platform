@@ -192,6 +192,19 @@ export const contact = {
   },
 };
 
+/* ------------------------------------------------------------- tracking */
+
+/**
+ * Google Tag Manager container and Search Console verification. Empty
+ * strings render nothing. Conversions are pushed to window.dataLayer by
+ * src/scripts/track.ts (whatsapp_click, email_click, build_sheet_send,
+ * example_view, detail_open) and configured as GA4 events inside GTM.
+ */
+export const tracking = {
+  gtmId: '',
+  searchConsoleToken: '',
+};
+
 /** mailto: link to the professional address, with an optional subject and body. */
 export function mail(subject: string = contact.email.subject, body = ''): string {
   const q = [`subject=${encodeURIComponent(subject)}`, body ? `body=${encodeURIComponent(body)}` : ''].filter(Boolean).join('&');
@@ -1918,11 +1931,11 @@ export interface PrivacyClause {
 export const privacy = {
   seo: {
     title: 'Privacy · Vesta',
-    description: 'What this website collects, which is nothing by default, and how to ask Vesta about your data.',
+    description: 'What this website collects (anonymous visit statistics through Google Analytics) and how to ask Vesta about your data.',
   } satisfies Seo,
   h1: 'Privacy',
   /** ISO date; render as "Last updated {formatDate(updated)}". */
-  updated: '2026-09-22',
+  updated: '2026-10-01',
   updatedLabel: 'Last updated',
   /** Sticky clause index title. */
   indexTitle: 'On this page',
@@ -1938,10 +1951,10 @@ export const privacy = {
       id: 'collects',
       title: 'What this site collects',
       paragraphs: [
-        'This site sets no cookies and runs no analytics or advertising scripts. Fonts are served from this site, not from a third party.',
-        'One preference is stored in your browser: the Motion on/off setting, saved in localStorage under the key "vesta-motion". It never leaves your device.',
+        'This site uses Google Tag Manager and Google Analytics to count visits and to see which buttons lead to a conversation (for example, a click on WhatsApp or email). Google may set cookies for this. No advertising or remarketing tags are used, and nothing you type in the configurator is sent.',
+        'Fonts are served from this site, not from a third party.',
       ],
-      links: [],
+      links: [{ label: 'How Google uses data ↗', href: 'https://policies.google.com/technologies/partner-sites' }],
     },
     {
       id: 'configurator',

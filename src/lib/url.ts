@@ -22,7 +22,7 @@ export function isExternal(href: string): boolean {
 
 /** Absolute URL for canonical / Open Graph / JSON-LD. */
 export function absolute(pathname: string, site: URL | undefined): string {
-  const origin = site ? site.origin : 'https://vesta.systems';
+  const origin = site ? site.origin : 'https://vesta-consult.com.br';
   return new URL(url(pathname), origin).href;
 }
 

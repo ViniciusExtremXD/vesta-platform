@@ -1,3 +1,4 @@
 User-agent: *
 Allow: /
-Sitemap: https://viniciusextremxd.github.io/vesta-platform/sitemap-index.xml
+Disallow: /lab/
+Sitemap: https://vesta-consult.com.br/sitemap-index.xml
