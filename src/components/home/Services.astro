@@ -30,8 +30,10 @@ import { services as studioServices } from '../../data/site';
 export interface Props {
   /** Defaults to the website studio's copy; the Azure home passes its own. */
   data?: typeof studioServices;
+  /** false: no stations (/azure/ lists its services in the catalog). */
+  stations?: boolean;
 }
-const { data: services = studioServices } = Astro.props;
+const { data: services = studioServices, stations: showStations = true } = Astro.props;
 
 const { stance, bodyA, bodyB, notOurWork, stations, modernize, label } = services;
 /* round-2 keys (site.ts); fall back to round-1 copy if they are ever absent */
@@ -141,6 +143,7 @@ const P0 = 200; // planet start angle, degrees — the far left, behind the text
   </div>
 
   {/* --------------------------------------------------- C. the stations */}
+  {showStations && (
   <div class="stations s-paper" data-nav-theme="light">
     <div class="wrap" data-scene="soft">
       <div class="st-track" data-inview data-st-track>
@@ -169,6 +172,7 @@ const P0 = 200; // planet start angle, degrees — the far left, behind the text
       </div>
     </div>
   </div>
+  )}
 </section>
 
 <style>

@@ -1,0 +1,341 @@
+---
+/**
+ * The main services (catalog in site.ts), two ways:
+ *
+ *   variant="tiles"  home page (#services, paper): six compact tiles, each a
+ *                    link to its full entry on /azure/ (/azure/#aks …), and
+ *                    a link to all of them.
+ *   variant="full"   /azure/ (#catalog, paper): one row per service with its
+ *                    anchor id, the full description and what it covers.
+ *
+ * Tiles: one column on phones, two from 768px, three from 1100px. Hover
+ * (fine pointers): a violet edge draws across the top, the arrow moves on.
+ */
+import SectionLabel from '../ui/SectionLabel.astro';
+import SplitText from '../ui/SplitText.astro';
+import Arrow from '../ui/Arrow.astro';
+import { catalog } from '../../data/site';
+import { url } from '../../lib/url';
+
+export interface Props {
+  variant?: 'tiles' | 'full';
+}
+
+const { variant = 'tiles' } = Astro.props;
+const head = variant === 'tiles' ? catalog.home : catalog.page;
+const titleId = `${head.id}-title`;
+const lead = variant === 'full' ? catalog.page.lead : null;
+---
+
+<section id={head.id} class:list={['s-paper section ct', `ct--${variant}`]} data-nav-theme="light" aria-labelledby={titleId}>
+  <div class="wrap" data-scene="soft">
+    <header class="ct-head">
+      <SectionLabel n={head.label.index ?? undefined} name={head.label.name} />
+      <SplitText as="h2" id={titleId} class="d2 ct-h2" text={head.h2} />
+      {
+        lead && (
+          <p class="lead ct-lead" data-reveal style="--d:200ms">
+            {lead}
+          </p>
+        )
+      }
+      {
+        variant === 'tiles' && (
+          <p class="ct-all" data-reveal style="--d:200ms">
+            <a class="tlink" href={url(catalog.home.all.href)}>
+              <span>{catalog.home.all.label}</span>
+              <Arrow />
+            </a>
+          </p>
+        )
+      }
+    </header>
+
+    {
+      variant === 'tiles' ? (
+        <ol class="ct-grid" role="list">
+          {catalog.items.map((it, k) => (
+            <li class="ct-cell" data-reveal style={`--i:${k}`}>
+              <a class="ct-tile" href={url(`/azure/#${it.id}`)}>
+                <span class="ct-edge" aria-hidden="true" />
+                <span class="label ct-idx">{it.index}</span>
+                <h3 class="ct-title">{it.title}</h3>
+                <span class="ct-short">{it.short}</span>
+                <span class="ct-go" aria-hidden="true">
+                  <Arrow />
+                </span>
+              </a>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <ol class="ct-list" role="list">
+          {catalog.items.map((it, k) => (
+            <li id={it.id} class="ct-item" data-reveal style={`--i:${k % 2}`}>
+              <span class="ct-rule" aria-hidden="true" />
+              <p class="label ct-idx">{it.index}</p>
+              <h3 class="ct-name">{it.title}</h3>
+              <p class="ct-body">{it.body}</p>
+              <ul class="ct-keys" role="list">
+                {it.keys.map((key) => (
+                  <li class="ct-key">
+                    <span class="ct-node" aria-hidden="true" />
+                    <span>{key}</span>
+                  </li>
+                ))}
+              </ul>
+            </li>
+          ))}
+        </ol>
+      )
+    }
+  </div>
+</section>
+
+<style>
+  .ct {
+    overflow-x: clip;
+  }
+
+  .ct-head {
+    display: grid;
+    gap: 18px;
+  }
+
+  .ct-h2 {
+    margin-top: 2px;
+    max-width: 16ch;
+  }
+
+  .ct-lead {
+    color: var(--ink-2);
+  }
+
+  .ct-all .tlink {
+    color: var(--ink);
+  }
+
+  /* ---------- tiles (home) ------------------------------------------------ */
+  .ct-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--gap);
+    margin-top: clamp(36px, 2rem + 2vw, 64px);
+  }
+
+  .ct-cell {
+    min-width: 0;
+  }
+
+  .ct-tile {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto 1fr auto;
+    column-gap: 16px;
+    height: 100%;
+    min-height: 168px;
+    padding: 20px 20px 18px;
+    background-color: var(--white);
+    border: 1px solid var(--line-light);
+    color: var(--ink);
+    text-decoration: none;
+    transition: border-color var(--t-ui) linear;
+  }
+
+  .ct-edge {
+    position: absolute;
+    top: -1px;
+    left: -1px;
+    right: -1px;
+    height: 2px;
+    background-color: var(--violet);
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 520ms var(--ease-quint);
+  }
+
+  .ct-idx {
+    color: var(--violet-ink);
+  }
+
+  .ct-tile .ct-idx {
+    grid-column: 1;
+  }
+
+  .ct-title {
+    grid-column: 1 / -1;
+    align-self: end;
+    margin-top: 28px;
+    font-size: clamp(1.25rem, 1.1rem + 0.6vw, 1.625rem);
+    font-weight: 620;
+    line-height: 1.1;
+    letter-spacing: -0.012em;
+  }
+
+  .ct-short {
+    grid-column: 1;
+    margin-top: 8px;
+    color: var(--ink-2);
+    font-size: 0.9375rem;
+    line-height: 1.45;
+  }
+
+  .ct-go {
+    grid-column: 2;
+    grid-row: 3;
+    align-self: end;
+    color: var(--violet-ink);
+  }
+
+  .ct-go :global(.arrow) {
+    transition: transform var(--t-ui) var(--ease-expo);
+  }
+
+  .ct-tile:focus-visible .ct-edge {
+    transform: scaleX(1);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .ct-tile:hover {
+      border-color: var(--line-light-strong);
+    }
+
+    .ct-tile:hover .ct-edge {
+      transform: scaleX(1);
+    }
+
+    .ct-tile:hover .ct-go :global(.arrow) {
+      transform: translateX(5px);
+    }
+  }
+
+  /* ---------- full entries (/azure/) -------------------------------------- */
+  .ct-list {
+    margin-top: clamp(40px, 2.5rem + 2vw, 72px);
+  }
+
+  .ct-item {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 10px;
+    padding-block: 28px 30px;
+  }
+
+  .ct-item:last-child {
+    border-bottom: 1px solid var(--line-light);
+  }
+
+  .ct-rule {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background-color: var(--line-light-strong);
+  }
+
+  .ct-name {
+    font-size: clamp(1.5rem, 1.2rem + 1vw, 2.125rem);
+    font-weight: 620;
+    line-height: 1.06;
+    letter-spacing: -0.015em;
+  }
+
+  .ct-body {
+    max-width: 58ch;
+    color: var(--ink-2);
+    line-height: 1.55;
+  }
+
+  .ct-keys {
+    display: grid;
+    gap: 2px;
+    margin-top: 4px;
+  }
+
+  .ct-key {
+    display: grid;
+    grid-template-columns: 9px minmax(0, 1fr);
+    align-items: baseline;
+    column-gap: 12px;
+    padding-block: 4px;
+    color: var(--ink);
+    font-size: 0.9375rem;
+    line-height: 1.4;
+  }
+
+  .ct-node {
+    width: 7px;
+    height: 7px;
+    background-color: var(--violet);
+    transform: translateY(-1px);
+  }
+
+  @media (min-width: 768px) {
+    .ct-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .ct-tile {
+      min-height: 190px;
+      padding: 24px 24px 20px;
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .ct-head {
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      column-gap: var(--gap);
+      align-items: end;
+    }
+
+    .ct-head > :global(.sec-label) {
+      grid-column: 1 / -1;
+    }
+
+    .ct-h2 {
+      grid-column: 1 / 8;
+    }
+
+    .ct-lead,
+    .ct-all {
+      grid-column: 9 / -1;
+      justify-self: end;
+      text-align: right;
+    }
+
+    .ct-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .ct-tile {
+      min-height: 210px;
+      padding: 28px 28px 24px;
+    }
+
+    .ct-item {
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      column-gap: var(--gap);
+      padding-block: 36px 38px;
+    }
+
+    .ct-item .ct-idx {
+      grid-column: 1 / 2;
+    }
+
+    .ct-name {
+      grid-column: 2 / 6;
+    }
+
+    .ct-body {
+      grid-column: 6 / 10;
+    }
+
+    .ct-keys {
+      grid-column: 10 / -1;
+      margin-top: 0;
+    }
+  }
+</style>
