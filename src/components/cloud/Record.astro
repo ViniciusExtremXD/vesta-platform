@@ -1,6 +1,6 @@
 ---
 /**
- * #record (paper) — the CV: confirmed roles and certifications only
+ * #record (night, on /about/) — the CV: confirmed roles and certifications only
  * (record in site.ts). Renders nothing until the owner confirms at least
  * one entry, so the page never shows an empty or invented track record.
  *
@@ -21,7 +21,7 @@ const showLinkedin = contact.linkedin.confirmed;
 
 {
   show && (
-    <section id={record.id} class="s-paper section rc" data-nav-theme="light" aria-labelledby="record-title">
+    <section id={record.id} class="s-night section rc" data-nav-theme="dark" aria-labelledby="record-title">
       <div class="wrap" data-scene="soft">
         <header class="g rc-head">
           <div class="rc-label">
@@ -113,7 +113,7 @@ const showLinkedin = contact.linkedin.confirmed;
   }
 
   .rc-lead {
-    color: var(--ink-2);
+    color: var(--fg-2);
   }
 
   .rc-block {
@@ -121,22 +121,22 @@ const showLinkedin = contact.linkedin.confirmed;
   }
 
   .rc-title {
-    color: var(--violet-ink);
+    color: var(--accent-text);
   }
 
   .rc-roles {
     margin-top: 16px;
-    border-top: 1px solid var(--line-light-strong);
+    border-top: 1px solid var(--line-strong);
   }
 
   .rc-role {
     row-gap: 12px;
     padding-block: 24px;
-    border-bottom: 1px solid var(--line-light);
+    border-bottom: 1px solid var(--line);
   }
 
   .rc-period {
-    color: var(--ink-3);
+    color: var(--fg-3);
   }
 
   .rc-role-name {
@@ -148,7 +148,7 @@ const showLinkedin = contact.linkedin.confirmed;
 
   .rc-company {
     margin-top: 4px;
-    color: var(--ink-2);
+    color: var(--fg-2);
   }
 
   .rc-hl-row {
@@ -157,14 +157,14 @@ const showLinkedin = contact.linkedin.confirmed;
     align-items: baseline;
     column-gap: 12px;
     padding-block: 6px;
-    color: var(--ink);
+    color: var(--fg);
     line-height: 1.5;
   }
 
   .rc-node {
     width: 7px;
     height: 7px;
-    background-color: var(--violet);
+    background-color: var(--mark);
     transform: translateY(-1px);
   }
 
@@ -180,12 +180,12 @@ const showLinkedin = contact.linkedin.confirmed;
     gap: 6px;
     align-content: start;
     padding: 20px;
-    background-color: var(--paper-2);
+    border: 1px solid var(--line);
     border-top: 2px solid var(--violet);
   }
 
   .rc-code {
-    color: var(--violet-ink);
+    color: var(--accent-text);
   }
 
   .rc-cred-name {
@@ -194,12 +194,12 @@ const showLinkedin = contact.linkedin.confirmed;
   }
 
   .rc-issuer {
-    color: var(--ink-2);
+    color: var(--fg-2);
   }
 
   .rc-verify {
     justify-self: start;
-    color: var(--ink);
+    color: var(--fg);
   }
 
   .rc-li {
@@ -207,7 +207,7 @@ const showLinkedin = contact.linkedin.confirmed;
   }
 
   .rc-li .tlink {
-    color: var(--ink);
+    color: var(--fg);
   }
 
   @media (min-width: 768px) {

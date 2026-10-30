@@ -5,12 +5,16 @@
 
 Site da Vesta, com duas frentes sob a mesma marca:
 
-- **Home (`/`) — prática Azure (frente principal, apresentação do Vinícius):** administração
-  de ambientes Microsoft Azure, redução de custos (FinOps), otimização de ambientes e
+- **Prática Azure (frente principal, apresentação do Vinícius):** administração de
+  ambientes Microsoft Azure, redução de custos (FinOps), otimização de ambientes e
   excelência operacional. Toda contratação começa por uma revisão de custos gratuita e
   somente leitura (Reader + Cost Management Reader), lida contra os cinco pilares do Azure
   Well-Architected Framework. Nenhuma economia é prometida: é estimada na revisão e medida
   na própria fatura do cliente depois.
+  - **Home (`/`)** é um hub curto: hero, quatro portas (uma por página) e o fecho.
+  - **`/azure/`**: problema, serviços, a revisão (pilares) e o método.
+  - **`/engagements/`**: as três formas de contratar, FAQ e fecho.
+  - **`/about/`**: o Vinícius, e o currículo (seção "Track record", quando confirmado).
 - **`/websites/` — estúdio de sites:** design e construção de sites e landing pages de alto
   padrão (o conteúdo que era a home até out/2026, intacto: pacotes, configurador, estudos).
   A Vesta **não** é gestora de tráfego pago.
@@ -93,11 +97,13 @@ src/
                          Faq e Finale recebem os dados por props: padrão = estúdio de sites;
                          a home passa os dados `cloud*` de site.ts
   components/cloud/      seções só da prática Azure: CostPlate (palco do hero, ilustração),
-                         Pillars (#review), Method, Engagements, Record (currículo), WebTeaser
+                         Doors (as portas da home; uma porta só = "próxima página"),
+                         Pillars (#review), Method, Engagements (`bare` sem cabeçalho),
+                         Record (currículo, em /about/)
   components/work/       trabalho, estudo de conceito e template de caso
   components/ui/         SplitText, SectionLabel, Arrow, WaGlyph
-  pages/                 index (Azure), websites (estúdio), about, contact, work/, work/concept-NN,
-                         work/[slug], industries/[slug], privacy, 404
+  pages/                 index (hub), azure, engagements, websites (estúdio), about, contact,
+                         work/, work/concept-NN, work/[slug], industries/[slug], privacy, 404
 scripts/
   verify.mjs             gate de qualidade (1440/390/360/320, sem JS, contraste, vocabulário de IA)
   snap.mjs               captura de qualquer URL (seção, rolagem, quadros de animação)
@@ -117,7 +123,26 @@ scripts/
 - **`prefers-reduced-motion` do sistema é ignorado de propósito.** O controle é o
   botão no rodapé (`html.motion-reduced`, salvo em `localStorage` como `vesta-motion`).
 
-## Currículo na home (seção "Track record")
+## Transições entre páginas (ida e volta)
+
+View Transitions entre documentos (`global.css` §11 + script inline no `<head>` do
+`Base.astro`). **Ida** (porta, link para página mais funda): a página nova entra como uma
+folha vinda da direita, com a borda lilás, e a anterior afunda no espaço. **Volta** (botão
+voltar, logo, página mais rasa): a folha sai pela direita e a de baixo sobe. A porta clicada
+e o cabeçalho da página de destino compartilham o nome `page-head`: o card cresce até virar
+o cabeçalho e encolhe de volta na volta. Nav e barra fixa do mobile ficam paradas.
+
+- Direção: `traverse` compara índices do histórico; o resto compara profundidade do caminho.
+  Fica em `html[data-vt]` durante a transição.
+- Todo cabeçalho de página tem `id="page-head"` + `data-vt-head`, e a página passa
+  `expect="page-head"` ao `Base` (a home passa `expect="start"`, as portas): o primeiro render
+  espera esse elemento, senão o morph não acha o par.
+- Nome de transição é único por página: o script tira o nome do cabeçalho quando nomeia uma
+  porta. Elemento que alarga a viewport no mobile (ex.: transform que vaza) **aborta** a
+  transição ("Viewport size changed"): conter com `overflow-x: clip` na seção.
+- Navegadores sem suporte simplesmente navegam. Motion desligado corta sem animação.
+
+## Currículo (seção "Track record", em /about/)
 
 `record` em `src/data/site.ts` guarda experiências e certificações. Tudo nasce com
 `confirmed: false` e **nada renderiza** até haver ao menos um item confirmado — o site nunca

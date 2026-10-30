@@ -1,0 +1,49 @@
+---
+import Base from '../layouts/Base.astro';
+import PageHead from '../components/work/PageHead.astro';
+import Engagements from '../components/cloud/Engagements.astro';
+import Faq from '../components/home/Faq.astro';
+import Finale from '../components/home/Finale.astro';
+import { brand, engagementsPage, engagements, cloudFaq, cloudFaqSection, cloudFinale, confirmedOnly } from '../data/site';
+
+/* /engagements/ — how to start: the three engagements and the questions
+   people ask before granting access. */
+
+/* FAQPage from the same rendered, confirmed answers. */
+const faqLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: confirmedOnly(cloudFaq).map((f) => ({
+    '@type': 'Question',
+    name: f.q,
+    acceptedAnswer: { '@type': 'Answer', text: f.a },
+  })),
+};
+
+/* Only the review carries a price (free); the others are quoted after it,
+   so they publish no offer price. */
+const servicesLd = {
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name: `${brand.name} Azure engagements`,
+  itemListElement: engagements.models.map((m, i) => ({
+    '@type': 'ListItem',
+    position: i + 1,
+    item: {
+      '@type': 'Service',
+      name: m.name,
+      description: m.tagline,
+      serviceType: 'Microsoft Azure administration and cost optimization',
+      provider: { '@type': 'ProfessionalService', name: brand.name },
+      ...(m.price === 'Free' ? { offers: { '@type': 'Offer', price: 0, priceCurrency: 'USD' } } : {}),
+    },
+  })),
+};
+---
+
+<Base title={engagementsPage.seo.title} description={engagementsPage.seo.description} canonical="/engagements/" jsonLd={[faqLd, servicesLd]} expect="page-head">
+  <PageHead label={engagementsPage.label} h1={engagementsPage.h1} lead={engagementsPage.lead} layout="split" />
+  <Engagements bare />
+  <Faq section={cloudFaqSection} faq={cloudFaq} />
+  <Finale data={cloudFinale} />
+</Base>

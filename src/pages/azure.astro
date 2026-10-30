@@ -1,0 +1,27 @@
+---
+import Base from '../layouts/Base.astro';
+import PageHead from '../components/work/PageHead.astro';
+import Problem from '../components/home/Problem.astro';
+import Services from '../components/home/Services.astro';
+import Finale from '../components/home/Finale.astro';
+import Pillars from '../components/cloud/Pillars.astro';
+import Method from '../components/cloud/Method.astro';
+import Doors from '../components/cloud/Doors.astro';
+import { azurePage, cloudProblem, cloudServices, cloudFinale, doors } from '../data/site';
+import type { Door } from '../data/site';
+
+/* /azure/ — the Azure practice in full: why (problem), what (services), what
+   the free review reads (pillars), how (method). One door at the end leads
+   on to /engagements/. */
+const next: Door[] = doors.items.filter((d) => d.href === azurePage.next.href);
+---
+
+<Base title={azurePage.seo.title} description={azurePage.seo.description} canonical="/azure/" expect="page-head">
+  <PageHead label={azurePage.label} h1={azurePage.h1} lead={azurePage.lead} layout="split" />
+  <Problem data={cloudProblem} />
+  <Services data={cloudServices} />
+  <Pillars />
+  <Method />
+  <Doors id="next" items={next} head={false} surface="s-paper" />
+  <Finale data={cloudFinale} />
+</Base>

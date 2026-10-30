@@ -32,7 +32,7 @@ const hasMeta = Astro.slots.has('meta');
 ---
 
 <section id={id} class:list={['s-void ph', `ph--${layout}`, hasAside && 'ph--aside', cls]} data-nav-theme="dark">
-  <div class="wrap g ph-grid">
+  <div class="wrap g ph-grid" id="page-head" data-vt-head>
     <div class="ph-row">
       <p class="sec-label label ph-label" data-load>
         <span class="stripe" aria-hidden="true"></span>

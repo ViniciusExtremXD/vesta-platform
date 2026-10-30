@@ -17,19 +17,37 @@ import MailGlyph from '../ui/MailGlyph.astro';
 import Expand from '../ui/Expand.astro';
 import { engagements, contact, wa, mail, confirmedOnly } from '../../data/site';
 
+export interface Props {
+  /** No label and no H2: /engagements/ says it in its page head. */
+  bare?: boolean;
+}
+const { bare = false } = Astro.props;
+
 const showEmail = contact.email.confirmed;
 const models = engagements.models.map((m) => ({ ...m, includesOn: confirmedOnly(m.includes) }));
 ---
 
-<section id={engagements.id} class="s-paper-2 section en" data-nav-theme="light" aria-labelledby="engagements-title">
+<section
+  id={engagements.id}
+  class:list={['s-paper-2 section en', { 'en--bare': bare }]}
+  data-nav-theme="light"
+  aria-labelledby={bare ? undefined : 'engagements-title'}
+  aria-label={bare ? engagements.label.name : undefined}
+>
   <div class="wrap" data-scene="soft">
-    <header class="g en-head">
-      <div class="en-label">
-        <SectionLabel n={engagements.label.index ?? undefined} name={engagements.label.name} />
-      </div>
-      <SplitText as="h2" id="engagements-title" class="d2 en-h2" text={engagements.h2} />
-      <p class="lead en-lead" data-reveal style="--d:200ms">{engagements.lead}</p>
-    </header>
+    {
+      !bare && (
+        <header class="g en-head">
+          <div class="en-label">
+            <SectionLabel n={engagements.label.index ?? undefined} name={engagements.label.name} />
+          </div>
+          <SplitText as="h2" id="engagements-title" class="d2 en-h2" text={engagements.h2} />
+          <p class="lead en-lead" data-reveal style="--d:200ms">
+            {engagements.lead}
+          </p>
+        </header>
+      )
+    }
 
     <ol class="en-cols" role="list">
       {
@@ -127,6 +145,10 @@ const models = engagements.models.map((m) => ({ ...m, includesOn: confirmedOnly(
     grid-template-columns: minmax(0, 1fr);
     gap: 24px var(--gap);
     margin-top: clamp(48px, 3rem + 2vw, 88px);
+  }
+
+  .en--bare .en-cols {
+    margin-top: 0;
   }
 
   .en-col {
