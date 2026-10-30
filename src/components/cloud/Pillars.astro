@@ -1,0 +1,312 @@
+---
+/**
+ * #review (void) — what the free review reads: the five pillars of the
+ * Azure Well-Architected Framework, one column each, four checks per
+ * pillar. Cost Optimization is the pillar the review prices, so it carries
+ * the violet edge and the "Priced in the review" tag. Under the grid: what
+ * the review hands over, and the Microsoft Learn source for the pillars.
+ *
+ * Phones: one column. Tablet: two. Desktop: five across.
+ * Motion: the scene swings up (data-scene); each column rises in turn, its
+ * top hairline draws, its checks follow.
+ */
+import SectionLabel from '../ui/SectionLabel.astro';
+import SplitText from '../ui/SplitText.astro';
+import Arrow from '../ui/Arrow.astro';
+import { pillars } from '../../data/site';
+---
+
+<section id={pillars.id} class="s-void section pl" data-nav-theme="dark" aria-labelledby="review-title">
+  <div class="wrap" data-scene="soft">
+    <header class="g pl-head">
+      <div class="pl-label">
+        <SectionLabel n={pillars.label.index ?? undefined} name={pillars.label.name} />
+      </div>
+      <SplitText as="h2" id="review-title" class="d2 pl-h2" text={pillars.h2} />
+      <p class="lead pl-lead" data-reveal style="--d:200ms">{pillars.lead}</p>
+    </header>
+
+    <ol class="pl-grid" role="list">
+      {
+        pillars.items.map((p, k) => (
+          <li class:list={['pl-col', p.priced && 'is-priced']} data-reveal style={`--i:${k}`}>
+            <span class="pl-rule" data-reveal="draw" style={`--i:${k}`} aria-hidden="true" />
+            <p class="label pl-top">
+              <span class="pl-idx">{p.index}</span>
+              {p.priced && <span class="pl-tag">{pillars.pricedTag}</span>}
+            </p>
+            <h3 class="pl-name">{p.name}</h3>
+            <ul class="pl-checks" role="list">
+              {p.checks.map((c) => (
+                <li class="pl-check">
+                  <span class="pl-node" aria-hidden="true" />
+                  <span>{c}</span>
+                </li>
+              ))}
+            </ul>
+          </li>
+        ))
+      }
+    </ol>
+
+    <div class="g pl-foot">
+      <div class="pl-out" data-reveal>
+        <h3 class="label pl-out-title">{pillars.output.title}</h3>
+        <ol class="pl-out-list" role="list">
+          {
+            pillars.output.items.map((it, k) => (
+              <li class="pl-out-item">
+                <span class="label pl-out-n">{String(k + 1).padStart(2, '0')}</span>
+                <span>{it}</span>
+              </li>
+            ))
+          }
+        </ol>
+      </div>
+      <p class="small pl-src" data-reveal style="--d:160ms">
+        <span>{pillars.source.text}</span>
+        <a class="tlink pl-src-link" href={pillars.source.url} target="_blank" rel="noopener">
+          <span>{pillars.source.citation}</span>
+          <Arrow dir="up-right" />
+        </a>
+      </p>
+    </div>
+  </div>
+</section>
+
+<style>
+  .pl {
+    overflow-x: clip;
+  }
+
+  .pl-head {
+    row-gap: 20px;
+  }
+
+  .pl-h2 {
+    margin-top: 8px;
+    max-width: 18ch;
+  }
+
+  .pl-lead {
+    max-width: 52ch;
+    color: var(--haze);
+  }
+
+  /* ---------- the five columns -------------------------------------------- */
+  .pl-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 40px var(--gap);
+    margin-top: clamp(48px, 3rem + 2vw, 88px);
+  }
+
+  .pl-col {
+    position: relative;
+    padding-top: 22px;
+  }
+
+  .pl-rule {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background-color: var(--line-dark-strong);
+  }
+
+  .pl-col.is-priced .pl-rule {
+    height: 2px;
+    background-color: var(--violet);
+  }
+
+  /* index left, the priced tag right: the tag never pushes the name down,
+     so the five check lists start on one line */
+  .pl-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 22px;
+  }
+
+  .pl-idx {
+    color: var(--lilac);
+  }
+
+  .pl-name {
+    margin-top: 14px;
+    font-size: clamp(1.25rem, 1.1rem + 0.5vw, 1.5rem);
+    font-weight: 620;
+    line-height: 1.12;
+    letter-spacing: -0.01em;
+    color: var(--starlight);
+  }
+
+  .pl-tag {
+    display: inline-block;
+    padding: 4px 8px 3px;
+    background-color: var(--violet);
+    color: var(--starlight);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+  }
+
+  .pl-checks {
+    margin-top: 18px;
+  }
+
+  .pl-check {
+    display: grid;
+    grid-template-columns: 9px minmax(0, 1fr);
+    align-items: baseline;
+    column-gap: 12px;
+    padding-block: 9px;
+    border-top: 1px solid var(--line-dark);
+    color: var(--haze);
+    font-size: 0.9375rem;
+    line-height: 1.4;
+  }
+
+  .pl-node {
+    width: 7px;
+    height: 7px;
+    border: 1px solid var(--lilac);
+    transform: translateY(-1px);
+  }
+
+  .pl-col.is-priced .pl-node {
+    background-color: var(--lilac);
+  }
+
+  /* the checks follow their column in */
+  .pl-check {
+    transition:
+      opacity 700ms var(--ease-expo),
+      transform 700ms var(--ease-expo);
+  }
+
+  :global(html.js:not(.motion-reduced):not(.motion-failed)) .pl-col:not(.is-in) .pl-check {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+
+  .pl-col.is-in .pl-check:nth-child(2) {
+    transition-delay: 90ms;
+  }
+
+  .pl-col.is-in .pl-check:nth-child(3) {
+    transition-delay: 180ms;
+  }
+
+  .pl-col.is-in .pl-check:nth-child(4) {
+    transition-delay: 270ms;
+  }
+
+  /* ---------- foot -------------------------------------------------------- */
+  .pl-foot {
+    row-gap: 32px;
+    margin-top: clamp(56px, 3rem + 3vw, 104px);
+  }
+
+  .pl-out {
+    padding: 24px;
+    background-color: var(--night);
+    border: 1px solid var(--line-dark);
+  }
+
+  .pl-out-title {
+    color: var(--lilac);
+  }
+
+  .pl-out-list {
+    margin-top: 14px;
+  }
+
+  .pl-out-item {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr);
+    column-gap: 12px;
+    align-items: baseline;
+    padding-block: 10px;
+    border-top: 1px solid var(--line-dark);
+    color: var(--starlight);
+    line-height: 1.45;
+  }
+
+  .pl-out-item:first-child {
+    border-top: 0;
+  }
+
+  .pl-out-n {
+    color: var(--dim);
+  }
+
+  .pl-src {
+    display: grid;
+    gap: 6px;
+    align-content: start;
+    color: var(--haze);
+  }
+
+  .pl-src-link {
+    justify-self: start;
+    font-size: 0.8125rem;
+    font-weight: 560;
+    color: var(--starlight);
+  }
+
+  @media (min-width: 768px) {
+    .pl-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 48px var(--gap);
+    }
+
+    .pl-out {
+      grid-column: 1 / 6;
+      padding: 28px;
+    }
+
+    .pl-src {
+      grid-column: 6 / -1;
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .pl-label {
+      grid-column: 1 / 4;
+    }
+
+    .pl-h2 {
+      grid-column: 1 / 9;
+      grid-row: 2;
+    }
+
+    .pl-lead {
+      grid-column: 1 / 7;
+      grid-row: 3;
+    }
+
+    .pl-grid {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+
+    /* two lines for every name, so the check lists line up across */
+    .pl-name {
+      min-height: 2.24em;
+    }
+
+    .pl-check {
+      font-size: 0.875rem;
+    }
+
+    .pl-out {
+      grid-column: 1 / 7;
+    }
+
+    .pl-src {
+      grid-column: 8 / -1;
+      align-self: end;
+    }
+  }
+</style>

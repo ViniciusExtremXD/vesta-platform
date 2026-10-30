@@ -16,7 +16,12 @@
      WhatsApp prefills included. No gendered pronouns for the founder.
    - No live clocks anywhere (owner decision). Hours are always the static
      `contact.hours.label`.
-   - Internal links are root-absolute ("/about/", "/#pricing") so they work
+   - Two practices, one brand. The home page (/) presents the Azure practice
+     (administration, cost optimization, operational excellence); the website
+     studio lives on /websites/. Home-section exports for the Azure practice
+     are prefixed `cloud`; the unprefixed hero/problem/services/... exports
+     are the website studio's and render on /websites/.
+   - Internal links are root-absolute ("/about/", "/websites/#pricing") so they work
      from every page. Pass every href through `url()` from src/lib/url.ts so
      the GitHub Pages base path is applied. Hrefs that start with "#" are
      home-page-only anchors.
@@ -119,20 +124,21 @@ export const brand: Brand = {
   region: 'SP',
   country: 'Brazil',
   countryCode: 'BR',
-  tagline: 'Websites built like flagships. Priced after a free analysis.',
+  tagline: 'Azure that costs less and runs better.',
   description:
-    'Vesta designs and builds high-end websites for businesses, new or rebuilt, and sets them up to be found on Google. Every price starts with a free analysis. Talk to the founder on WhatsApp or email.',
+    'Vesta administers and optimizes Microsoft Azure environments: a smaller bill, right-sized resources, clear governance and operations that hold up. Every engagement starts with a free cost review. Websites built to the same standard.',
   seo: {
-    title: 'Vesta — High-end websites for businesses',
+    title: 'Vesta — Azure administration and cloud cost optimization',
     description:
-      'Vesta designs and builds high-end websites for businesses, new or rebuilt, and sets them up to be found on Google. Every price starts with a free analysis. Talk to the founder on WhatsApp or email.',
+      'Azure administration, cost optimization and operational excellence by Vinícius Magno. A smaller bill, right-sized resources, clear governance. Free cost review.',
   },
   og: {
-    headline: 'Websites built like flagships.',
-    sub: 'Free price analysis on every project',
+    headline: 'Azure that costs less and runs better.',
+    sub: 'Administration · Cost optimization · Operations',
   },
   schema: {
-    priceRange: '$750–$1,000',
+    /** Empty: the Azure work is scoped after the free review, so no range is published. */
+    priceRange: '',
     areaServed: 'US, worldwide',
   },
 };
@@ -143,6 +149,18 @@ export const founder = {
   name: 'Vinícius Magno',
   firstName: 'Vinícius',
   role: 'Founder',
+  /** The practice, as it reads under the name and in the Person JSON-LD jobTitle. */
+  title: 'Azure administration and cloud cost optimization',
+  /** Person JSON-LD knowsAbout. Only what the owner has stated as the practice. */
+  knowsAbout: [
+    'Microsoft Azure',
+    'Azure administration',
+    'Cloud cost optimization',
+    'FinOps',
+    'Operational excellence',
+    'Azure Well-Architected Framework',
+    'Web development',
+  ],
   education: 'B.S. Computer Science, Mackenzie Presbyterian University',
   location: 'São Paulo, Brazil · UTC−3',
   /** Portrait (src/assets/vinicius-magno.jpg). Confirmed by the owner. */
@@ -174,7 +192,7 @@ export const contact = {
   email: {
     address: 'vima8251273@gmail.com',
     /** Subject line for mailto: links. */
-    subject: 'Website price analysis',
+    subject: 'Azure cost review',
     label: 'Email',
     confirmed: true,
   },
@@ -230,8 +248,8 @@ export interface Source {
   citation: string;
 }
 
-/** The only two external sources the site cites (§8.1). */
-export const sources: { deloitte: Source; googleLocalRanking: Source } = {
+/** Every external source the site cites (§8.1), one entry each. */
+export const sources: { deloitte: Source; googleLocalRanking: Source; wellArchitected: Source } = {
   deloitte: {
     publisher: 'Deloitte Digital',
     title: 'Milliseconds Make Millions',
@@ -247,6 +265,14 @@ export const sources: { deloitte: Source; googleLocalRanking: Source } = {
     accessed: 'September 2026',
     url: 'https://support.google.com/business/answer/7091',
     citation: 'Google Business Profile Help, "Tips to improve your local ranking on Google", accessed September 2026',
+  },
+  wellArchitected: {
+    publisher: 'Microsoft Learn',
+    title: 'Azure Well-Architected Framework pillars',
+    year: null,
+    accessed: 'October 2026',
+    url: 'https://learn.microsoft.com/en-us/azure/well-architected/pillars',
+    citation: 'Microsoft Learn, "Azure Well-Architected Framework pillars", accessed October 2026',
   },
 };
 
@@ -264,8 +290,10 @@ export interface ConfigSelection {
 }
 
 export type FinaleIntentId = 'new' | 'rebuild' | 'google' | 'question';
-export type QuickStartId = 'newSite' | 'rebuild' | 'landing';
-export type HelperNeed = 'new' | 'rebuild' | 'google' | 'question';
+export type CloudIntentId = 'cost' | 'admin' | 'ops' | 'website' | 'question';
+export type QuickStartId = 'cost' | 'admin' | 'website';
+export type HelperNeed = 'cost' | 'admin' | 'ops' | 'website' | 'question';
+export type EngagementId = 'review' | 'optimize' | 'operate';
 
 /** /contact/ message helper state. Empty strings mean "not given". */
 export interface HelperInput {
@@ -296,6 +324,15 @@ export interface WaMessages {
   finale: Record<FinaleIntentId, string>;
   /** /contact/ quick-start buttons. */
   contact: Record<QuickStartId, string>;
+  /** The Azure practice (home page). */
+  cloud: {
+    /** Home hero, nav button, sticky bar, mobile menu. */
+    hero: string;
+    engagements: Record<EngagementId, string>;
+    builder: string;
+    question: string;
+    finale: Record<CloudIntentId, string>;
+  };
   /** Configurator build-sheet message (§5.8 template). */
   configurator: (sel: ConfigSelection) => string;
   /** /contact/ message helper. */
@@ -322,9 +359,26 @@ export const waMessages: WaMessages = {
     question: 'Hi Vinícius, I have a question about Vesta: ',
   },
   contact: {
-    newSite: 'Hi Vinícius, I need a new website for my business. The business is: ',
-    rebuild: 'Hi Vinícius, I want to rebuild my current site. It is: ',
-    landing: 'Hi Vinícius, I need a landing page for my business. The offer is: ',
+    cost: "Hi Vinícius, I'd like a free review of my Azure costs. My monthly Azure spend is roughly: ",
+    admin: 'Hi Vinícius, I need help administering my Azure environment. It runs: ',
+    website: 'Hi Vinícius, I need a website for my business. The business is: ',
+  },
+  cloud: {
+    hero: "Hi Vinícius, I found Vesta and I'd like a free review of my Azure costs.",
+    engagements: {
+      review: "Hi Vinícius, I'd like the free Azure cost review.",
+      optimize: "Hi Vinícius, I'd like to talk about an Azure optimization project.",
+      operate: "Hi Vinícius, I'd like to ask about managed operations for my Azure environment.",
+    },
+    builder: "Hi Vinícius, I'd like to talk about my Azure environment.",
+    question: 'Hi Vinícius, I have a question about Azure: ',
+    finale: {
+      cost: "Hi Vinícius, I'd like to lower my Azure bill. My monthly spend is roughly: ",
+      admin: 'Hi Vinícius, I need help administering my Azure environment. It runs: ',
+      ops: "Hi Vinícius, I'd like help with monitoring and operations on Azure. Today: ",
+      website: "Hi Vinícius, I'd like a price for a website for my business. The business is: ",
+      question: 'Hi Vinícius, I have a question: ',
+    },
   },
   configurator: configuratorMessage,
   contactHelper: contactHelperMessage,
@@ -357,9 +411,10 @@ function configuratorMessage(sel: ConfigSelection): string {
 }
 
 const helperNeeds: Record<HelperNeed, string> = {
-  new: 'a new website',
-  rebuild: 'a rebuild of my current site',
-  google: 'help getting found on Google',
+  cost: 'a review of my Azure costs',
+  admin: 'Azure administration',
+  ops: 'monitoring and operations on Azure',
+  website: 'a website',
   question: 'an answer to a question',
 };
 
@@ -370,8 +425,8 @@ function contactHelperMessage(input: HelperInput): string {
   const extra = input.extra.trim();
   const lines = [
     "Hi Vinícius, I found Vesta and I'd like to talk.",
-    `– Business: ${business || 'not given'}`,
-    `– Current website: ${url || 'none'}`,
+    `– Company: ${business || 'not given'}`,
+    `– Website: ${url || 'none'}`,
     `– What I need: ${helperNeeds[input.need]}`,
   ];
   if (extra) lines.push(`– Anything else: ${extra}`);
@@ -386,19 +441,37 @@ export interface NavLink extends Link {
   section: string | null;
 }
 
-/** Desktop nav links, in order (§4 Nav). */
+/** Desktop nav links, in order (§4 Nav). The Azure practice first. */
 export const nav: NavLink[] = [
   { label: 'Services', href: '/#services', section: 'services' },
-  { label: 'Pricing', href: '/#pricing', section: 'pricing' },
-  { label: 'Process', href: '/#process', section: 'process' },
+  { label: 'Engagements', href: '/#engagements', section: 'engagements' },
+  { label: 'Websites', href: '/websites/', section: null },
   { label: 'About', href: '/about/', section: null },
 ];
 
-/** The one primary action on every page. */
-export const primaryCta: Link & { text: string } = {
+/** A page-level primary action: nav WhatsApp button, mobile menu, sticky bar. */
+export interface PageCta {
+  label: string;
+  /** WhatsApp prefill. */
+  text: string;
+  /** Sticky bar, bone: what the first conversation gets you. */
+  price: string;
+}
+
+/** The one primary action on every page (the Azure practice). */
+export const primaryCta: Link & PageCta = {
+  label: 'Free cost review on WhatsApp',
+  text: waMessages.cloud.hero,
+  href: wa(waMessages.cloud.hero),
+  price: 'Free Azure cost review',
+};
+
+/** /websites/ swaps the page-level action for the studio's own. */
+export const webCta: Link & PageCta = {
   label: 'Get a price on WhatsApp',
   text: waMessages.hero,
   href: wa(waMessages.hero),
+  price: 'Free price analysis',
 };
 
 /** Small UI strings for the nav and layout chrome. */
@@ -407,7 +480,7 @@ export const navUi = {
   /** Desktop and tablet button label (with the WhatsApp glyph). */
   whatsapp: 'WhatsApp',
   /** Mobile icon-only button. */
-  whatsappAria: 'Get a price on WhatsApp',
+  whatsappAria: 'Message Vinícius on WhatsApp',
   /** Desktop/tablet label beside the WhatsApp button. */
   email: 'Email',
   emailAria: 'Email Vinícius',
@@ -420,10 +493,11 @@ export const navUi = {
 export const mobileMenu = {
   links: [
     { index: '01', label: 'Services', href: '/#services' },
-    { index: '02', label: 'Pricing', href: '/#pricing' },
-    { index: '03', label: 'Process', href: '/#process' },
-    { index: '04', label: 'About', href: '/about/' },
-    { index: '05', label: 'Contact', href: '/contact/' },
+    { index: '02', label: 'Engagements', href: '/#engagements' },
+    { index: '03', label: 'Method', href: '/#method' },
+    { index: '04', label: 'Websites', href: '/websites/' },
+    { index: '05', label: 'About', href: '/about/' },
+    { index: '06', label: 'Contact', href: '/contact/' },
   ],
   cta: primaryCta,
   linkedin: { label: contact.linkedin.label, href: contact.linkedin.url },
@@ -431,14 +505,15 @@ export const mobileMenu = {
   hours: contact.hours.label,
 };
 
-/** Mobile sticky WhatsApp bar (§4). Renders as `{price} · {note}`. */
+/** Mobile sticky WhatsApp bar (§4). Renders as `{price} · {note}`. Pages can
+ *  override price and text with a PageCta (Base `cta` prop). */
 export const stickyBar = {
   /** Bone. */
-  price: 'Free price analysis',
+  price: primaryCta.price,
   /** Ash. */
   note: 'Reply in one business day',
   button: 'WhatsApp',
-  text: waMessages.hero,
+  text: primaryCta.text,
 };
 
 /* ------------------------------------------------ Concept 01 (fictional) */
@@ -508,7 +583,557 @@ export const concept = {
 };
 
 /* =========================================================================
-   HOME PAGE: one export per section, in page order
+   HOME PAGE · the Azure practice. One export per section, in page order.
+   Copy rules as everywhere: no number without a source, no promised saving.
+   Savings are always "estimated" in the review and "measured" after it.
+   ========================================================================= */
+
+/* --------------------------------------------------------------- #hero */
+
+export const cloudHero = {
+  id: 'hero',
+  meta: {
+    left: 'Vesta · Azure administration and cost optimization',
+    right: null,
+    mobile: 'Azure administration and FinOps',
+  },
+  h1: 'Azure that costs less and runs better.',
+  lead: 'Vesta administers and optimizes Microsoft Azure environments: a smaller bill, right-sized resources, clear governance and operations that hold up on a bad day.',
+  primary: { label: 'Free cost review on WhatsApp', text: waMessages.cloud.hero } satisfies WaCta,
+  secondary: { label: 'See how it works', href: '#method' } satisfies Link,
+  email: { label: 'Email Vinícius', subject: 'Azure cost review' },
+  micro: 'Every engagement starts with a free, read-only cost review. You talk to the engineer who does the work.',
+};
+
+/** The hero stage: an ILLUSTRATED cost review on a fictional subscription.
+ *  The bars are a drawing (relative heights), never data. */
+export interface CostFinding {
+  name: string;
+  /** Struck through once the review lands. */
+  before: string;
+  after: string;
+}
+
+export const costPlate = {
+  title: 'Cost review',
+  scope: 'Subscription · prod-01',
+  tag: 'Illustration',
+  aria: 'Illustration of an Azure cost review on a fictional subscription: monthly spend climbs until the review, then falls as six findings are fixed.',
+  chart: { label: 'Monthly spend', marker: 'Review', before: 'Before', after: 'After' },
+  /** Relative bar heights, 0–1. Twelve months; the review lands after month 8. */
+  bars: [0.56, 0.6, 0.63, 0.68, 0.72, 0.79, 0.86, 1, 0.78, 0.7, 0.66, 0.65],
+  reviewAfter: 8,
+  findingsLabel: 'Findings',
+  findings: [
+    { name: 'Idle virtual machines', before: 'Running 24/7', after: 'Off out of hours' },
+    { name: 'Oversized SKUs', before: 'Sized for a peak', after: 'Right-sized' },
+    { name: 'Unattached disks', before: 'Left behind', after: 'Snapshot, deleted' },
+    { name: 'Steady workloads', before: 'Pay-as-you-go', after: 'Reserved' },
+    { name: 'Untagged resources', before: 'No owner', after: 'Owner and cost center' },
+    { name: 'Budget alerts', before: 'None', after: 'On, per owner' },
+  ] satisfies CostFinding[],
+  caption: 'Illustration · Fictional subscription, not client data',
+};
+
+/* ------------------------------------------------ spec band (part of #hero) */
+
+export const cloudSpec: { cells: SpecCell[]; footnote: string } = {
+  cells: [
+    {
+      value: 'Free',
+      unit: 'Cost review',
+      caption: 'Read-only access. Every finding with its estimated monthly saving.',
+      count: null,
+    },
+    {
+      value: '5',
+      unit: 'Pillars',
+      caption: 'Each environment read against the Azure Well-Architected Framework.',
+      count: { to: 5, prefix: '', suffix: '' },
+    },
+    {
+      value: '100%',
+      unit: 'Documented',
+      caption: 'Every change written down, with its reason and its rollback.',
+      count: { to: 100, prefix: '', suffix: '%' },
+    },
+    {
+      value: 'Azure first, websites too',
+      unit: null,
+      caption: 'The same engineer builds high-end websites, to the same standard.',
+      count: null,
+    },
+  ],
+  footnote: 'Savings are measured on your own bill, never promised in advance.',
+};
+
+/* ------------------------------------------------------------- #problem */
+
+export const cloudProblem = {
+  id: 'problem',
+  label: { index: '01', name: 'The problem' } satisfies SectionLabel,
+  h2: 'Most Azure bills pay for things nobody uses.',
+  rows: [
+    {
+      index: '01',
+      title: 'The bill grows faster than the business.',
+      body: 'Machines sized for a peak that never came, disks left behind by deleted VMs, test environments running all weekend. Nobody decided to pay for them, and nobody decided to stop.',
+      keywords: ['Oversized VMs', 'Orphaned disks', 'Always-on test'],
+    },
+    {
+      index: '02',
+      title: 'Nobody can say who owns what.',
+      body: 'No tags, no naming convention, one subscription for everything. When finance asks why the bill went up, the answer takes a week.',
+      keywords: ['No tags', 'No ownership', 'No cost allocation'],
+    },
+    {
+      index: '03',
+      title: 'Customers find the problems first.',
+      body: 'No alerts on what matters, backups never test-restored, access still open for people who left. It all works, until the day it does not.',
+      keywords: ['No alerts', 'Untested backups', 'Stale access'],
+    },
+  ],
+  closing: 'Vesta fixes all three, for good.',
+};
+
+/* ------------------------------------------------------------ #services */
+
+export const cloudServices = {
+  id: 'services',
+  label: { index: '02', name: 'What Vesta does' } satisfies SectionLabel,
+  stance: {
+    text: 'The cloud bills by the hour. So does neglect.',
+    desktop: ['The cloud bills', 'by the hour.', 'So does neglect.'],
+    mobile: ['The cloud', 'bills by', 'the hour.', 'So does', 'neglect.'],
+  },
+  lead: 'Vesta runs the Azure side of a business as an operation, not a pile of resources: what it costs, who can touch it, and what happens when something breaks.',
+  detail: {
+    title: 'With your team or without',
+    keywords: ['Works with your IT', 'Works with your MSP', 'Scripts you keep'],
+  },
+  bodyA:
+    'Vesta runs the Azure side of a business as an operation, not a pile of resources: what it costs, who can touch it, and what happens when something breaks.',
+  bodyB:
+    'If you have an IT team or a managed service provider, Vesta works alongside them: findings, scripts and runbooks they can run themselves. If there is no one, Vesta covers it.',
+  notOurWork: {
+    label: "Not Vesta's work",
+    items: ['Savings that cost uptime', 'Changes without a rollback', 'Reports nobody reads'],
+    follow: 'Every recommendation comes with its estimated saving, its risk and the way back.',
+  },
+  stations: [
+    {
+      index: '01',
+      title: 'Azure administration',
+      body: 'Day-to-day care of subscriptions, identities and resources. Access reviewed, policies enforced, patching and backups on a schedule, every change written down.',
+      deliverables: ['Entra ID and RBAC', 'Azure Policy and naming', 'Backup and patching'],
+    },
+    {
+      index: '02',
+      title: 'Cost optimization',
+      body: 'A line-by-line read of the bill. Idle and oversized resources removed or right-sized, reservations and savings plans sized to real usage, budgets and alerts in place.',
+      deliverables: ['Right-sizing and cleanup', 'Reservations and savings plans', 'Budgets and tagging'],
+    },
+    {
+      index: '03',
+      title: 'Operational excellence',
+      body: 'Monitoring that warns before users do, runbooks for the incidents that repeat, and documentation a new engineer can follow on day one.',
+      deliverables: ['Azure Monitor and alerts', 'Runbooks', 'Monthly operations report'],
+    },
+  ],
+  modernize: 'Need a website too? Vesta builds those as well, to the same standard.',
+};
+
+/* -------------------------------------------------------------- #review */
+
+export interface Pillar {
+  index: string;
+  name: string;
+  checks: string[];
+  /** The pillar the free review puts a price on. */
+  priced: boolean;
+}
+
+export const pillars = {
+  id: 'review',
+  label: { index: '03', name: 'The review' } satisfies SectionLabel,
+  h2: 'Read against the framework Microsoft publishes.',
+  lead: 'The Azure Well-Architected Framework describes a healthy workload in five pillars. The free review reads your environment against each one, and estimates what every cost finding is worth per month.',
+  pricedTag: 'Priced in the review',
+  items: [
+    {
+      index: '01',
+      name: 'Cost Optimization',
+      checks: ['Idle and oversized resources', 'Reservation and savings plan coverage', 'Budgets, alerts and cost allocation tags', 'Storage tiers and retention'],
+      priced: true,
+    },
+    {
+      index: '02',
+      name: 'Operational Excellence',
+      checks: ['Monitoring and alert rules', 'Infrastructure as code coverage', 'Runbooks and change records', 'Naming and tagging standards'],
+      priced: false,
+    },
+    {
+      index: '03',
+      name: 'Reliability',
+      checks: ['Backup coverage and test restores', 'Zones and redundancy', 'Recovery targets in writing', 'Service health alerts'],
+      priced: false,
+    },
+    {
+      index: '04',
+      name: 'Security',
+      checks: ['Role assignments and stale access', 'Defender for Cloud recommendations', 'Public endpoints and network rules', 'Secrets kept in Key Vault'],
+      priced: false,
+    },
+    {
+      index: '05',
+      name: 'Performance Efficiency',
+      checks: ['SKUs that fit the real load', 'Autoscale rules', 'Database and storage throughput', 'Regions close to users'],
+      priced: false,
+    },
+  ] satisfies Pillar[],
+  output: {
+    title: 'What the review hands you',
+    items: [
+      'A cost breakdown by service, resource group and tag',
+      'Every finding with its estimated monthly saving and its risk',
+      'Quick wins you can apply the same week',
+      'A plan sorted by return, with the fix for each item',
+    ],
+  },
+  source: {
+    text: 'The five pillars are defined by Microsoft in the Azure Well-Architected Framework.',
+    citation: sources.wellArchitected.citation,
+    url: sources.wellArchitected.url,
+  },
+};
+
+/* -------------------------------------------------------------- #method */
+
+export interface MethodStep {
+  index: string;
+  title: string;
+  body: string;
+}
+
+export const method = {
+  id: 'method',
+  label: { index: '04', name: 'Method' } satisfies SectionLabel,
+  h2: 'Measure. Fix. Keep it fixed.',
+  sub: 'One engineer from the first call to the monthly report.',
+  steps: [
+    {
+      index: '01',
+      title: 'Call',
+      body: 'Fifteen minutes on WhatsApp or video: what runs on Azure, roughly what it costs, what worries you.',
+    },
+    {
+      index: '02',
+      title: 'Read-only access',
+      body: 'You grant Reader and Cost Management Reader on the subscriptions in scope. Nothing can be changed with them.',
+    },
+    {
+      index: '03',
+      title: 'Review',
+      body: 'The bill and the resources are read against the five pillars. Every finding gets an estimated monthly saving and a risk.',
+    },
+    {
+      index: '04',
+      title: 'Plan',
+      body: 'A plan in writing: what changes, in what order, with what rollback, and the fixed price to do it.',
+    },
+    {
+      index: '05',
+      title: 'Implement',
+      body: 'Changes made in windows you approve, through scripts or infrastructure as code where it counts, each one logged.',
+    },
+    {
+      index: '06',
+      title: 'Keep it',
+      body: 'Budgets, alerts and a monthly report stop the bill from creeping back. Managed operations, if you want them.',
+    },
+  ] satisfies MethodStep[],
+  note: 'Savings are measured from your own Cost Management data, before and after.',
+};
+
+/* --------------------------------------------------------- #engagements */
+
+export interface Engagement {
+  id: EngagementId;
+  index: string;
+  name: string;
+  tagline: string;
+  /** Where a price would sit: never a number before the review. */
+  price: string;
+  recommended: Flagged | null;
+  bestFor: string;
+  includes: Flagged[];
+  keys: string[];
+  cta: string;
+  waText: string;
+  /** mailto: subject for the email companion. */
+  subject: string;
+}
+
+export const engagements = {
+  id: 'engagements',
+  label: { index: '05', name: 'Engagements' } satisfies SectionLabel,
+  h2: 'Three ways to work. One free review first.',
+  lead: 'The review is free and read-only. Whatever comes after is scoped from its findings and fixed in writing before any change is made.',
+  labels: { bestFor: 'Best for', includes: "What's included", price: 'Price' },
+  models: [
+    {
+      id: 'review',
+      index: '01',
+      name: 'Cost review',
+      tagline: 'A read-only analysis of your Azure bill and resources.',
+      price: 'Free',
+      recommended: null,
+      bestFor: 'Any business paying for Azure whose bill has never been read line by line.',
+      includes: [
+        { text: 'Read-only access: Reader and Cost Management Reader', confirmed: true },
+        { text: 'Cost breakdown by service, resource group and tag', confirmed: true },
+        { text: 'Findings with estimated monthly savings', confirmed: true },
+        { text: 'Quick wins you can apply the same week', confirmed: true },
+        { text: 'A plan sorted by return', confirmed: true },
+        { text: 'A call to walk through the report', confirmed: true },
+      ],
+      keys: ['Read-only', 'Findings', 'Plan'],
+      cta: 'Request the free review',
+      waText: waMessages.cloud.engagements.review,
+      subject: 'Free Azure cost review',
+    },
+    {
+      id: 'optimize',
+      index: '02',
+      name: 'Optimization project',
+      tagline: 'The findings, implemented: cleanup, right-sizing, reservations and governance.',
+      price: 'Fixed price after the review',
+      recommended: { text: 'Recommended after the review', confirmed: true },
+      bestFor: 'Environments with clear savings and nobody with the time to make the changes safely.',
+      includes: [
+        { text: 'Every change planned with its risk and rollback', confirmed: true },
+        { text: 'Idle resources removed, oversized ones right-sized', confirmed: true },
+        { text: 'Reservations and savings plans sized to usage', confirmed: true },
+        { text: 'Tags, naming and Azure Policy in place', confirmed: true },
+        { text: 'Budgets and cost alerts per owner', confirmed: true },
+        { text: 'A before-and-after report from your own bill', confirmed: true },
+      ],
+      keys: ['Right-sizing', 'Reservations', 'Governance'],
+      cta: 'Talk about a project',
+      waText: waMessages.cloud.engagements.optimize,
+      subject: 'Azure optimization project',
+    },
+    {
+      id: 'operate',
+      index: '03',
+      name: 'Managed operations',
+      tagline: 'Ongoing administration, so the savings and the structure stay in place.',
+      price: 'Monthly, scoped to your environment',
+      recommended: null,
+      bestFor: 'Businesses that want one accountable engineer for their Azure environment.',
+      includes: [
+        { text: 'Subscriptions, identities and access administered', confirmed: true },
+        { text: 'Monitoring and alert rules maintained', confirmed: true },
+        { text: 'Backup and patching routines checked', confirmed: true },
+        { text: 'Monthly cost watch against budget', confirmed: true },
+        { text: 'Every change in a log you own', confirmed: true },
+        { text: 'A monthly operations report', confirmed: true },
+      ],
+      keys: ['Administration', 'Cost watch', 'Monthly report'],
+      cta: 'Ask about operations',
+      waText: waMessages.cloud.engagements.operate,
+      subject: 'Azure managed operations',
+    },
+  ] satisfies Engagement[],
+  terms: [
+    { value: 'Read-only', caption: 'Access for the review' },
+    { value: 'Scoped', caption: 'Access for changes, removed at the end' },
+    { value: 'EN', caption: 'Formal contract in English' },
+    { value: 'USD', caption: 'Stripe, Wise or international wire' },
+  ],
+  emailLabel: 'Or by email',
+};
+
+/* -------------------------------------------------------------- #record */
+
+/** One role on the owner's CV. Renders only when `confirmed`. */
+export interface ExperienceEntry {
+  role: string;
+  company: string;
+  /** As rendered: '2023–present'. */
+  period: string;
+  /** Results stated by the owner, each one checkable. No invented numbers. */
+  highlights: string[];
+  confirmed: boolean;
+}
+
+/** One certification. Renders only when `confirmed`; `url` = the public credential. */
+export interface Credential {
+  name: string;
+  code: string | null;
+  issuer: string;
+  year: string | null;
+  url: string | null;
+  confirmed: boolean;
+}
+
+/**
+ * The CV block (owner's to-do list). Copy each role and certification from
+ * the LinkedIn profile, then set `confirmed: true`. The section renders only
+ * when at least one entry is confirmed; nothing here is shown before that.
+ */
+export const record = {
+  id: 'record',
+  label: { index: '07', name: 'Track record' } satisfies SectionLabel,
+  h2: 'Experience, in the open.',
+  lead: 'Roles and certifications, each one checkable on LinkedIn.',
+  experienceTitle: 'Experience',
+  credentialsTitle: 'Certifications',
+  verify: 'Verify',
+  experience: [
+    {
+      role: '',
+      company: '',
+      period: '',
+      highlights: [],
+      confirmed: false,
+    },
+  ] satisfies ExperienceEntry[],
+  credentials: [
+    { name: 'Azure Fundamentals', code: 'AZ-900', issuer: 'Microsoft', year: null, url: null, confirmed: false },
+    { name: 'Azure Administrator Associate', code: 'AZ-104', issuer: 'Microsoft', year: null, url: null, confirmed: false },
+    { name: 'Azure Solutions Architect Expert', code: 'AZ-305', issuer: 'Microsoft', year: null, url: null, confirmed: false },
+    { name: 'FinOps Certified Practitioner', code: null, issuer: 'FinOps Foundation', year: null, url: null, confirmed: false },
+  ] satisfies Credential[],
+  linkedin: { label: 'Full history on LinkedIn', href: contact.linkedin.url } satisfies Link,
+};
+
+/* ------------------------------------------------------------ #websites */
+
+export const webTeaser = {
+  id: 'websites',
+  label: { index: '08', name: 'Websites' } satisfies SectionLabel,
+  h2: 'Websites, built to the same standard.',
+  lead: 'Vesta also designs and builds high-end websites for businesses, new or rebuilt from the one you have, and sets them up to be found on Google.',
+  points: [
+    { title: 'Custom code', text: 'No page builders and no plugin stack to patch.' },
+    { title: 'Measured', text: 'Every launch ships with its Lighthouse report.' },
+    { title: 'Yours', text: 'Code, design, content and every login at launch.' },
+  ],
+  link: { label: 'See the website studio', href: '/websites/' } satisfies Link,
+  plateCaption: 'Concept 01 · A study by Vesta · Fictional business, not client work',
+};
+
+/* ----------------------------------------------------------------- #faq */
+
+export const cloudFaqSection = {
+  id: 'faq',
+  label: { index: '09', name: 'Questions' } satisfies SectionLabel,
+  h2: 'Straight answers.',
+  side: { label: 'Ask anything on WhatsApp →', text: waMessages.cloud.question } satisfies WaCta,
+  email: { label: 'Or send it by email', subject: 'A question about Azure' },
+};
+
+export const cloudFaq: FaqItem[] = [
+  {
+    q: 'What does the free cost review need from me?',
+    a: 'Read-only access to the subscriptions in scope: the Reader and Cost Management Reader roles. Nothing can be changed with them, and you can remove the access the moment the review is done.',
+    confirmed: true,
+  },
+  {
+    q: 'How much will I save?',
+    a: 'Nobody can honestly promise a number before looking. The review lists every finding with its estimated monthly saving, and after the changes the saving is measured on your own bill, before and after.',
+    confirmed: true,
+  },
+  {
+    q: 'Will the changes cause downtime?',
+    a: 'Every change in the plan carries its risk and its rollback. Anything that touches production runs in a window you approve. A saving that costs uptime is not a saving.',
+    confirmed: true,
+  },
+  {
+    q: 'Which parts of Azure do you cover?',
+    a: 'Identity and access (Entra ID and RBAC), governance (Azure Policy, tags and management groups), compute, storage, networking, monitoring and backup. If something in your environment is outside that, the review says so.',
+    confirmed: true,
+  },
+  {
+    q: 'Do you work with my IT team or MSP?',
+    a: 'Yes. Findings come with the exact steps or scripts, so your team can apply them, or Vesta can. Nothing is kept in a format only Vesta can read.',
+    confirmed: true,
+  },
+  {
+    q: 'Is my data safe?',
+    a: 'The review reads configuration and billing, not your application data. Access is granted by you, scoped to the role the work needs, and removed when the work ends.',
+    confirmed: true,
+  },
+  {
+    q: 'How do I pay from the US?',
+    a: 'In US dollars by Stripe invoice, Wise or international wire, under a formal agreement in English. A W-8BEN-E is available on request.',
+    confirmed: true,
+  },
+  {
+    q: 'What about the time difference?',
+    a: 'São Paulo is one to two hours ahead of New York, depending on the season. Vesta works 9:00–18:00 local time, which covers most of the US Eastern and Central business day.',
+    confirmed: true,
+  },
+  {
+    q: 'Do you still build websites?',
+    a: 'Yes. Vesta designs and builds high-end websites for businesses, new or rebuilt, set up to be found on Google. The website studio has its own page, with packages and five example studies.',
+    confirmed: true,
+  },
+  {
+    q: 'What happens if Vesta is unavailable?',
+    a: 'Every change is documented and every script lives in your own repository or tenant, so any qualified engineer can take over.',
+    confirmed: true,
+  },
+];
+
+/* -------------------------------------------------------------- #finale */
+
+export const cloudFinale = {
+  id: 'finale',
+  h2: 'Send a few lines. Get a free cost review.',
+  body: 'What runs on Azure, roughly what you pay, what worries you. The answer comes from the engineer who would do the work.',
+  intentsLabel: 'What do you need?',
+  intents: [
+    { id: 'cost', label: 'Lower my Azure bill', text: waMessages.cloud.finale.cost },
+    { id: 'admin', label: 'Azure administration', text: waMessages.cloud.finale.admin },
+    { id: 'ops', label: 'Monitoring and operations', text: waMessages.cloud.finale.ops },
+    { id: 'website', label: 'A website', text: waMessages.cloud.finale.website },
+    { id: 'question', label: 'Just a question', text: waMessages.cloud.finale.question },
+  ] satisfies FinaleIntent[],
+  button: {
+    label: 'Open WhatsApp',
+    text: waMessages.cloud.hero,
+    withIntent: (intentLabel: string): string => `Open WhatsApp: ${intentLabel}`,
+  },
+  email: { label: 'Email', address: contact.email.address, aria: 'Email Vinícius at', subject: contact.email.subject },
+  number: {
+    display: contact.whatsapp.display,
+    copy: 'Copy number',
+    copied: 'Copied',
+    copiedMs: 1600,
+  },
+  reassurance: 'A Brazilian number. WhatsApp messages are free from any country.',
+  secondary: [
+    { label: contact.linkedin.label, href: contact.linkedin.url },
+    { label: 'See the engagements', href: '/#engagements' },
+  ] satisfies Link[],
+};
+
+/* ----------------------------------------------------- /websites/ page */
+
+export const websitesPage = {
+  seo: {
+    title: 'Websites · Vesta',
+    description:
+      'Vesta designs and builds high-end websites for businesses, new or rebuilt, and sets them up to be found on Google. Every price starts with a free analysis.',
+  } satisfies Seo,
+};
+
+/* =========================================================================
+   WEBSITE STUDIO (/websites/): one export per section, in page order.
+   These were the home page until the Azure practice moved there; ids and
+   anchors (#pricing, #configure, …) are unchanged and now live on /websites/.
    ========================================================================= */
 
 /* ------------------------------------------------------------ 5.1 #hero */
@@ -1445,25 +2070,27 @@ export const process = {
 
 /* --------------------------------------------------------- 5.10 #builder */
 
+/** Home page (Azure practice): the engineer. */
 export const builder = {
-  id: 'builder',
-  label: { index: '09', name: 'The builder' } satisfies SectionLabel,
-  h2: 'The person you message is the person who builds it.',
+  id: 'engineer',
+  label: { index: '06', name: 'The engineer' } satisfies SectionLabel,
+  h2: 'The person you message is the engineer who does the work.',
   paragraphs: [
-    'Vesta is Vinícius Magno. A Computer Science graduate of Mackenzie Presbyterian University in São Paulo, Vinícius designs, builds and launches every Vesta site.',
-    'No account managers, no junior hand-offs, no outsourcing. The person on WhatsApp is the person building your site.',
+    'Vesta is Vinícius Magno. A Computer Science graduate of Mackenzie Presbyterian University in São Paulo, Vinícius works on Microsoft Azure administration, cost reduction and the operational structure that keeps environments healthy.',
+    'No account managers, no junior hand-offs, no outsourcing. The person who reads your bill is the person who makes the changes and signs the report.',
     'São Paulo is one to two hours ahead of New York, depending on the season. Working hours are 9:00–18:00 local time, which covers most of the US Eastern and Central business day.',
   ],
   /** Hairline rows. "Hours" replaces the spec's live "Local time" row. */
   facts: [
+    { label: 'Focus', value: 'Azure administration · Cost optimization · Operational excellence' },
     { label: 'Education', value: founder.education },
     { label: 'Company', value: `${brand.legalName} · CNPJ ${brand.cnpj}` },
     { label: 'Based in', value: founder.location },
     { label: 'Hours', value: contact.hours.label },
   ] satisfies Fact[],
-  cta: { label: 'Message Vinícius on WhatsApp', text: waMessages.builder } satisfies WaCta,
+  cta: { label: 'Message Vinícius on WhatsApp', text: waMessages.cloud.builder } satisfies WaCta,
   /** Round 2: second channel next to WhatsApp (mailto via mail()). */
-  email: { label: 'Email Vinícius', subject: 'A website for my business' },
+  email: { label: 'Email Vinícius', subject: 'My Azure environment' },
   linkedin: { label: contact.linkedin.label, href: contact.linkedin.url } satisfies Link,
   /** Round 2: paragraphs 2–3 live in this Expand box; the lead stays visible. */
   more: { title: 'More about Vinícius', keywords: ['No hand-offs', 'No outsourcing', 'US business hours'] },
@@ -1566,7 +2193,7 @@ export const faq: FaqItem[] = [
 /* ---------------------------------------------------------- 5.12 #finale */
 
 export interface FinaleIntent {
-  id: FinaleIntentId;
+  id: FinaleIntentId | CloudIntentId;
   label: string;
   text: string;
 }
@@ -1592,7 +2219,7 @@ export const finale = {
   },
   /** Round 2: email next to WhatsApp. Subject = the chosen chip's label
       (before a choice: contact.email.subject); body = the same prefill. */
-  email: { label: 'Email', address: contact.email.address, aria: 'Email Vinícius at' },
+  email: { label: 'Email', address: contact.email.address, aria: 'Email Vinícius at', subject: 'Website price analysis' },
   number: {
     display: contact.whatsapp.display,
     copy: 'Copy number',
@@ -1603,7 +2230,7 @@ export const finale = {
   reassurance: 'A Brazilian number. WhatsApp messages are free from any country.',
   secondary: [
     { label: contact.linkedin.label, href: contact.linkedin.url },
-    { label: 'See the packages', href: '/#pricing' },
+    { label: 'See the packages', href: '/websites/#pricing' },
   ] satisfies Link[],
 };
 
@@ -1611,32 +2238,33 @@ export const finale = {
 
 export const footer = {
   brand: {
-    blurb: 'Website design and build studio in São Paulo.',
+    blurb: 'Azure administration, cost optimization and websites. São Paulo.',
     tagline: brand.tagline,
   },
   columns: {
+    /** Key kept as `pricing` (Footer.astro); it is the services column now. */
     pricing: {
-      title: 'Pricing',
+      title: 'Services',
       links: [
-        { label: 'Landing Page', href: '/#pricing' },
-        { label: 'Landing Page + Google', href: '/#pricing' },
-        { label: 'Complete Website', href: '/#pricing' },
-        { label: 'Free price analysis', href: '/#pricing' },
-        { label: 'Care, priced with your project', href: '/#pricing' },
+        { label: 'Azure administration', href: '/#services' },
+        { label: 'Cost optimization', href: '/#services' },
+        { label: 'Operational excellence', href: '/#services' },
+        { label: 'Free cost review', href: '/#engagements' },
+        { label: 'Websites', href: '/websites/' },
       ] satisfies Link[],
     },
     studio: {
-      title: 'Studio',
+      title: 'Vesta',
       links: [
         { label: 'About', href: '/about/' },
-        { label: 'Work', href: '/work/' },
+        { label: 'Website work', href: '/work/' },
         { label: 'Contact', href: '/contact/' },
         { label: 'Privacy', href: '/privacy/' },
       ] satisfies Link[],
     },
     contact: {
       title: 'Contact',
-      whatsapp: { label: `WhatsApp ${contact.whatsapp.display}`, text: waMessages.hero } satisfies WaCta,
+      whatsapp: { label: `WhatsApp ${contact.whatsapp.display}`, text: waMessages.cloud.hero } satisfies WaCta,
       linkedin: { label: contact.linkedin.name, href: contact.linkedin.url } satisfies Link,
       /** Static hours where the spec had a live clock. */
       hours: contact.hours.label,
@@ -1657,7 +2285,7 @@ export const footer = {
   },
   /** SMALL dim. Pass measurements.performance and a formatted date. */
   buildLine: (performance: number, date: string): string =>
-    `Designed and built by Vinícius Magno in São Paulo. This page: Lighthouse mobile performance ${performance}, measured ${date}.`,
+    `Designed, built and run by Vinícius Magno in São Paulo. This page: Lighthouse mobile performance ${performance}, measured ${date}.`,
   /** Labels for the existing `data-motion-toggle` (motion.ts sets them at runtime too). */
   motion: {
     on: 'Motion: on',
@@ -1678,25 +2306,25 @@ export const about = {
   seo: {
     title: 'About · Vesta',
     description:
-      'Vesta is one person: Vinícius Magno, who designs, builds and launches every site. Company facts, working hours and how Vesta works.',
+      'Vesta is one engineer: Vinícius Magno, who administers and optimizes Azure environments and builds websites. Background, company facts and how Vesta works.',
   } satisfies Seo,
   label: { index: null, name: 'About' } satisfies SectionLabel,
-  h1: "The studio is one person. That's the point.",
-  lead: 'Vinícius Magno designs, builds and launches every Vesta website personally.',
+  h1: "Vesta is one engineer. That's the point.",
+  lead: 'Vinícius Magno administers and optimizes Azure environments, and designs and builds websites, personally.',
   /** Portrait section (same `founder.portrait.confirmed` gate). */
   bio: [
-    'Most small-business sites are built from templates by people the owner never meets. Vesta is the opposite: one builder, custom code, a fixed price in writing.',
-    'Vinícius holds a B.S. in Computer Science from Mackenzie Presbyterian University in São Paulo.',
-    'One builder means nothing gets lost between the first message and the code. The person who hears the brief is the person who builds the site.',
+    'Most small Azure environments are run by whoever set them up, years ago, with nobody reading the bill. Vesta is the opposite: one accountable engineer, every change documented, a fixed price in writing.',
+    'Vinícius holds a B.S. in Computer Science from Mackenzie Presbyterian University in São Paulo, and works on Microsoft Azure administration, cost optimization and cloud operations.',
+    'One engineer means nothing gets lost between the review and the change. The person who reads the bill is the person who fixes it.',
   ],
   howVestaWorks: {
     title: 'How Vesta works',
     items: [
-      'A free price analysis, then a fixed price.',
-      'The person you talk to builds the site.',
-      'You own everything at launch.',
-      'Measured, not claimed: every launch ships with its Lighthouse report.',
-      'Websites and Google setup. No ads, no ranking promises.',
+      'A free, read-only review first. Then a fixed price.',
+      'The person you talk to does the work.',
+      'Every change has a reason, a risk and a rollback, in writing.',
+      'Measured, not claimed: savings come from your own bill, before and after.',
+      'Azure first. Websites built to the same standard.',
     ],
   },
   /** Static replacement for the spec's live 24-hour bands. */
@@ -1733,8 +2361,8 @@ export const about = {
   /** Closing: render the finale module in compact form (reuse `finale`). */
   /** Round 2: the detail lives in expandable boxes; titles + keywords stay visible. */
   more: {
-    builder: { title: 'One builder', keywords: ['Custom code', 'No hand-offs'] },
-    background: { title: 'Background', keywords: ['B.S. Computer Science', 'Mackenzie'] },
+    builder: { title: 'One engineer', keywords: ['Documented changes', 'No hand-offs'] },
+    background: { title: 'Background', keywords: ['B.S. Computer Science', 'Mackenzie', 'Microsoft Azure'] },
     entity: { title: 'Legal entity', keywords: ['Vesta Consultoria', 'CNPJ'] },
     paperwork: { title: 'Contracts and invoicing', keywords: ['In English', 'USD', 'W-8BEN-E'] },
     overlap: { keywords: ['1–2 hours ahead of New York'] },
@@ -1761,10 +2389,10 @@ export const contactPage = {
   seo: {
     title: 'Contact · Vesta',
     description:
-      'Message Vinícius Magno on WhatsApp or by email for a free price analysis on a new or rebuilt website. Replies Mon–Fri, 9:00–18:00 São Paulo time.',
+      'Message Vinícius Magno on WhatsApp or by email for a free Azure cost review, Azure administration or a website. Replies Mon–Fri, 9:00–18:00 São Paulo time.',
   } satisfies Seo,
   label: { index: null, name: 'Contact' } satisfies SectionLabel,
-  h1: 'Talk to the person who builds it.',
+  h1: 'Talk to the engineer who does the work.',
   lead: 'WhatsApp or email, straight to Vinícius. Replies Mon–Fri, 9:00–18:00 São Paulo time (UTC−3).',
   /** The email line under the lead: the address set large, copyable. */
   email: { label: 'Email', write: 'Write an email', copy: 'Copy address', copied: 'Copied' },
@@ -1773,9 +2401,9 @@ export const contactPage = {
     label: 'WhatsApp',
     number: contact.whatsapp.display,
     quickStarts: [
-      { id: 'newSite', label: 'I need a new website', text: waMessages.contact.newSite },
-      { id: 'rebuild', label: 'I want to rebuild my current site', text: waMessages.contact.rebuild },
-      { id: 'landing', label: 'I need a landing page', text: waMessages.contact.landing },
+      { id: 'cost', label: 'Review my Azure costs', text: waMessages.contact.cost },
+      { id: 'admin', label: 'I need Azure administration', text: waMessages.contact.admin },
+      { id: 'website', label: 'I need a website', text: waMessages.contact.website },
     ] satisfies QuickStart[],
   },
   /** Desktop QR code for the generic link, generated at build time. */
@@ -1787,14 +2415,15 @@ export const contactPage = {
   helper: {
     title: 'Message helper',
     fields: {
-      business: { label: 'Business name' },
-      currentUrl: { label: 'Current website (optional)', placeholder: 'yourbusiness.com' },
+      business: { label: 'Company name' },
+      currentUrl: { label: 'Company website (optional)', placeholder: 'yourcompany.com' },
       need: {
         legend: 'What you need',
         options: [
-          { id: 'new', label: 'New website' },
-          { id: 'rebuild', label: 'Rebuild' },
-          { id: 'google', label: 'Google visibility' },
+          { id: 'cost', label: 'Azure costs' },
+          { id: 'admin', label: 'Administration' },
+          { id: 'ops', label: 'Operations' },
+          { id: 'website', label: 'Website' },
           { id: 'question', label: 'A question' },
         ] satisfies { id: HelperNeed; label: string }[],
       },
@@ -1809,10 +2438,10 @@ export const contactPage = {
   include: {
     title: 'What to include in your first message',
     items: [
-      { index: '01', text: 'What the business does and where' },
-      { index: '02', text: 'The website you have now, if any' },
-      { index: '03', text: 'What the site has to achieve' },
-      { index: '04', text: 'Your deadline' },
+      { index: '01', text: 'What the company does and where' },
+      { index: '02', text: 'What runs on Azure, roughly' },
+      { index: '03', text: 'Your monthly Azure spend, roughly' },
+      { index: '04', text: 'What worries you, and any deadline' },
     ],
   },
   linkedin: { title: 'LinkedIn', label: contact.linkedin.name, href: contact.linkedin.url },
@@ -1826,10 +2455,10 @@ export const contactPage = {
       { label: 'Based in', value: 'São Paulo, Brazil' },
     ] satisfies Fact[],
   },
-  configureLink: { label: 'Or configure a build →', href: '/#configure' } satisfies Link,
+  configureLink: { label: 'Or configure a website build →', href: '/websites/#configure' } satisfies Link,
   /** Round 2: keywords for the expandable boxes on /contact/. */
   more: {
-    include: { keywords: ['The business', 'Current site', 'Goal', 'Deadline'] },
+    include: { keywords: ['The company', 'What runs', 'Spend', 'Deadline'] },
     company: { keywords: ['CNPJ', 'São Paulo, Brazil'] },
   },
 };
@@ -2018,7 +2647,7 @@ export const notFound = {
   text: "This page doesn't exist. The rest of the site does.",
   links: [
     { label: 'Home', href: '/' },
-    { label: 'Pricing', href: '/#pricing' },
+    { label: 'Engagements', href: '/#engagements' },
   ] satisfies Link[],
   cta: primaryCta,
 };

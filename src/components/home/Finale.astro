@@ -50,7 +50,14 @@ import SplitText from '../ui/SplitText.astro';
 import Arrow from '../ui/Arrow.astro';
 import WaGlyph from '../ui/WaGlyph.astro';
 import MailGlyph from '../ui/MailGlyph.astro';
-import { finale, contact, wa, mail } from '../../data/site';
+import { finale as studioFinale, contact, wa, mail } from '../../data/site';
+import type { FinaleIntent } from '../../data/site';
+
+export interface Props {
+  /** Defaults to the website studio's close; the Azure home passes its own. */
+  data?: Omit<typeof studioFinale, 'intents'> & { intents: FinaleIntent[] };
+}
+const { data: finale = studioFinale } = Astro.props;
 import { url } from '../../lib/url';
 
 /* "Send your current website." / "Get a free price analysis." — one
@@ -68,7 +75,7 @@ const intents = finale.intents.map((it) => ({
   mail: mail(it.label, it.text),
 }));
 
-const mailDefault = mail(contact.email.subject, finale.button.text);
+const mailDefault = mail(finale.email.subject, finale.button.text);
 const mailAria = `${finale.email.aria} ${finale.email.address}`;
 
 /* The button is sized once for its longest label, so choosing a chip never

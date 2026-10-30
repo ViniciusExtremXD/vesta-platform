@@ -1,0 +1,120 @@
+---
+/**
+ * #websites (night) — the website studio, in one section, on the Azure
+ * home: the promise, three points, a link to /websites/ and Concept 01
+ * (fictional, labelled) as a static plate. Everything else about websites
+ * lives on /websites/.
+ */
+import SectionLabel from '../ui/SectionLabel.astro';
+import SplitText from '../ui/SplitText.astro';
+import Arrow from '../ui/Arrow.astro';
+import ConceptPlate from '../ConceptPlate.astro';
+import { webTeaser } from '../../data/site';
+import { url } from '../../lib/url';
+---
+
+<section id={webTeaser.id} class="s-night section wt" data-nav-theme="dark" aria-labelledby="websites-title">
+  <div class="wrap g wt-grid" data-scene="soft">
+    <div class="wt-copy">
+      <SectionLabel n={webTeaser.label.index ?? undefined} name={webTeaser.label.name} />
+      <SplitText as="h2" id="websites-title" class="d2 wt-h2" text={webTeaser.h2} />
+      <p class="lead wt-lead" data-reveal style="--d:200ms">{webTeaser.lead}</p>
+      <ul class="wt-points" role="list">
+        {
+          webTeaser.points.map((p, k) => (
+            <li class="wt-point" data-reveal style={`--i:${k}`}>
+              <span class="label wt-pt">{p.title}</span>
+              <span class="wt-pv">{p.text}</span>
+            </li>
+          ))
+        }
+      </ul>
+      <p class="wt-cta" data-reveal style="--d:320ms">
+        <a class="btn btn-line wt-btn" href={url(webTeaser.link.href)}>
+          <span>{webTeaser.link.label}</span>
+          <Arrow />
+        </a>
+      </p>
+    </div>
+
+    <div class="wt-stage" data-tilt="3">
+      <ConceptPlate concept="halden" mode="static" data-reveal="wipe" class="wt-plate" />
+      <p class="label wt-cap" data-reveal style="--d:300ms">{webTeaser.plateCaption}</p>
+    </div>
+  </div>
+</section>
+
+<style>
+  .wt {
+    overflow-x: clip;
+  }
+
+  .wt-grid {
+    row-gap: 48px;
+    align-items: center;
+  }
+
+  .wt-h2 {
+    margin-top: 20px;
+    max-width: 14ch;
+  }
+
+  .wt-lead {
+    margin-top: 20px;
+    color: var(--haze);
+  }
+
+  .wt-points {
+    margin-top: 32px;
+    border-top: 1px solid var(--line-dark-strong);
+  }
+
+  .wt-point {
+    display: grid;
+    grid-template-columns: minmax(0, 7.5rem) minmax(0, 1fr);
+    column-gap: 16px;
+    align-items: baseline;
+    padding-block: 14px;
+    border-bottom: 1px solid var(--line-dark);
+  }
+
+  .wt-pt {
+    color: var(--lilac);
+  }
+
+  .wt-pv {
+    color: var(--starlight);
+    line-height: 1.45;
+  }
+
+  .wt-cta {
+    margin-top: 32px;
+  }
+
+  .wt-btn {
+    background-color: var(--night);
+    background-clip: padding-box;
+  }
+
+  .wt-stage {
+    min-width: 0;
+  }
+
+  .wt-cap {
+    margin-top: 12px;
+    color: var(--dim);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    line-height: 1.5;
+  }
+
+  @media (min-width: 1100px) {
+    .wt-copy {
+      grid-column: 1 / 6;
+    }
+
+    .wt-stage {
+      grid-column: 7 / -1;
+    }
+  }
+</style>

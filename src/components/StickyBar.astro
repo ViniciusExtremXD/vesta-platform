@@ -23,6 +23,15 @@
  * and its unclassed <span> the label.
  */
 import { stickyBar, wa, mail, navUi } from '../data/site';
+import type { PageCta } from '../data/site';
+
+export interface Props {
+  /** Page-level action (Base `cta`): the price line and the WhatsApp prefill. */
+  cta?: PageCta;
+}
+const { cta } = Astro.props;
+const price = cta?.price ?? stickyBar.price;
+const text = cta?.text ?? stickyBar.text;
 import WaGlyph from './ui/WaGlyph.astro';
 import MailGlyph from './ui/MailGlyph.astro';
 ---
@@ -32,7 +41,7 @@ import MailGlyph from './ui/MailGlyph.astro';
     <p class="sticky-copy small" data-sticky-copy>
       <span class="stripe sticky-mark" aria-hidden="true"></span>
       <span class="sticky-lines">
-        <span class="sticky-price num">{stickyBar.price}</span><span class="sticky-sep" aria-hidden="true"> · </span><span
+        <span class="sticky-price num">{price}</span><span class="sticky-sep" aria-hidden="true"> · </span><span
           class="sticky-note">{stickyBar.note}</span
         >
       </span>
@@ -40,7 +49,7 @@ import MailGlyph from './ui/MailGlyph.astro';
     <a class="sticky-mail" href={mail()} aria-label={navUi.emailAria}>
       <MailGlyph size={16} />
     </a>
-    <a class="btn btn-sm sticky-btn" href={wa(stickyBar.text)} target="_blank" rel="noopener" data-wa-intent="sticky" data-sticky-link>
+    <a class="btn btn-sm sticky-btn" href={wa(text)} target="_blank" rel="noopener" data-wa-intent="sticky" data-sticky-link>
       <WaGlyph size={16} />
       <span>{stickyBar.button}</span>
     </a>

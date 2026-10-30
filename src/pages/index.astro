@@ -3,65 +3,76 @@ import Base from '../layouts/Base.astro';
 import Hero from '../components/home/Hero.astro';
 import Problem from '../components/home/Problem.astro';
 import Services from '../components/home/Services.astro';
-import Shutter from '../components/home/Shutter.astro';
-import Build from '../components/home/Build.astro';
-import Visibility from '../components/home/Visibility.astro';
-import TestDrive from '../components/home/TestDrive.astro';
-import Pricing from '../components/home/Pricing.astro';
-import Configurator from '../components/home/Configurator.astro';
-import Process from '../components/home/Process.astro';
 import Builder from '../components/home/Builder.astro';
 import Faq from '../components/home/Faq.astro';
 import Finale from '../components/home/Finale.astro';
-import { brand, faq, packages, confirmedOnly } from '../data/site';
+import CostPlate from '../components/cloud/CostPlate.astro';
+import Pillars from '../components/cloud/Pillars.astro';
+import Method from '../components/cloud/Method.astro';
+import Engagements from '../components/cloud/Engagements.astro';
+import Record from '../components/cloud/Record.astro';
+import WebTeaser from '../components/cloud/WebTeaser.astro';
+import {
+  brand,
+  cloudHero,
+  cloudSpec,
+  cloudProblem,
+  cloudServices,
+  cloudFaq,
+  cloudFaqSection,
+  cloudFinale,
+  engagements,
+  confirmedOnly,
+} from '../data/site';
+
+/* The home page is the Azure practice: administration, cost optimization and
+   operational excellence. The website studio is one section here and its
+   own page at /websites/. */
 
 /* FAQPage from the same rendered, confirmed answers. */
 const faqLd = {
   '@context': 'https://schema.org',
   '@type': 'FAQPage',
-  mainEntity: confirmedOnly(faq).map((f) => ({
+  mainEntity: confirmedOnly(cloudFaq).map((f) => ({
     '@type': 'Question',
     name: f.q,
     acceptedAnswer: { '@type': 'Answer', text: f.a },
   })),
 };
 
-const offersLd = {
+/* The three engagements. Only the review carries a price (free); the others
+   are quoted after it, so they publish no offer price. */
+const servicesLd = {
   '@context': 'https://schema.org',
   '@type': 'ItemList',
-  name: `${brand.name} packages`,
-  itemListElement: packages.map((p, i) => ({
+  name: `${brand.name} Azure engagements`,
+  itemListElement: engagements.models.map((m, i) => ({
     '@type': 'ListItem',
     position: i + 1,
     item: {
       '@type': 'Service',
-      name: p.name,
-      description: p.tagline,
+      name: m.name,
+      description: m.tagline,
+      serviceType: 'Microsoft Azure administration and cost optimization',
       provider: { '@type': 'ProfessionalService', name: brand.name },
-      offers: {
-        '@type': 'Offer',
-        priceCurrency: 'USD',
-        ...(p.price.max && p.price.max !== p.price.min
-          ? { priceSpecification: { '@type': 'PriceSpecification', minPrice: p.price.min, maxPrice: p.price.max, priceCurrency: 'USD' } }
-          : { price: p.price.min }),
-      },
+      ...(m.price === 'Free' ? { offers: { '@type': 'Offer', price: 0, priceCurrency: 'USD' } } : {}),
     },
   })),
 };
 ---
 
-<Base title={brand.seo.title} description={brand.seo.description} canonical="/" jsonLd={[faqLd, offersLd]}>
-  <Hero />
-  <Problem />
-  <Services />
-  <Shutter />
-  <Build />
-  <Visibility />
-  <TestDrive />
-  <Pricing />
-  <Configurator />
-  <Process />
+<Base title={brand.seo.title} description={brand.seo.description} canonical="/" jsonLd={[faqLd, servicesLd]}>
+  <Hero data={cloudHero} spec={cloudSpec}>
+    <CostPlate slot="stage" />
+  </Hero>
+  <Problem data={cloudProblem} />
+  <Services data={cloudServices} />
+  <Pillars />
+  <Method />
+  <Engagements />
   <Builder />
-  <Faq />
-  <Finale />
+  <Record />
+  <WebTeaser />
+  <Faq section={cloudFaqSection} faq={cloudFaq} />
+  <Finale data={cloudFinale} />
 </Base>

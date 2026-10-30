@@ -1,0 +1,415 @@
+---
+/**
+ * The Azure home's hero stage: an ILLUSTRATED cost review on a fictional
+ * subscription (costPlate in site.ts). Twelve monthly bars climb to the
+ * review, then step down; six findings below are struck and fixed in turn.
+ * The bars are a drawing (relative heights), never data, and the plate says
+ * so on its face and in its caption.
+ *
+ * Anatomy (figure.cpl, container-type: inline-size)
+ *   .cpl-bar        title · scope · "Illustration"
+ *   .cpl-chart      role=img; bars (.cpl-col, --h 0–1), the review marker
+ *   .cpl-findings   name · before (struck) · after, one row each
+ *   figcaption      the persistent fictional-data caption
+ *
+ * Motion on load (CSS only, like the rest of the hero — never gated on JS):
+ *   300   plate rises            700+  bars grow, 50ms apart
+ *   1250  review marker draws    1000+ rows rise, 80ms apart
+ *   1900+ each finding is struck, then its fix lands (140ms apart)
+ * Default styles are the final state, so no-JS and motion-off read complete.
+ */
+import { costPlate } from '../../data/site';
+
+const n = costPlate.bars.length;
+const at = costPlate.reviewAfter / n;
+---
+
+<figure class="cpl" data-tilt="3" style={`--at:${at}`}>
+  <div class="cpl-frame">
+    <header class="cpl-bar">
+      <p class="label cpl-title"><span class="orbit" aria-hidden="true"></span>{costPlate.title}</p>
+      <p class="label cpl-scope">{costPlate.scope}</p>
+      <p class="label cpl-tag">{costPlate.tag}</p>
+    </header>
+
+    <div class="cpl-chart" role="img" aria-label={costPlate.aria}>
+      <p class="label cpl-ch-label" aria-hidden="true">{costPlate.chart.label}</p>
+      <div class="cpl-plot" aria-hidden="true">
+        <span class="cpl-grid"></span>
+        {
+          costPlate.bars.map((h, k) => (
+            <span class:list={['cpl-col', k >= costPlate.reviewAfter && 'is-after']} style={`--h:${h};--k:${k}`}>
+              <i />
+            </span>
+          ))
+        }
+        <span class="cpl-marker">
+          <span class="label cpl-marker-l">{costPlate.chart.marker}</span>
+        </span>
+      </div>
+      <p class="label cpl-axis" aria-hidden="true">
+        <span>{costPlate.chart.before}</span><span>{costPlate.chart.after}</span>
+      </p>
+    </div>
+
+    <div class="cpl-findings">
+      <p class="label cpl-f-label">{costPlate.findingsLabel}</p>
+      <ul class="cpl-rows" role="list">
+        {
+          costPlate.findings.map((f, k) => (
+            <li class="cpl-row" style={`--k:${k}`}>
+              <span class="cpl-node" aria-hidden="true" />
+              <span class="cpl-name">{f.name}</span>
+              <span class="cpl-was">
+                <s class="cpl-before">{f.before}</s>
+                <span class="visually-hidden">, now </span>
+                <span class="cpl-after">{f.after}</span>
+              </span>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </div>
+  <figcaption class="label cpl-cap">{costPlate.caption}</figcaption>
+</figure>
+
+<style>
+  .cpl {
+    --u: calc(100cqi / 640);
+    position: relative;
+    container-type: inline-size;
+    margin: 0;
+    transform-style: preserve-3d;
+  }
+
+  .cpl-frame {
+    position: relative;
+    background-color: var(--plate);
+    color: var(--starlight);
+    --fg: var(--starlight);
+    --line: var(--line-dark);
+  }
+
+  /* the faint lilac rim the concept plates wear */
+  .cpl-frame::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 1px solid rgb(185 162 255 / 0.22);
+    pointer-events: none;
+  }
+
+  /* ---------- top bar ----------------------------------------------------- */
+  .cpl-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px 16px;
+    min-height: 40px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line-dark);
+    background-color: var(--night);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+  }
+
+  .cpl-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--starlight);
+    font-size: inherit;
+  }
+
+  .cpl-scope {
+    display: none;
+    color: var(--haze);
+    font-size: inherit;
+  }
+
+  .cpl-tag {
+    margin-left: auto;
+    padding: 3px 8px 2px;
+    border: 1px solid var(--line-dark-strong);
+    color: var(--haze);
+    font-size: 10px;
+  }
+
+  /* ---------- chart ------------------------------------------------------- */
+  .cpl-chart {
+    position: relative;
+    padding: 16px 14px 10px;
+    border-bottom: 1px solid var(--line-dark);
+  }
+
+  .cpl-ch-label {
+    color: var(--dim);
+    font-size: 10px;
+  }
+
+  .cpl-plot {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    align-items: end;
+    gap: 6px;
+    height: 120px;
+    margin-top: 12px;
+  }
+
+  /* three faint guide lines, no values: it is a drawing */
+  .cpl-grid {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(var(--line-dark), var(--line-dark)) 0 0 / 100% 1px no-repeat,
+      linear-gradient(var(--line-dark), var(--line-dark)) 0 50% / 100% 1px no-repeat,
+      linear-gradient(var(--line-dark-strong), var(--line-dark-strong)) 0 100% / 100% 1px no-repeat;
+    pointer-events: none;
+  }
+
+  .cpl-col {
+    position: relative;
+    display: block;
+    height: 100%;
+  }
+
+  .cpl-col i {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    height: calc(var(--h) * 100%);
+    background-color: rgb(243 240 250 / 0.26);
+    transform-origin: 50% 100%;
+  }
+
+  .cpl-col.is-after i {
+    background-color: var(--violet);
+  }
+
+  /* the review: a hairline between month 8 and month 9 */
+  .cpl-marker {
+    position: absolute;
+    top: -6px;
+    bottom: 0;
+    left: calc(var(--at) * 100%);
+    width: 0;
+    border-left: 1px dashed var(--lilac);
+    transform-origin: 50% 100%;
+  }
+
+  .cpl-marker-l {
+    position: absolute;
+    top: -2px;
+    left: 8px;
+    padding: 2px 6px 1px;
+    background-color: var(--plate);
+    color: var(--lilac);
+    font-size: 10px;
+    white-space: nowrap;
+  }
+
+  .cpl-axis {
+    display: grid;
+    grid-template-columns: calc(var(--at) * 100%) 1fr;
+    margin-top: 8px;
+    color: var(--dim);
+    font-size: 10px;
+  }
+
+  .cpl-axis span + span {
+    padding-left: 8px;
+    color: var(--lilac);
+  }
+
+  /* ---------- findings ---------------------------------------------------- */
+  .cpl-findings {
+    padding: 14px 14px 6px;
+  }
+
+  .cpl-f-label {
+    color: var(--dim);
+    font-size: 10px;
+  }
+
+  .cpl-rows {
+    margin-top: 6px;
+  }
+
+  .cpl-row {
+    display: grid;
+    grid-template-columns: 9px minmax(0, 1fr);
+    align-items: baseline;
+    column-gap: 12px;
+    padding-block: 8px;
+    border-top: 1px solid var(--line-dark);
+    font-size: 0.8125rem;
+    line-height: 1.35;
+  }
+
+  .cpl-row:first-child {
+    border-top: 0;
+  }
+
+  .cpl-node {
+    align-self: center;
+    width: 9px;
+    height: 9px;
+    border: 1px solid var(--lilac);
+    background-color: var(--lilac);
+  }
+
+  .cpl-name {
+    color: var(--starlight);
+    font-weight: 560;
+  }
+
+  .cpl-was {
+    grid-column: 2;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 12px;
+  }
+
+  .cpl-before {
+    position: relative;
+    justify-self: start;
+    width: fit-content;
+    color: var(--dim);
+    text-decoration: none;
+  }
+
+  /* the strike: a hairline drawn through the old state */
+  .cpl-before::after {
+    content: '';
+    position: absolute;
+    left: -2px;
+    right: -2px;
+    top: 55%;
+    height: 1px;
+    background-color: var(--dim);
+    transform-origin: left center;
+  }
+
+  .cpl-after {
+    justify-self: start;
+    color: var(--lilac);
+    font-weight: 560;
+  }
+
+  .cpl-cap {
+    margin-top: 12px;
+    color: var(--dim);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    line-height: 1.5;
+  }
+
+  /* wider plates: one line per finding, before and after in columns */
+  @container (min-width: 520px) {
+    .cpl-bar {
+      padding-inline: 18px;
+    }
+
+    .cpl-scope {
+      display: block;
+    }
+
+    .cpl-chart,
+    .cpl-findings {
+      padding-inline: 18px;
+    }
+
+    .cpl-plot {
+      height: 132px;
+      gap: 8px;
+    }
+
+    .cpl-row {
+      grid-template-columns: 9px minmax(0, 1.1fr) minmax(0, 1.4fr);
+      padding-block: 7px;
+    }
+
+    .cpl-was {
+      grid-column: 3;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 12px;
+    }
+  }
+
+  /* ---------- load choreography (final state is the default) -------------- */
+  :global(html:not(.motion-reduced)) .cpl {
+    animation: cpl-in 1400ms var(--ease-mech) 300ms both;
+  }
+
+  :global(html:not(.motion-reduced)) .cpl-col i {
+    animation: cpl-grow 900ms var(--ease-expo) both;
+    animation-delay: calc(700ms + var(--k) * 50ms);
+  }
+
+  :global(html:not(.motion-reduced)) .cpl-marker {
+    animation: cpl-grow 700ms var(--ease-quint) 1250ms both;
+  }
+
+  :global(html:not(.motion-reduced)) .cpl-marker-l,
+  :global(html:not(.motion-reduced)) .cpl-axis span + span {
+    animation: rise-in 700ms var(--ease-expo) 1500ms both;
+  }
+
+  :global(html:not(.motion-reduced)) .cpl-row {
+    --rise: 8px;
+    animation: rise-in 800ms var(--ease-expo) both;
+    animation-delay: calc(1000ms + var(--k) * 80ms);
+  }
+
+  :global(html:not(.motion-reduced)) .cpl-before::after {
+    animation: draw-in 420ms var(--ease-quint) both;
+    animation-delay: calc(1900ms + var(--k) * 140ms);
+  }
+
+  :global(html:not(.motion-reduced)) .cpl-after {
+    --rise: 6px;
+    animation: rise-in 600ms var(--ease-expo) both;
+    animation-delay: calc(2050ms + var(--k) * 140ms);
+  }
+
+  :global(html:not(.motion-reduced)) .cpl-node {
+    animation: cpl-fill 360ms linear both;
+    animation-delay: calc(2050ms + var(--k) * 140ms);
+  }
+
+  @keyframes cpl-in {
+    from {
+      opacity: 0;
+      translate: 0 40px;
+      rotate: y -8deg;
+    }
+    30% {
+      opacity: 1;
+    }
+    to {
+      opacity: 1;
+      translate: 0 0;
+      rotate: y 0deg;
+    }
+  }
+
+  @keyframes cpl-grow {
+    from {
+      transform: scaleY(0);
+    }
+    to {
+      transform: scaleY(1);
+    }
+  }
+
+  @keyframes cpl-fill {
+    from {
+      background-color: transparent;
+    }
+    to {
+      background-color: var(--lilac);
+    }
+  }
+</style>

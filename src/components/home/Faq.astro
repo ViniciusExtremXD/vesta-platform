@@ -28,8 +28,15 @@
 import SectionLabel from '../ui/SectionLabel.astro';
 import SplitText from '../ui/SplitText.astro';
 import Arrow from '../ui/Arrow.astro';
-import { faqSection, faq, confirmedOnly, contact, wa, mail } from '../../data/site';
+import { faqSection as studioSection, faq as studioFaq, confirmedOnly, contact, wa, mail } from '../../data/site';
+import type { FaqItem } from '../../data/site';
 
+export interface Props {
+  /** Defaults to the website studio's questions; the Azure home passes its own. */
+  section?: typeof studioSection;
+  faq?: FaqItem[];
+}
+const { section: faqSection = studioSection, faq = studioFaq } = Astro.props;
 const items = confirmedOnly(faq);
 const pad = (n: number) => String(n).padStart(2, '0');
 /* The stored label ends in "→"; the arrow is drawn as a hairline SVG so it can
