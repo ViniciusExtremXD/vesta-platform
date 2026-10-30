@@ -3,9 +3,19 @@
 > Documentação operacional em português, para uso interno. O site em si é 100% em
 > inglês; nada deste arquivo é renderizado para o visitante.
 
-Site do estúdio Vesta: design e construção de sites e landing pages de alto padrão para
-negócios (novos ou reconstruídos a partir do site atual), com SEO técnico e local por pacote.
-A Vesta **não** é gestora de tráfego pago. Público: EUA e internacional, site 100% em inglês.
+Site da Vesta, com duas frentes sob a mesma marca:
+
+- **Home (`/`) — prática Azure (frente principal, apresentação do Vinícius):** administração
+  de ambientes Microsoft Azure, redução de custos (FinOps), otimização de ambientes e
+  excelência operacional. Toda contratação começa por uma revisão de custos gratuita e
+  somente leitura (Reader + Cost Management Reader), lida contra os cinco pilares do Azure
+  Well-Architected Framework. Nenhuma economia é prometida: é estimada na revisão e medida
+  na própria fatura do cliente depois.
+- **`/websites/` — estúdio de sites:** design e construção de sites e landing pages de alto
+  padrão (o conteúdo que era a home até out/2026, intacto: pacotes, configurador, estudos).
+  A Vesta **não** é gestora de tráfego pago.
+
+Público: EUA e internacional, site 100% em inglês.
 
 Direção de arte (definida pelo dono em 2026-09-22): **roxo, branco e preto; tema espaço /
 astronomia** (galáxias, estrelas, órbitas — o nome vem do asteroide 4 Vesta). Nada de astrologia.
@@ -79,10 +89,15 @@ src/
   scripts/motion.ts      motor: revelações, um único loop de scroll (addFrame), magnético
   scripts/cosmos.ts      galáxia e céu estrelado (WebGL2, sem biblioteca)
   components/            Nav, Footer, StickyBar, Logo, Cosmos, ConceptPlate (+Before/Layers), Gauge, Odometer
-  components/home/       uma seção da home por arquivo (Hero … Finale)
+  components/home/       uma seção por arquivo (Hero … Finale). Hero, SpecBand, Problem, Services,
+                         Faq e Finale recebem os dados por props: padrão = estúdio de sites;
+                         a home passa os dados `cloud*` de site.ts
+  components/cloud/      seções só da prática Azure: CostPlate (palco do hero, ilustração),
+                         Pillars (#review), Method, Engagements, Record (currículo), WebTeaser
   components/work/       trabalho, estudo de conceito e template de caso
   components/ui/         SplitText, SectionLabel, Arrow, WaGlyph
-  pages/                 index, about, contact, work/, work/concept-01, work/[slug], industries/[slug], privacy, 404
+  pages/                 index (Azure), websites (estúdio), about, contact, work/, work/concept-NN,
+                         work/[slug], industries/[slug], privacy, 404
 scripts/
   verify.mjs             gate de qualidade (1440/390/360/320, sem JS, contraste, vocabulário de IA)
   snap.mjs               captura de qualquer URL (seção, rolagem, quadros de animação)
@@ -101,6 +116,18 @@ scripts/
 - **Nenhuma página de setor sem caso.** `getStaticPaths` filtra por casos confirmados.
 - **`prefers-reduced-motion` do sistema é ignorado de propósito.** O controle é o
   botão no rodapé (`html.motion-reduced`, salvo em `localStorage` como `vesta-motion`).
+
+## Currículo na home (seção "Track record")
+
+`record` em `src/data/site.ts` guarda experiências e certificações. Tudo nasce com
+`confirmed: false` e **nada renderiza** até haver ao menos um item confirmado — o site nunca
+mostra histórico vazio ou inventado.
+
+1. Para cada cargo do LinkedIn: preencha `role`, `company`, `period` ('2023–present') e
+   `highlights` (resultados checáveis; número só com origem). `confirmed: true`.
+2. Certificações já listadas (AZ-900, AZ-104, AZ-305, FinOps Certified Practitioner): marque
+   `confirmed: true` só nas que existem, com `year` e `url` (link público do Microsoft Learn
+   / Credly). Adicione outras no mesmo formato.
 
 ## Publicar um caso
 

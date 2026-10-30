@@ -36,7 +36,7 @@ export const TODO_SITE_INDUSTRY = {
   lead: 'The same packages and the same fixed prices. The case studies below were measured, and each number carries its tool and date.',
   casesTitle: 'Case studies',
   pricesTitle: 'Prices',
-  pricesLink: { label: 'See every package', href: '/#pricing' },
+  pricesLink: { label: 'See every package', href: '/websites/#pricing' },
 };
 
 /** TODO_SITE: /work/ and case-page strings not in site.ts. */

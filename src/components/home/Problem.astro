@@ -25,7 +25,13 @@
 import SectionLabel from '../ui/SectionLabel.astro';
 import SplitText from '../ui/SplitText.astro';
 import Expand from '../ui/Expand.astro';
-import { problem } from '../../data/site';
+import { problem as studioProblem } from '../../data/site';
+
+export interface Props {
+  /** Defaults to the website studio's copy; the Azure home passes its own. */
+  data?: typeof studioProblem;
+}
+const { data: problem = studioProblem } = Astro.props;
 
 /* Typesetting only: tie one-letter words to the next word so no line ends
    on a stranded "A" or "I". The words are unchanged. */

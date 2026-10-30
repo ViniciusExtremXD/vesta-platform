@@ -5,6 +5,7 @@ import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
 import StickyBar from '../components/StickyBar.astro';
 import { brand, contact, founder, tracking } from '../data/site';
+import type { Link, PageCta } from '../data/site';
 import { url, absolute } from '../lib/url';
 
 export interface Props {
@@ -22,9 +23,12 @@ export interface Props {
   bodyClass?: string;
   /** Lab pages: render the slot without nav, footer and sticky bar. */
   bare?: boolean;
+  /** Page-level action for the nav button, mobile menu and sticky bar.
+      Defaults to the Azure practice; /websites/ passes the studio's. */
+  cta?: Link & PageCta;
 }
 
-const { title, description, canonical, ogImage, ogType = 'website', noindex = false, jsonLd, bodyClass = '', bare = false } = Astro.props;
+const { title, description, canonical, ogImage, ogType = 'website', noindex = false, jsonLd, bodyClass = '', bare = false, cta } = Astro.props;
 
 const basePrefix = import.meta.env.BASE_URL.replace(/\/$/, '');
 const path = canonical ?? (Astro.url.pathname.replace(basePrefix, '') || '/');
@@ -47,7 +51,8 @@ const organization = {
   areaServed: [{ '@type': 'Country', name: 'United States' }, { '@type': 'Place', name: 'Worldwide' }],
   founder: { '@id': `${siteUrl}/#founder` },
   sameAs,
-  priceRange: brand.schema.priceRange,
+  knowsAbout: founder.knowsAbout,
+  ...(brand.schema.priceRange ? { priceRange: brand.schema.priceRange } : {}),
 };
 
 const person = {
@@ -55,7 +60,9 @@ const person = {
   '@type': 'Person',
   '@id': `${siteUrl}/#founder`,
   name: founder.name,
-  jobTitle: founder.role,
+  jobTitle: `${founder.role}, ${founder.title}`,
+  knowsAbout: founder.knowsAbout,
+  alumniOf: { '@type': 'CollegeOrUniversity', name: 'Mackenzie Presbyterian University' },
   worksFor: { '@id': `${siteUrl}/#organization` },
   sameAs,
 };
@@ -167,7 +174,7 @@ const extraLd = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
           <div class="progress" data-progress aria-hidden="true">
             <div class="progress-bar" />
           </div>
-          <Nav />
+          <Nav cta={cta} />
         </Fragment>
       )
     }
@@ -180,7 +187,7 @@ const extraLd = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
       !bare && (
         <Fragment>
           <Footer />
-          <StickyBar />
+          <StickyBar cta={cta} />
         </Fragment>
       )
     }

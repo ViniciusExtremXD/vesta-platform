@@ -8,7 +8,13 @@
  * Cells tilt toward the pointer. Final values are in the HTML, so no-JS and
  * motion-off read complete.
  */
-import { specBand } from '../../data/site';
+import { specBand as studioSpec } from '../../data/site';
+
+export interface Props {
+  /** Defaults to the website studio's band; the Azure home passes its own. */
+  data?: typeof studioSpec;
+}
+const { data: specBand = studioSpec } = Astro.props;
 
 /* "5–7" → two counters around the dash */
 const range = (v: string) => {

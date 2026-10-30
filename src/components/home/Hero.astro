@@ -45,8 +45,19 @@ import Cosmos from '../Cosmos.astro';
 import ConceptPlate from '../ConceptPlate.astro';
 import SpecBand from './SpecBand.astro';
 import { concepts } from '../../data/concepts';
-import { hero, wa, mail } from '../../data/site';
+import { hero as studio, specBand as studioSpec, wa, mail } from '../../data/site';
 import { url } from '../../lib/url';
+
+/* The copy is a prop so both practices share one hero: the website studio
+   (default, with the five-niche showcase) and the Azure practice, which
+   passes its own copy, its own spec band and its own stage (slot "stage"). */
+type HeroCopy = Pick<typeof studio, 'id' | 'meta' | 'h1' | 'lead' | 'primary' | 'secondary' | 'email' | 'micro'>;
+export interface Props {
+  data?: HeroCopy;
+  spec?: typeof studioSpec;
+}
+const { data: hero = studio, spec } = Astro.props;
+const customStage = Astro.slots.has('stage');
 
 /* "Concept 01 · A study by Vesta" / "Fictional business, not client work" */
 const split = (caption: string): [string, string] => {
@@ -55,7 +66,7 @@ const split = (caption: string): [string, string] => {
 };
 const first = concepts[0];
 const [capA, capB] = split(first.caption);
-const tabName = (id: string) => (hero.showcase.tabs as Record<string, string>)[id] ?? id;
+const tabName = (id: string) => (studio.showcase.tabs as Record<string, string>)[id] ?? id;
 const total = String(concepts.length).padStart(2, '0');
 ---
 
@@ -101,6 +112,11 @@ const total = String(concepts.length).padStart(2, '0');
           <p class="small hero__micro" data-load style="--d:1000ms">{hero.micro}</p>
         </div>
 
+        {customStage ? (
+          <div class="hero__stage hero__stage--custom">
+            <slot name="stage" />
+          </div>
+        ) : (
         <div class="hero__stage" data-showcase>
           <p class="label hs-cap" data-cap aria-live="off">
             <span class="hs-cap-a" data-cap-a>{capA}</span><span class="visually-hidden"> · </span><span
@@ -129,13 +145,13 @@ const total = String(concepts.length).padStart(2, '0');
                       <div class="hs-rail" aria-hidden="true">
                         <span class="hs-rail-move">
                           <span class="hs-tag hs-tag--after label">
-                            <span class="hs-t-l">{hero.plate.tags.after}</span>
-                            <span class="hs-t-s">{hero.plate.tagsShort.after}</span>
+                            <span class="hs-t-l">{studio.plate.tags.after}</span>
+                            <span class="hs-t-s">{studio.plate.tagsShort.after}</span>
                           </span>
                           <i class="hs-tick" />
                           <span class="hs-tag hs-tag--before label">
-                            <span class="hs-t-l">{hero.plate.tags.before}</span>
-                            <span class="hs-t-s">{hero.plate.tagsShort.before}</span>
+                            <span class="hs-t-l">{studio.plate.tags.before}</span>
+                            <span class="hs-t-s">{studio.plate.tagsShort.before}</span>
                           </span>
                         </span>
                       </div>
@@ -150,17 +166,17 @@ const total = String(concepts.length).padStart(2, '0');
 
           <div class="hs-sw" data-switcher>
             <div class="hs-sw-head">
-              <p class="label hs-sw-title"><i class="hs-sw-node" aria-hidden="true"></i>{hero.showcase.title}</p>
+              <p class="label hs-sw-title"><i class="hs-sw-node" aria-hidden="true"></i>{studio.showcase.title}</p>
               <p class="label hs-sw-count" aria-hidden="true">
                 <span class="hs-sw-name" data-sw-name>{tabName(first.id)}</span>
                 <span class="hs-sw-n"><span data-sw-n>{first.number}</span><span class="hs-sw-of"> / {total}</span></span>
               </p>
             </div>
             <div class="hs-bar">
-              <button class="hs-arrow hs-arrow--prev" type="button" data-step="-1" aria-label={hero.showcase.prev} aria-controls="hs-deck">
+              <button class="hs-arrow hs-arrow--prev" type="button" data-step="-1" aria-label={studio.showcase.prev} aria-controls="hs-deck">
                 <Arrow size={20} />
               </button>
-              <div class="hs-tabs" role="tablist" aria-label={hero.showcase.label}>
+              <div class="hs-tabs" role="tablist" aria-label={studio.showcase.label}>
                 {
                   concepts.map((c, k) => (
                     <button
@@ -183,17 +199,18 @@ const total = String(concepts.length).padStart(2, '0');
                   ))
                 }
               </div>
-              <button class="hs-arrow hs-arrow--next" type="button" data-step="1" aria-label={hero.showcase.next} aria-controls="hs-deck">
+              <button class="hs-arrow hs-arrow--next" type="button" data-step="1" aria-label={studio.showcase.next} aria-controls="hs-deck">
                 <Arrow size={20} />
               </button>
             </div>
           </div>
         </div>
+        )}
       </div>
     </div>
   </div>
 
-  <SpecBand />
+  <SpecBand data={spec} />
 </section>
 
 <script>

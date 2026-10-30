@@ -49,16 +49,16 @@ const card = `<!doctype html><html><head>${fonts}<style>
   .sky i{position:absolute;border-radius:50%;background:#f3f0fa}
   .neb{position:absolute;inset:0;background:radial-gradient(42% 60% at 78% 38%, rgba(98,54,232,.28), transparent 70%),radial-gradient(30% 40% at 18% 90%, rgba(185,162,255,.08), transparent 70%)}
   .logo{position:absolute;left:80px;top:78px;width:430px}
-  h1{position:absolute;left:80px;top:292px;margin:0;font-stretch:115%;font-size:72px;line-height:.98;letter-spacing:-.03em;font-weight:640;max-width:13ch}
+  h1{position:absolute;left:80px;top:276px;margin:0;font-stretch:115%;font-size:68px;line-height:.98;letter-spacing:-.03em;font-weight:640;max-width:14ch}
   .foot{position:absolute;left:80px;right:80px;bottom:64px;display:flex;justify-content:space-between;font-stretch:115%;font-size:17px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:#b4abc8}
   .rule{position:absolute;left:80px;right:80px;bottom:110px;height:1px;background:rgba(243,240,250,.14)}
   .bar{position:absolute;left:0;bottom:0;width:38%;height:8px;background:#6236e8}
 </style></head><body>
 <div class="neb"></div><div class="sky">${stars}</div>
 <img class="logo" src="${logoUri}">
-<h1>Websites built like flagships.</h1>
+<h1>Azure that costs less and runs better.</h1>
 <div class="rule"></div>
-<div class="foot"><span>High-end websites for businesses</span><span>Free price analysis</span></div>
+<div class="foot"><span>Azure administration · Cost optimization</span><span>Free cost review</span></div>
 <div class="bar"></div>
 </body></html>`;
 

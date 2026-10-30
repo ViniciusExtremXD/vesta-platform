@@ -1,0 +1,251 @@
+---
+/**
+ * #record (paper) — the CV: confirmed roles and certifications only
+ * (record in site.ts). Renders nothing until the owner confirms at least
+ * one entry, so the page never shows an empty or invented track record.
+ *
+ * Experience: hairline rows, period | role and company | highlights.
+ * Certifications: code, name, issuer and year, with the public credential
+ * link when there is one. LinkedIn closes the section.
+ */
+import SectionLabel from '../ui/SectionLabel.astro';
+import SplitText from '../ui/SplitText.astro';
+import Arrow from '../ui/Arrow.astro';
+import { record, contact, confirmedOnly } from '../../data/site';
+
+const roles = confirmedOnly(record.experience);
+const creds = confirmedOnly(record.credentials);
+const show = roles.length > 0 || creds.length > 0;
+const showLinkedin = contact.linkedin.confirmed;
+---
+
+{
+  show && (
+    <section id={record.id} class="s-paper section rc" data-nav-theme="light" aria-labelledby="record-title">
+      <div class="wrap" data-scene="soft">
+        <header class="g rc-head">
+          <div class="rc-label">
+            <SectionLabel n={record.label.index ?? undefined} name={record.label.name} />
+          </div>
+          <SplitText as="h2" id="record-title" class="d2 rc-h2" text={record.h2} />
+          <p class="lead rc-lead" data-reveal style="--d:200ms">
+            {record.lead}
+          </p>
+        </header>
+
+        {roles.length > 0 && (
+          <div class="rc-block">
+            <h3 class="label rc-title" data-reveal>
+              {record.experienceTitle}
+            </h3>
+            <ol class="rc-roles" role="list">
+              {roles.map((r, k) => (
+                <li class="rc-role g" data-reveal style={`--i:${k}`}>
+                  <p class="label rc-period">{r.period}</p>
+                  <div class="rc-who">
+                    <p class="rc-role-name">{r.role}</p>
+                    <p class="rc-company">{r.company}</p>
+                  </div>
+                  {r.highlights.length > 0 && (
+                    <ul class="rc-hl" role="list">
+                      {r.highlights.map((h) => (
+                        <li class="rc-hl-row">
+                          <span class="rc-node" aria-hidden="true" />
+                          <span>{h}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
+
+        {creds.length > 0 && (
+          <div class="rc-block">
+            <h3 class="label rc-title" data-reveal>
+              {record.credentialsTitle}
+            </h3>
+            <ul class="rc-creds" role="list">
+              {creds.map((c, k) => (
+                <li class="rc-cred" data-reveal style={`--i:${k}`}>
+                  {c.code && <p class="label rc-code">{c.code}</p>}
+                  <p class="rc-cred-name">{c.name}</p>
+                  <p class="small rc-issuer">{[c.issuer, c.year].filter(Boolean).join(' · ')}</p>
+                  {c.url && (
+                    <a class="tlink rc-verify" href={c.url} target="_blank" rel="noopener">
+                      <span>{record.verify}</span>
+                      <Arrow dir="up-right" />
+                    </a>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {showLinkedin && (
+          <p class="rc-li" data-reveal>
+            <a class="tlink" href={record.linkedin.href} target="_blank" rel="noopener">
+              <span>{record.linkedin.label}</span>
+              <Arrow dir="up-right" />
+            </a>
+          </p>
+        )}
+      </div>
+    </section>
+  )
+}
+
+<style>
+  .rc {
+    overflow-x: clip;
+  }
+
+  .rc-head {
+    row-gap: 18px;
+  }
+
+  .rc-h2 {
+    margin-top: 8px;
+    max-width: 16ch;
+  }
+
+  .rc-lead {
+    color: var(--ink-2);
+  }
+
+  .rc-block {
+    margin-top: clamp(48px, 3rem + 2vw, 88px);
+  }
+
+  .rc-title {
+    color: var(--violet-ink);
+  }
+
+  .rc-roles {
+    margin-top: 16px;
+    border-top: 1px solid var(--line-light-strong);
+  }
+
+  .rc-role {
+    row-gap: 12px;
+    padding-block: 24px;
+    border-bottom: 1px solid var(--line-light);
+  }
+
+  .rc-period {
+    color: var(--ink-3);
+  }
+
+  .rc-role-name {
+    font-stretch: var(--wd-display);
+    font-size: clamp(1.25rem, 1.1rem + 0.5vw, 1.5rem);
+    font-weight: 620;
+    line-height: 1.15;
+  }
+
+  .rc-company {
+    margin-top: 4px;
+    color: var(--ink-2);
+  }
+
+  .rc-hl-row {
+    display: grid;
+    grid-template-columns: 9px minmax(0, 1fr);
+    align-items: baseline;
+    column-gap: 12px;
+    padding-block: 6px;
+    color: var(--ink);
+    line-height: 1.5;
+  }
+
+  .rc-node {
+    width: 7px;
+    height: 7px;
+    background-color: var(--violet);
+    transform: translateY(-1px);
+  }
+
+  .rc-creds {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--gap);
+    margin-top: 16px;
+  }
+
+  .rc-cred {
+    display: grid;
+    gap: 6px;
+    align-content: start;
+    padding: 20px;
+    background-color: var(--paper-2);
+    border-top: 2px solid var(--violet);
+  }
+
+  .rc-code {
+    color: var(--violet-ink);
+  }
+
+  .rc-cred-name {
+    font-weight: 620;
+    line-height: 1.3;
+  }
+
+  .rc-issuer {
+    color: var(--ink-2);
+  }
+
+  .rc-verify {
+    justify-self: start;
+    color: var(--ink);
+  }
+
+  .rc-li {
+    margin-top: clamp(32px, 2rem + 1vw, 56px);
+  }
+
+  .rc-li .tlink {
+    color: var(--ink);
+  }
+
+  @media (min-width: 768px) {
+    .rc-creds {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .rc-label {
+      grid-column: 1 / 4;
+    }
+
+    .rc-h2 {
+      grid-column: 1 / 8;
+      grid-row: 2;
+    }
+
+    .rc-lead {
+      grid-column: 8 / -1;
+      grid-row: 2;
+      align-self: end;
+    }
+
+    .rc-period {
+      grid-column: 1 / 3;
+    }
+
+    .rc-who {
+      grid-column: 3 / 7;
+    }
+
+    .rc-hl {
+      grid-column: 7 / -1;
+    }
+
+    .rc-creds {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+</style>

@@ -1,0 +1,353 @@
+---
+/**
+ * #engagements (paper-2) — the three ways to work with the Azure practice:
+ * the free cost review, an optimization project, managed operations. No
+ * prices before the review: each column says where its price comes from.
+ * Each column: index, name, tagline, price line, best for, keyword chips,
+ * the six inclusions in an Expand box, WhatsApp + email. Under the columns:
+ * the terms (access, contract, currency) as value / caption cells.
+ *
+ * Desktop: three columns. Below 1100px: stacked.
+ */
+import SectionLabel from '../ui/SectionLabel.astro';
+import SplitText from '../ui/SplitText.astro';
+import Arrow from '../ui/Arrow.astro';
+import WaGlyph from '../ui/WaGlyph.astro';
+import MailGlyph from '../ui/MailGlyph.astro';
+import Expand from '../ui/Expand.astro';
+import { engagements, contact, wa, mail, confirmedOnly } from '../../data/site';
+
+const showEmail = contact.email.confirmed;
+const models = engagements.models.map((m) => ({ ...m, includesOn: confirmedOnly(m.includes) }));
+---
+
+<section id={engagements.id} class="s-paper-2 section en" data-nav-theme="light" aria-labelledby="engagements-title">
+  <div class="wrap" data-scene="soft">
+    <header class="g en-head">
+      <div class="en-label">
+        <SectionLabel n={engagements.label.index ?? undefined} name={engagements.label.name} />
+      </div>
+      <SplitText as="h2" id="engagements-title" class="d2 en-h2" text={engagements.h2} />
+      <p class="lead en-lead" data-reveal style="--d:200ms">{engagements.lead}</p>
+    </header>
+
+    <ol class="en-cols" role="list">
+      {
+        models.map((m, k) => {
+          const flagged = m.recommended?.confirmed ? m.recommended.text : null;
+          return (
+            <li class:list={['en-col', flagged && 'is-rec']} data-reveal style={`--i:${k}`}>
+              <span class="en-top" data-reveal="draw" style={`--i:${k}`} aria-hidden="true" />
+              {flagged && <p class="label en-flag">{flagged}</p>}
+              <p class="label en-idx">{m.index}</p>
+              <h3 class="en-name">{m.name}</h3>
+              <p class="en-tag">{m.tagline}</p>
+
+              <div class="en-price">
+                <p class="label en-k">{engagements.labels.price}</p>
+                <p class:list={['en-pv', m.price === 'Free' && 'is-free']}>{m.price}</p>
+              </div>
+
+              <div class="en-best">
+                <p class="label en-k">{engagements.labels.bestFor}</p>
+                <p class="en-bv">{m.bestFor}</p>
+              </div>
+
+              <Expand title={engagements.labels.includes} keywords={m.keys} reveal={false} class="en-xp">
+                <ul class="en-inc" role="list">
+                  {m.includesOn.map((it) => (
+                    <li class="en-inc-row">
+                      <span class="en-node" aria-hidden="true" />
+                      <span>{it.text}</span>
+                    </li>
+                  ))}
+                </ul>
+              </Expand>
+
+              <div class="en-ctas">
+                <a
+                  class:list={['btn', !flagged && 'btn-line', 'en-cta']}
+                  href={wa(m.waText)}
+                  target="_blank"
+                  rel="noopener"
+                  data-wa-intent={`engagement-${m.id}`}
+                >
+                  <WaGlyph size={16} />
+                  <span>{m.cta}</span>
+                  <Arrow />
+                </a>
+                {showEmail && (
+                  <a class="tlink en-mail" href={mail(m.subject, m.waText)}>
+                    <MailGlyph size={14} />
+                    <span>{engagements.emailLabel}</span>
+                  </a>
+                )}
+              </div>
+            </li>
+          );
+        })
+      }
+    </ol>
+
+    <ul class="en-terms" role="list">
+      {
+        engagements.terms.map((t, k) => (
+          <li class="en-term" data-reveal style={`--i:${k}`}>
+            <span class="en-term-v">{t.value}</span>
+            <span class="en-term-c small">{t.caption}</span>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</section>
+
+<style>
+  .en {
+    overflow-x: clip;
+  }
+
+  .en-head {
+    row-gap: 18px;
+  }
+
+  .en-h2 {
+    margin-top: 8px;
+    max-width: 17ch;
+  }
+
+  .en-lead {
+    max-width: 50ch;
+    color: var(--ink-2);
+  }
+
+  /* ---------- columns ----------------------------------------------------- */
+  .en-cols {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px var(--gap);
+    margin-top: clamp(48px, 3rem + 2vw, 88px);
+  }
+
+  .en-col {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: 28px 22px 26px;
+    background-color: var(--paper);
+    border: 1px solid var(--line-light);
+  }
+
+  .en-top {
+    position: absolute;
+    top: -1px;
+    left: -1px;
+    right: -1px;
+    height: 2px;
+    background-color: var(--line-light-strong);
+  }
+
+  .en-col.is-rec .en-top {
+    background-color: var(--violet);
+  }
+
+  .en-flag {
+    align-self: flex-start;
+    margin-bottom: 18px;
+    padding: 5px 9px 4px;
+    background-color: var(--violet);
+    color: var(--white);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+  }
+
+  .en-idx {
+    color: var(--violet-ink);
+  }
+
+  .en-name {
+    margin-top: 12px;
+    font-size: clamp(1.5rem, 1.25rem + 0.8vw, 2rem);
+    font-weight: 620;
+    line-height: 1.06;
+    letter-spacing: -0.015em;
+  }
+
+  .en-tag {
+    margin-top: 12px;
+    color: var(--ink-2);
+    line-height: 1.5;
+  }
+
+  .en-k {
+    color: var(--ink-3);
+  }
+
+  .en-price {
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line-light);
+  }
+
+  .en-pv {
+    margin-top: 8px;
+    font-stretch: var(--wd-display);
+    font-size: 1.125rem;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  .en-pv.is-free {
+    font-size: var(--t-n2);
+    font-weight: 520;
+    line-height: 1;
+    letter-spacing: -0.015em;
+    color: var(--violet-ink);
+  }
+
+  .en-best {
+    margin-top: 20px;
+  }
+
+  .en-bv {
+    margin-top: 8px;
+    color: var(--ink-2);
+    line-height: 1.5;
+  }
+
+  .en-col :global(.en-xp) {
+    margin-top: 24px;
+  }
+
+  .en-inc {
+    display: grid;
+  }
+
+  .en-inc-row {
+    display: grid;
+    grid-template-columns: 9px minmax(0, 1fr);
+    align-items: baseline;
+    column-gap: 12px;
+    padding-block: 9px;
+    border-top: 1px solid var(--line-light);
+    color: var(--ink);
+    line-height: 1.45;
+  }
+
+  .en-inc-row:first-child {
+    border-top: 0;
+  }
+
+  .en-node {
+    width: 7px;
+    height: 7px;
+    background-color: var(--violet);
+    transform: translateY(-1px);
+  }
+
+  .en-ctas {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 20px;
+    margin-top: auto;
+    padding-top: 26px;
+  }
+
+  .en-cta {
+    width: 100%;
+    padding-inline: 18px;
+    white-space: normal;
+    text-align: center;
+  }
+
+  /* the outline CTA on paper, opaque for the contrast gate */
+  .en-cta.btn-line {
+    background-color: var(--paper);
+    background-clip: padding-box;
+  }
+
+  .en-mail {
+    color: var(--ink);
+  }
+
+  /* ---------- terms ------------------------------------------------------- */
+  .en-terms {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: clamp(40px, 2.5rem + 2vw, 72px);
+    border-top: 1px solid var(--line-light-strong);
+  }
+
+  .en-term {
+    display: grid;
+    gap: 6px;
+    align-content: start;
+    padding: 20px 16px 20px 0;
+    border-bottom: 1px solid var(--line-light);
+  }
+
+  .en-term-v {
+    font-stretch: var(--wd-display);
+    font-size: clamp(1.375rem, 1.1rem + 1vw, 2rem);
+    font-weight: 560;
+    line-height: 1;
+    letter-spacing: -0.01em;
+  }
+
+  .en-term-c {
+    color: var(--ink-2);
+  }
+
+  @media (min-width: 768px) {
+    .en-cta {
+      width: auto;
+      white-space: nowrap;
+    }
+
+    .en-terms {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .en-term {
+      padding-right: 24px;
+      border-bottom: 0;
+    }
+
+    .en-term + .en-term {
+      padding-left: 20px;
+      border-left: 1px solid var(--line-light);
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .en-label {
+      grid-column: 1 / 4;
+    }
+
+    .en-h2 {
+      grid-column: 1 / 8;
+      grid-row: 2;
+    }
+
+    .en-lead {
+      grid-column: 8 / -1;
+      grid-row: 2;
+      align-self: end;
+    }
+
+    .en-cols {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      align-items: stretch;
+    }
+
+    .en-col {
+      padding: 32px 28px 28px;
+    }
+
+    /* three CTAs of different lengths: full width keeps the columns even */
+    .en-cta {
+      width: 100%;
+    }
+  }
+</style>

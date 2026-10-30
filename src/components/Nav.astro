@@ -31,12 +31,20 @@
  * Base.astro, which is hidden below (one indicator, not two).
  */
 import { nav, navUi, mobileMenu, primaryCta, contact, mail } from '../data/site';
+import type { Link, PageCta } from '../data/site';
 import { url } from '../lib/url';
 import Logo from './Logo.astro';
 import Cosmos from './Cosmos.astro';
 import WaGlyph from './ui/WaGlyph.astro';
 import MailGlyph from './ui/MailGlyph.astro';
 import Arrow from './ui/Arrow.astro';
+
+export interface Props {
+  /** Page-level action (Base `cta`); defaults to the Azure practice's. */
+  cta?: Link & PageCta;
+}
+const { cta = primaryCta } = Astro.props;
+const menuCta = Astro.props.cta ?? mobileMenu.cta;
 
 const path = Astro.url.pathname;
 /** Page links only; home-section anchors are tracked live by the script. */
@@ -148,7 +156,7 @@ const ORY = 4.6;
 
       <a
         class="btn btn-sm nav-btn nav-wa"
-        href={primaryCta.href}
+        href={cta.href}
         target="_blank"
         rel="noopener"
         aria-label={navUi.whatsappAria}
@@ -226,9 +234,9 @@ const ORY = 4.6;
 
       <div class="menu-foot">
         <div class="menu-ctas">
-          <a class="btn menu-cta" href={mobileMenu.cta.href} target="_blank" rel="noopener" data-wa-intent="menu">
+          <a class="btn menu-cta" href={menuCta.href} target="_blank" rel="noopener" data-wa-intent="menu">
             <WaGlyph size={16} />
-            <span>{mobileMenu.cta.label}</span>
+            <span>{menuCta.label}</span>
             <Arrow />
           </a>
           <a class="btn btn-line menu-mail" href={mailHref}>
