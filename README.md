@@ -11,8 +11,15 @@ Site da Vesta, com duas frentes sob a mesma marca:
   somente leitura (Reader + Cost Management Reader), lida contra os cinco pilares do Azure
   Well-Architected Framework. Nenhuma economia é prometida: é estimada na revisão e medida
   na própria fatura do cliente depois.
-  - **Home (`/`)** é um hub curto: hero, quatro portas (uma por página) e o fecho.
-  - **`/azure/`**: problema, serviços, a revisão (pilares) e o método.
+  - **Home (`/`)** é um hub curto: hero com o rosto do Vinícius (retrato no desktop, chip
+    com foto acima do título no celular), os seis serviços principais (cada um leva ao seu
+    trecho em `/azure/`), três portas (uma por página) e o fecho.
+  - **`/azure/`**: painel ilustrativo de custos no topo, problema, posicionamento, os seis
+    serviços com âncora (`#aks`, `#cost`, `#cleanup`, `#sustaining`, `#pipelines`,
+    `#support`), a revisão (pilares) e o método.
+  - Serviços: gestão de AKS, redução de custos, higienização de ambiente, sustentação,
+    otimização de builds e pipelines, suporte 24/7 (`catalog` em `site.ts`). O 24/7 promete
+    prazos de resposta **escritos em contrato**: defina-os antes de assinar.
   - **`/engagements/`**: as três formas de contratar, FAQ e fecho.
   - **`/about/`**: o Vinícius, e o currículo (seção "Track record", quando confirmado).
 - **`/websites/` — estúdio de sites:** design e construção de sites e landing pages de alto
@@ -96,8 +103,9 @@ src/
   components/home/       uma seção por arquivo (Hero … Finale). Hero, SpecBand, Problem, Services,
                          Faq e Finale recebem os dados por props: padrão = estúdio de sites;
                          a home passa os dados `cloud*` de site.ts
-  components/cloud/      seções só da prática Azure: CostPlate (palco do hero, ilustração),
-                         Doors (as portas da home; uma porta só = "próxima página"),
+  components/cloud/      seções só da prática Azure: CostPlate (topo de /azure/, ilustração),
+                         HeroPortrait (palco do hero), Catalog (tiles na home / completo
+                         em /azure/), Doors (as portas da home; uma porta só = "próxima página"),
                          Pillars (#review), Method, Engagements (`bare` sem cabeçalho),
                          Record (currículo, em /about/)
   components/work/       trabalho, estudo de conceito e template de caso

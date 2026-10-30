@@ -7,21 +7,28 @@ import Finale from '../components/home/Finale.astro';
 import Pillars from '../components/cloud/Pillars.astro';
 import Method from '../components/cloud/Method.astro';
 import Doors from '../components/cloud/Doors.astro';
+import Catalog from '../components/cloud/Catalog.astro';
+import CostPlate from '../components/cloud/CostPlate.astro';
 import { azurePage, cloudProblem, cloudServices, cloudFinale, doors } from '../data/site';
 import type { Door } from '../data/site';
 
-/* /azure/ — the Azure practice in full: why (problem), what (services), what
-   the free review reads (pillars), how (method). One door at the end leads
-   on to /engagements/. */
+/* /azure/ — the Azure practice in full: the illustrated cost review beside
+   the head, why (problem), the stance, the six services (#catalog, one
+   anchor each: #aks, #cost, #cleanup, #sustaining, #pipelines, #support),
+   what the free review reads (pillars), how (method). One door at the end
+   leads on to /engagements/. */
 const next: Door[] = doors.items.filter((d) => d.href === azurePage.next.href);
 ---
 
 <Base title={azurePage.seo.title} description={azurePage.seo.description} canonical="/azure/" expect="page-head">
-  <PageHead label={azurePage.label} h1={azurePage.h1} lead={azurePage.lead} layout="split" />
+  <PageHead label={azurePage.label} h1={azurePage.h1} lead={azurePage.lead}>
+    <CostPlate />
+  </PageHead>
   <Problem data={cloudProblem} />
-  <Services data={cloudServices} />
+  <Services data={cloudServices} stations={false} />
+  <Catalog variant="full" />
   <Pillars />
   <Method />
-  <Doors id="next" items={next} head={false} surface="s-paper" />
+  <Doors id="next" items={next} head={false} surface="s-void" />
   <Finale data={cloudFinale} />
 </Base>

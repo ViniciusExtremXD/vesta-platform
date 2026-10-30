@@ -2,21 +2,23 @@
 import Base from '../layouts/Base.astro';
 import Hero from '../components/home/Hero.astro';
 import Finale from '../components/home/Finale.astro';
-import CostPlate from '../components/cloud/CostPlate.astro';
+import HeroPortrait from '../components/cloud/HeroPortrait.astro';
+import Catalog from '../components/cloud/Catalog.astro';
 import Doors from '../components/cloud/Doors.astro';
 import { brand, cloudHero, cloudFinale } from '../data/site';
 
-/* The home page is a short hub for the Azure practice: the promise, one door
-   per page, the close. The detail lives behind the doors: /azure/,
-   /engagements/, /websites/ and /about/. `expect` holds the first render
+/* The home page is a short hub for the Azure practice: the promise with the
+   founder's face, the six main services (each a link to its entry on
+   /azure/), one door per page, the close. `expect` holds the first render
    until the doors are parsed, so a page transition back home can grow the
    page head back into its door. */
 ---
 
 <Base title={brand.seo.title} description={brand.seo.description} canonical="/" expect="start">
   <Hero data={cloudHero} spec={false}>
-    <CostPlate slot="stage" />
+    <HeroPortrait slot="stage" />
   </Hero>
+  <Catalog variant="tiles" />
   <Doors />
   <Finale data={cloudFinale} />
 </Base>

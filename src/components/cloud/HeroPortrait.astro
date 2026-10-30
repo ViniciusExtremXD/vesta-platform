@@ -1,0 +1,227 @@
+---
+/**
+ * The Azure home's hero stage: the founder, face first (cloudHero.person).
+ * A 4:5 colour portrait in a hairline frame, the site's orbit crossing it,
+ * three focus chips on the photo, and the caption: name, role, and the line
+ * that says the person in the photo does the work.
+ *
+ * Motion on load (CSS only, never gated on JS): the frame opens from the
+ * bottom (clip-path), the orbit draws round it, the chips and the caption
+ * rise. Default styles are the final state.
+ */
+import { Picture } from 'astro:assets';
+import portrait from '../../assets/vinicius-magno.jpg';
+import { cloudHero } from '../../data/site';
+
+const p = cloudHero.person;
+---
+
+<figure class="hp" data-tilt="3">
+  <div class="hp-stage">
+    <div class="hp-frame">
+      <Picture
+        src={portrait}
+        alt={p.alt}
+        widths={[360, 480, 720, 900]}
+        sizes="(min-width: 1100px) 432px, (min-width: 768px) 380px, 340px"
+        formats={['avif', 'webp']}
+        class="hp-pic"
+        loading="eager"
+        decoding="async"
+        fetchpriority="high"
+      />
+      <ul class="hp-focus" role="list" aria-label="Focus">
+        {
+          p.focus.map((f, k) => (
+            <li class="label hp-chip" style={`--k:${k}`}>
+              {f}
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+    <svg class="hp-orbit" viewBox="-130 -60 260 120" aria-hidden="true" focusable="false">
+      <g transform="rotate(-24)">
+        <ellipse class="hp-ring" rx="124" ry="38" pathLength="100" />
+        <circle class="hp-planet" cx="124" cy="0" r="3.2" />
+      </g>
+    </svg>
+  </div>
+  <figcaption class="hp-cap">
+    <span class="hp-name">{p.name}</span>
+    <span class="label hp-role">{p.role}</span>
+    <span class="small hp-line">{p.line}</span>
+  </figcaption>
+</figure>
+
+<style>
+  .hp {
+    position: relative;
+    margin: 0;
+    max-width: 340px;
+  }
+
+  /* frame and orbit share one box: the frame's opening clip must not cut
+     the orbit, which runs wider than the photo */
+  .hp-stage {
+    position: relative;
+    aspect-ratio: 4 / 5;
+  }
+
+  .hp-frame {
+    position: absolute;
+    inset: 0;
+    background-color: var(--plate);
+  }
+
+  /* the faint lilac rim the plates wear, over the photo */
+  .hp-frame::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 1px solid rgb(185 162 255 / 0.28);
+    pointer-events: none;
+  }
+
+  /* <Picture> puts the class on the <img>; the <picture> around it must
+     fill the 4:5 frame too, or the square photo keeps its own height */
+  .hp-frame :global(picture),
+  .hp-frame :global(img) {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .hp-frame :global(img) {
+    object-fit: cover;
+    object-position: 50% 30%;
+  }
+
+  /* the orbit crosses the frame, wider than it, behind nothing */
+  .hp-orbit {
+    position: absolute;
+    left: -22%;
+    top: 46%;
+    width: 128%;
+    max-width: none;
+    overflow: visible;
+    pointer-events: none;
+  }
+
+  .hp-ring {
+    fill: none;
+    stroke: var(--lilac);
+    stroke-width: 0.6;
+    stroke-opacity: 0.75;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .hp-planet {
+    fill: var(--lilac);
+  }
+
+  .hp-focus {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0;
+  }
+
+  .hp-chip {
+    padding: 5px 8px 4px;
+    background-color: var(--void);
+    color: var(--starlight);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+  }
+
+  .hp-cap {
+    display: grid;
+    gap: 4px;
+    margin-top: 14px;
+  }
+
+  .hp-name {
+    color: var(--starlight);
+    font-stretch: var(--wd-display);
+    font-size: 1.0625rem;
+    font-weight: 620;
+    line-height: 1.2;
+  }
+
+  .hp-role {
+    color: var(--lilac);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+  }
+
+  .hp-line {
+    margin-top: 4px;
+    color: var(--haze);
+    max-width: 36ch;
+  }
+
+  @media (min-width: 768px) {
+    .hp {
+      max-width: 380px;
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .hp {
+      max-width: none;
+    }
+  }
+
+  /* ---------- load choreography (final state is the default) -------------- */
+  :global(html:not(.motion-reduced)) .hp-frame {
+    animation: hp-open 1200ms var(--ease-quint) 260ms both;
+  }
+
+  :global(html:not(.motion-reduced)) .hp-ring {
+    stroke-dasharray: 100;
+    animation: hp-draw 1400ms var(--ease-quint) 900ms both;
+  }
+
+  :global(html:not(.motion-reduced)) .hp-planet {
+    animation: hp-fade 500ms linear 2100ms both;
+  }
+
+  :global(html:not(.motion-reduced)) .hp-chip {
+    --rise: 8px;
+    animation: rise-in 700ms var(--ease-expo) both;
+    animation-delay: calc(1200ms + var(--k) * 90ms);
+  }
+
+  :global(html:not(.motion-reduced)) .hp-cap {
+    --rise: 10px;
+    animation: rise-in 900ms var(--ease-expo) 1000ms both;
+  }
+
+  @keyframes hp-open {
+    from {
+      clip-path: inset(100% 0 0 0);
+    }
+    to {
+      clip-path: inset(0 0 0 0);
+    }
+  }
+
+  @keyframes hp-draw {
+    from {
+      stroke-dashoffset: 100;
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  @keyframes hp-fade {
+    from {
+      opacity: 0;
+    }
+  }
+</style>

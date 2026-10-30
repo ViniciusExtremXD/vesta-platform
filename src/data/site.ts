@@ -17,7 +17,8 @@
    - No live clocks anywhere (owner decision). Hours are always the static
      `contact.hours.label`.
    - Two practices, one brand. The home page (/) is a short hub: the Azure
-     hero, four doors (one per page) and the close. The detail lives on its
+     hero with the founder's face, the six main services (each a link into
+     /azure/), three doors (one per page) and the close. The detail lives on its
      own page: /azure/ (services, review, method), /engagements/ (how to
      start, FAQ), /websites/ (the website studio) and /about/. Exports for
      the Azure practice are prefixed `cloud`; the unprefixed hero/problem/
@@ -127,11 +128,11 @@ export const brand: Brand = {
   countryCode: 'BR',
   tagline: 'Azure that costs less and runs better.',
   description:
-    'Vesta administers and optimizes Microsoft Azure environments: a smaller bill, right-sized resources, clear governance and operations that hold up. Every engagement starts with a free cost review. Websites built to the same standard.',
+    'Vesta administers and optimizes Microsoft Azure: AKS management, cost reduction, environment cleanup, sustaining operations, build and pipeline optimization and 24/7 support. Every engagement starts with a free cost review. Websites built to the same standard.',
   seo: {
     title: 'Vesta — Azure administration and cloud cost optimization',
     description:
-      'Azure administration, cost optimization and operational excellence by Vinícius Magno. A smaller bill, right-sized resources, clear governance. Free cost review.',
+      'Azure administration by Vinícius Magno: AKS management, cost reduction, environment cleanup, pipeline optimization and 24/7 support. Free cost review.',
   },
   og: {
     headline: 'Azure that costs less and runs better.',
@@ -156,6 +157,8 @@ export const founder = {
   knowsAbout: [
     'Microsoft Azure',
     'Azure administration',
+    'Azure Kubernetes Service (AKS)',
+    'CI/CD pipelines',
     'Cloud cost optimization',
     'FinOps',
     'Operational excellence',
@@ -593,14 +596,22 @@ export const cloudHero = {
     mobile: 'Azure administration and FinOps',
   },
   h1: 'Azure that costs less and runs better.',
-  lead: 'Vesta administers and optimizes Microsoft Azure environments: a smaller bill, right-sized resources, clear governance and operations that hold up on a bad day.',
+  lead: 'Vesta administers and optimizes Microsoft Azure: AKS clusters, a smaller bill, clean environments, faster pipelines and support around the clock.',
   primary: { label: 'Free cost review on WhatsApp', text: waMessages.cloud.hero } satisfies WaCta,
   secondary: { label: 'See the services', href: '/azure/' } satisfies Link,
   email: { label: 'Email Vinícius', subject: 'Azure cost review' },
   micro: 'Every engagement starts with a free, read-only cost review. You talk to the engineer who does the work.',
+  /** The face up front: the hero stage on desktop, a chip above the H1 on phones. */
+  person: {
+    name: founder.name,
+    role: 'Founder · Azure and FinOps',
+    line: 'The person in the photo is the engineer who does the work.',
+    alt: 'Vinícius Magno, founder of Vesta',
+    focus: ['AKS', 'FinOps', '24/7 support'],
+  },
 };
 
-/** The hero stage: an ILLUSTRATED cost review on a fictional subscription.
+/** /azure/ page head aside: an ILLUSTRATED cost review on a fictional subscription.
  *  The bars are a drawing (relative heights), never data. */
 export interface CostFinding {
   name: string;
@@ -630,6 +641,86 @@ export const costPlate = {
   caption: 'Illustration · Fictional subscription, not client data',
 };
 
+/* --------------------------------------------------------- the services */
+
+export interface CatalogItem {
+  /** Anchor of the full entry on /azure/. */
+  id: string;
+  index: string;
+  title: string;
+  /** One line: the home page tile. */
+  short: string;
+  /** The full entry on /azure/. */
+  body: string;
+  keys: string[];
+}
+
+/** The main services: tiles on the home page, full entries on /azure/. */
+export const catalog = {
+  home: {
+    id: 'services',
+    label: { index: '01', name: 'Main services' } satisfies SectionLabel,
+    h2: 'What Vesta runs for you.',
+    all: { label: 'Every service in detail', href: '/azure/#catalog' } satisfies Link,
+  },
+  page: {
+    id: 'catalog',
+    label: { index: '03', name: 'Services' } satisfies SectionLabel,
+    h2: 'Six services, one engineer.',
+    lead: 'Each one on its own or together, scoped after the free review.',
+  },
+  items: [
+    {
+      id: 'aks',
+      index: '01',
+      title: 'AKS management',
+      short: 'Kubernetes on Azure kept current, sized and watched.',
+      body: 'Azure Kubernetes Service run properly: version upgrades planned and tested, node pools and autoscaling sized to the real load, workload identity and network policies in place, and every cluster watched.',
+      keys: ['Upgrades', 'Node pools and autoscaling', 'Monitoring'],
+    },
+    {
+      id: 'cost',
+      index: '02',
+      title: 'Cost reduction',
+      short: 'A line-by-line read of the bill, and every finding fixed.',
+      body: 'Idle and oversized resources removed or right-sized, reservations and savings plans sized to real usage, budgets and alerts per owner. Savings are measured on your own bill, before and after.',
+      keys: ['Right-sizing', 'Reservations and savings plans', 'Budgets'],
+    },
+    {
+      id: 'cleanup',
+      index: '03',
+      title: 'Environment cleanup',
+      short: 'Orphaned resources out. Naming, tags and policies in.',
+      body: 'Subscriptions put in order: orphaned disks, IPs and snapshots removed, stale identities and role assignments revoked, naming and tags applied, and Azure Policy keeping it that way.',
+      keys: ['Orphaned resources', 'Access review', 'Tags and Azure Policy'],
+    },
+    {
+      id: 'sustaining',
+      index: '04',
+      title: 'Sustaining operations',
+      short: 'Day-to-day administration, so nothing drifts.',
+      body: 'Ongoing administration of subscriptions, identities and resources: patching and backups on a schedule, access reviewed, every change logged, and a monthly operations report.',
+      keys: ['Patching and backups', 'Access reviews', 'Monthly report'],
+    },
+    {
+      id: 'pipelines',
+      index: '05',
+      title: 'Build and pipeline optimization',
+      short: 'CI/CD that builds faster and costs less.',
+      body: 'Pipelines that stop wasting time and minutes: caching, parallel jobs, right-sized build agents, fewer redundant runs, and deployments that roll back cleanly.',
+      keys: ['Caching', 'Parallel jobs', 'Build agents'],
+    },
+    {
+      id: 'support',
+      index: '06',
+      title: '24/7 support',
+      short: 'Incident response around the clock, response times in writing.',
+      body: 'On-call incident response at any hour, with alerts routed to the engineer who knows the environment. Response times are written into the contract.',
+      keys: ['On call', 'Incident response', 'Written response times'],
+    },
+  ] satisfies CatalogItem[],
+};
+
 /* --------------------------------------------------------------- #doors */
 
 export interface Door {
@@ -646,20 +737,11 @@ export interface Door {
 /** Home page: one door per page. The detail lives behind each one. */
 export const doors = {
   id: 'start',
-  label: { index: '01', name: 'Where to go next' } satisfies SectionLabel,
+  label: { index: '02', name: 'Where to go next' } satisfies SectionLabel,
   h2: 'Pick what you need.',
   items: [
     {
       index: '01',
-      title: 'Azure services',
-      text: 'Administration, cost optimization and operational excellence, read against the framework Microsoft publishes.',
-      keys: ['Administration', 'Cost', 'Operations'],
-      href: '/azure/',
-      cta: 'See the services',
-      glyph: 'cost',
-    },
-    {
-      index: '02',
       title: 'Engagements',
       text: 'A free, read-only cost review first. Then an optimization project or managed operations.',
       keys: ['Free review', 'Fixed price', 'Monthly'],
@@ -668,7 +750,7 @@ export const doors = {
       glyph: 'steps',
     },
     {
-      index: '03',
+      index: '02',
       title: 'Websites',
       text: 'High-end websites for businesses, new or rebuilt, set up to be found on Google.',
       keys: ['Custom code', 'Google setup', 'Five studies'],
@@ -677,7 +759,7 @@ export const doors = {
       glyph: 'browser',
     },
     {
-      index: '04',
+      index: '03',
       title: 'The engineer',
       text: 'Vinícius Magno: background, how Vesta works and the company behind it.',
       keys: ['Background', 'How Vesta works', 'Company'],
@@ -694,11 +776,11 @@ export const azurePage = {
   seo: {
     title: 'Azure services · Vesta',
     description:
-      'Azure administration, cost optimization and operational excellence, read against the Azure Well-Architected Framework. One engineer, every change documented.',
+      'AKS management, cost reduction, environment cleanup, sustaining operations, pipeline optimization and 24/7 support for Microsoft Azure. One engineer.',
   } satisfies Seo,
   label: 'Azure services',
   h1: 'Azure, run like an operation.',
-  lead: 'Administration, cost optimization and operational excellence for Microsoft Azure environments. One engineer, every change documented.',
+  lead: 'AKS management, cost reduction, environment cleanup, sustaining operations, build and pipeline optimization and 24/7 support. One engineer, every change documented.',
   next: { label: 'Next', title: 'Engagements', text: 'How to start: a free, read-only cost review.', href: '/engagements/' },
 };
 
@@ -803,7 +885,7 @@ export interface Pillar {
 
 export const pillars = {
   id: 'review',
-  label: { index: '03', name: 'The review' } satisfies SectionLabel,
+  label: { index: '04', name: 'The review' } satisfies SectionLabel,
   h2: 'Read against the framework Microsoft publishes.',
   lead: 'The Azure Well-Architected Framework describes a healthy workload in five pillars. The free review reads your environment against each one, and estimates what every cost finding is worth per month.',
   pricedTag: 'Priced in the review',
@@ -865,7 +947,7 @@ export interface MethodStep {
 
 export const method = {
   id: 'method',
-  label: { index: '04', name: 'Method' } satisfies SectionLabel,
+  label: { index: '05', name: 'Method' } satisfies SectionLabel,
   h2: 'Measure. Fix. Keep it fixed.',
   sub: 'One engineer from the first call to the monthly report.',
   steps: [
@@ -981,13 +1063,13 @@ export const engagements = {
       bestFor: 'Businesses that want one accountable engineer for their Azure environment.',
       includes: [
         { text: 'Subscriptions, identities and access administered', confirmed: true },
-        { text: 'Monitoring and alert rules maintained', confirmed: true },
+        { text: 'Monitoring, alerts and 24/7 incident response', confirmed: true },
         { text: 'Backup and patching routines checked', confirmed: true },
         { text: 'Monthly cost watch against budget', confirmed: true },
         { text: 'Every change in a log you own', confirmed: true },
         { text: 'A monthly operations report', confirmed: true },
       ],
-      keys: ['Administration', 'Cost watch', 'Monthly report'],
+      keys: ['Administration', '24/7 support', 'Monthly report'],
       cta: 'Ask about operations',
       waText: waMessages.cloud.engagements.operate,
       subject: 'Azure managed operations',
@@ -1084,7 +1166,12 @@ export const cloudFaq: FaqItem[] = [
   },
   {
     q: 'Which parts of Azure do you cover?',
-    a: 'Identity and access (Entra ID and RBAC), governance (Azure Policy, tags and management groups), compute, storage, networking, monitoring and backup. If something in your environment is outside that, the review says so.',
+    a: 'Identity and access (Entra ID and RBAC), governance (Azure Policy, tags and management groups), compute, AKS, storage, networking, monitoring, backup, and the CI/CD pipelines that deploy to them. If something in your environment is outside that, the review says so.',
+    confirmed: true,
+  },
+  {
+    q: 'Is support really 24/7?',
+    a: 'Yes. Incidents are answered at any hour, and the response times are written into the contract, so you know exactly what to expect and when.',
     confirmed: true,
   },
   {
@@ -2242,7 +2329,7 @@ export const finale = {
 
 export const footer = {
   brand: {
-    blurb: 'Azure administration, cost optimization and websites. São Paulo.',
+    blurb: 'Azure administration, AKS, cost reduction, 24/7 support and websites. São Paulo.',
     tagline: brand.tagline,
   },
   columns: {
@@ -2250,10 +2337,12 @@ export const footer = {
     pricing: {
       title: 'Services',
       links: [
-        { label: 'Azure administration', href: '/azure/#services' },
-        { label: 'Cost optimization', href: '/azure/#services' },
-        { label: 'Operational excellence', href: '/azure/#services' },
-        { label: 'Free cost review', href: '/engagements/' },
+        { label: 'AKS management', href: '/azure/#aks' },
+        { label: 'Cost reduction', href: '/azure/#cost' },
+        { label: 'Environment cleanup', href: '/azure/#cleanup' },
+        { label: 'Sustaining operations', href: '/azure/#sustaining' },
+        { label: 'Build and pipelines', href: '/azure/#pipelines' },
+        { label: '24/7 support', href: '/azure/#support' },
         { label: 'Websites', href: '/websites/' },
       ] satisfies Link[],
     },

@@ -45,7 +45,7 @@ const titleId = `${id}-title`;
 const theme = surface === 's-void' ? 'dark' : 'light';
 ---
 
-<section id={id} class:list={[surface, 'section dr', { 'dr--single': items.length === 1 }]} data-nav-theme={theme} aria-labelledby={head ? titleId : undefined} aria-label={head ? undefined : items[0]?.title}>
+<section id={id} class:list={[surface, 'section dr', { 'dr--single': items.length === 1, 'dr--three': items.length === 3 }]} data-nav-theme={theme} aria-labelledby={head ? titleId : undefined} aria-label={head ? undefined : items[0]?.title}>
   <div class="wrap" data-scene="soft">
     {
       head && (
@@ -332,6 +332,13 @@ const theme = surface === 's-void' ? 'dark' : 'light';
 
     .dr--single .dr-door {
       min-height: 240px;
+    }
+  }
+
+  /* three doors: one row of three as soon as they fit */
+  @media (min-width: 900px) {
+    .dr--three .dr-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
 
