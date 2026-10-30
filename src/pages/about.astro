@@ -28,6 +28,7 @@ import Cosmos from '../components/Cosmos.astro';
 import SectionLabel from '../components/ui/SectionLabel.astro';
 import SplitText from '../components/ui/SplitText.astro';
 import Expand from '../components/ui/Expand.astro';
+import Record from '../components/cloud/Record.astro';
 import Arrow from '../components/ui/Arrow.astro';
 import WaGlyph from '../components/ui/WaGlyph.astro';
 import MailGlyph from '../components/ui/MailGlyph.astro';
@@ -267,13 +268,13 @@ const jsonLd = {
 };
 ---
 
-<Base title={about.seo.title} description={about.seo.description} canonical="/about/" jsonLd={jsonLd}>
+<Base title={about.seo.title} description={about.seo.description} canonical="/about/" jsonLd={jsonLd} expect="page-head">
   {/* ---------------------------------------------------------------- intro */}
   <section class="intro s-void" data-nav-theme="dark" aria-labelledby="about-title">
     <div class="sky" aria-hidden="true"><Cosmos variant="stars" /></div>
 
     <div class:list={['wrap', 'g', 'intro-grid', { solo: !showPortrait }]}>
-      <header class="intro-head">
+      <header class="intro-head" id="page-head" data-vt-head>
         <div data-load>
           <SectionLabel name={about.label.name} reveal={false} />
         </div>
@@ -370,6 +371,9 @@ const jsonLd = {
   </section>
 
   {/* ------------------------------------------------------ how vesta works */}
+  {/* --------------------------------------------- track record (gated) */}
+  <Record />
+
   <section class="how s-paper section" data-nav-theme="light" aria-labelledby="how-title">
     <div class="wrap g">
       <header class="how-head">
@@ -1011,6 +1015,13 @@ const jsonLd = {
   /* =====================================================================
      2. how vesta works
      ===================================================================== */
+  /* the statements flip up on a rotateX: unrevealed, their projected box is
+     wider than the phone, which widened the layout viewport (and aborted
+     page transitions on "viewport size changed"). Clip it to the section. */
+  .how {
+    overflow-x: clip;
+  }
+
   .how-title {
     max-width: 9ch;
   }

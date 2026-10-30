@@ -86,13 +86,13 @@ const jsonLd = {
 };
 ---
 
-<Base title={contactPage.seo.title} description={contactPage.seo.description} canonical="/contact/" jsonLd={jsonLd}>
+<Base title={contactPage.seo.title} description={contactPage.seo.description} canonical="/contact/" jsonLd={jsonLd} expect="page-head">
   {/* ----------------------------------------------------------------- head */}
   <section class="head s-void" data-nav-theme="dark" aria-labelledby="contact-title">
     <div class="sky" aria-hidden="true"><Cosmos variant="stars" /></div>
 
     <div class="wrap g head-grid">
-      <header class="head-copy">
+      <header class="head-copy" id="page-head" data-vt-head>
         <div data-load>
           <SectionLabel name={contactPage.label.name} reveal={false} />
         </div>

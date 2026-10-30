@@ -26,9 +26,13 @@ export interface Props {
   /** Page-level action for the nav button, mobile menu and sticky bar.
       Defaults to the Azure practice; /websites/ passes the studio's. */
   cta?: Link & PageCta;
+  /** Element id the first render waits for (rel=expect), so a page
+      transition finds it parsed: the home page's doors, an inner page's
+      head (#page-head). */
+  expect?: string;
 }
 
-const { title, description, canonical, ogImage, ogType = 'website', noindex = false, jsonLd, bodyClass = '', bare = false, cta } = Astro.props;
+const { title, description, canonical, ogImage, ogType = 'website', noindex = false, jsonLd, bodyClass = '', bare = false, cta, expect } = Astro.props;
 
 const basePrefix = import.meta.env.BASE_URL.replace(/\/$/, '');
 const path = canonical ?? (Astro.url.pathname.replace(basePrefix, '') || '/');
@@ -108,7 +112,89 @@ const extraLd = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
       })();
     </script>
 
+    {/*
+      Page transitions (see global.css §11). Registered before first render:
+      pagereveal only reaches listeners that exist by then.
+      - direction: a traverse compares history indexes; anything else
+        compares path depth (/ < /azure/ < /work/concept-01/), so going home
+        by the logo also reads as coming back. html[data-vt] carries it.
+      - the door ↔ head morph: leaving the home page for a door's page names
+        that door "page-head" (pageswap); arriving back home from it names
+        the door again (pagereveal). Only a door on screen is named, and the
+        page's own head gives the name up meanwhile (names must be unique).
+    */}
+    <script is:inline define:vars={{ vtBase: import.meta.env.BASE_URL.replace(/\/$/, '') }}>
+      (function () {
+        var NAME = 'page-head';
+        var root = document.documentElement;
+        function path(u) {
+          var p = new URL(u, location.href).pathname;
+          if (vtBase && p.indexOf(vtBase) === 0) p = p.slice(vtBase.length) || '/';
+          return p;
+        }
+        function depth(u) {
+          return path(u).split('/').filter(Boolean).length;
+        }
+        function onScreen(el) {
+          var r = el.getBoundingClientRect();
+          return r.width > 0 && r.bottom > 0 && r.top < innerHeight;
+        }
+        function doorFor(u) {
+          var want = path(u);
+          var list = document.querySelectorAll('[data-door]');
+          for (var i = 0; i < list.length; i++) {
+            if (path(list[i].href) === want && onScreen(list[i])) return list[i];
+          }
+          return null;
+        }
+        function clear() {
+          var named = document.querySelectorAll('[data-door], [data-vt-head]');
+          for (var i = 0; i < named.length; i++) named[i].style.viewTransitionName = '';
+        }
+        function name(door, vt) {
+          clear();
+          var heads = document.querySelectorAll('[data-vt-head]');
+          for (var i = 0; i < heads.length; i++) heads[i].style.viewTransitionName = 'none';
+          door.style.viewTransitionName = NAME;
+          if (vt && vt.finished) vt.finished.then(clear, clear);
+        }
+        addEventListener('pageswap', function (e) {
+          if (!e.viewTransition) return;
+          var to = e.activation && e.activation.entry && e.activation.entry.url;
+          var door = to && doorFor(to);
+          if (door) name(door, e.viewTransition);
+        });
+        addEventListener('pagereveal', function (e) {
+          // also a bfcache restore: drop the name pageswap left on the way out
+          clear();
+          var vt = e.viewTransition;
+          if (!vt) return;
+          var act = window.navigation && window.navigation.activation;
+          var from = act && act.from ? act.from.url : document.referrer;
+          var dir = 'forward';
+          if (act && act.navigationType === 'traverse' && act.from && act.entry && act.from.index !== act.entry.index) {
+            dir = act.entry.index < act.from.index ? 'back' : 'forward';
+          } else if (from) {
+            try {
+              if (new URL(from).origin === location.origin && depth(location.href) < depth(from)) dir = 'back';
+            } catch (err) {}
+          }
+          root.setAttribute('data-vt', dir);
+          try {
+            if (vt.types) vt.types.add(dir);
+          } catch (err) {}
+          var door = from && doorFor(from);
+          if (door) name(door, vt);
+          vt.finished.then(
+            function () { root.removeAttribute('data-vt'); },
+            function () { root.removeAttribute('data-vt'); }
+          );
+        });
+      })();
+    </script>
+
     <title>{title}</title>
+    {expect && <link rel="expect" href={`#${expect}`} {...{ blocking: 'render' }} />}
     <meta name="description" content={description} />
     <link rel="canonical" href={canonicalUrl} />
     {noindex && <meta name="robots" content="noindex, follow" />}

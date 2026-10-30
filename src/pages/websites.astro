@@ -53,8 +53,8 @@ const offersLd = {
 };
 ---
 
-<Base title={websitesPage.seo.title} description={websitesPage.seo.description} canonical="/websites/" jsonLd={[faqLd, offersLd]} cta={webCta}>
-  <Hero />
+<Base title={websitesPage.seo.title} description={websitesPage.seo.description} canonical="/websites/" jsonLd={[faqLd, offersLd]} cta={webCta} expect="page-head">
+  <Hero vtHead />
   <Problem />
   <Services />
   <Shutter />

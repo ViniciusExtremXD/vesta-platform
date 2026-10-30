@@ -820,7 +820,8 @@ O navegador carregou "${served}" em ${route} — nao e este site. Abortando.`);
       // do documento pegava o grafismo de fundo do hero, que não é
       // representativo do que o visitante lê.
       entry.curves = [];
-      for (const sel of ['#services [data-reveal]', '#problem h2[data-split]', '.foot-brand[data-reveal]']) {
+      // A home é o hub (hero, portas, fecho): mede as portas e o H2 delas.
+      for (const sel of ['#start [data-reveal]', '#start h2[data-split]', '.foot-brand[data-reveal]']) {
         entry.curves.push(await measureEntryCurve(page, sel));
       }
     }

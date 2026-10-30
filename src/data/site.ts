@@ -16,11 +16,12 @@
      WhatsApp prefills included. No gendered pronouns for the founder.
    - No live clocks anywhere (owner decision). Hours are always the static
      `contact.hours.label`.
-   - Two practices, one brand. The home page (/) presents the Azure practice
-     (administration, cost optimization, operational excellence); the website
-     studio lives on /websites/. Home-section exports for the Azure practice
-     are prefixed `cloud`; the unprefixed hero/problem/services/... exports
-     are the website studio's and render on /websites/.
+   - Two practices, one brand. The home page (/) is a short hub: the Azure
+     hero, four doors (one per page) and the close. The detail lives on its
+     own page: /azure/ (services, review, method), /engagements/ (how to
+     start, FAQ), /websites/ (the website studio) and /about/. Exports for
+     the Azure practice are prefixed `cloud`; the unprefixed hero/problem/
+     services/... exports are the website studio's and render on /websites/.
    - Internal links are root-absolute ("/about/", "/websites/#pricing") so they work
      from every page. Pass every href through `url()` from src/lib/url.ts so
      the GitHub Pages base path is applied. Hrefs that start with "#" are
@@ -316,8 +317,6 @@ export interface WaMessages {
   founding: string;
   /** Test Drive "Send your score" link. */
   testDrive: string;
-  /** #builder primary CTA. */
-  builder: string;
   /** FAQ side link and "Just a question" intent. */
   question: string;
   /** Finale intent chips. */
@@ -329,7 +328,6 @@ export interface WaMessages {
     /** Home hero, nav button, sticky bar, mobile menu. */
     hero: string;
     engagements: Record<EngagementId, string>;
-    builder: string;
     question: string;
     finale: Record<CloudIntentId, string>;
   };
@@ -350,7 +348,6 @@ export const waMessages: WaMessages = {
   care: "Hi Vinícius, I'd like to ask about the Care plan.",
   founding: "Hi Vinícius, I'd like to ask about a founding-client place.",
   testDrive: "Hi Vinícius, I ran Google's test on my site. It scored __ on mobile. My site is: ",
-  builder: "Hi Vinícius, I'd like to talk about a website for my business.",
   question: 'Hi Vinícius, I have a question about Vesta: ',
   finale: {
     new: "Hi Vinícius, I'd like a price for a new website for my business. The business is: ",
@@ -370,7 +367,6 @@ export const waMessages: WaMessages = {
       optimize: "Hi Vinícius, I'd like to talk about an Azure optimization project.",
       operate: "Hi Vinícius, I'd like to ask about managed operations for my Azure environment.",
     },
-    builder: "Hi Vinícius, I'd like to talk about my Azure environment.",
     question: 'Hi Vinícius, I have a question about Azure: ',
     finale: {
       cost: "Hi Vinícius, I'd like to lower my Azure bill. My monthly spend is roughly: ",
@@ -441,10 +437,10 @@ export interface NavLink extends Link {
   section: string | null;
 }
 
-/** Desktop nav links, in order (§4 Nav). The Azure practice first. */
+/** Desktop nav links, in order (§4 Nav). One page each; the Azure practice first. */
 export const nav: NavLink[] = [
-  { label: 'Services', href: '/#services', section: 'services' },
-  { label: 'Engagements', href: '/#engagements', section: 'engagements' },
+  { label: 'Azure', href: '/azure/', section: null },
+  { label: 'Engagements', href: '/engagements/', section: null },
   { label: 'Websites', href: '/websites/', section: null },
   { label: 'About', href: '/about/', section: null },
 ];
@@ -492,12 +488,11 @@ export const navUi = {
 /** Full-screen mobile menu (§4). Links carry a 01–05 index in smoke. */
 export const mobileMenu = {
   links: [
-    { index: '01', label: 'Services', href: '/#services' },
-    { index: '02', label: 'Engagements', href: '/#engagements' },
-    { index: '03', label: 'Method', href: '/#method' },
-    { index: '04', label: 'Websites', href: '/websites/' },
-    { index: '05', label: 'About', href: '/about/' },
-    { index: '06', label: 'Contact', href: '/contact/' },
+    { index: '01', label: 'Azure', href: '/azure/' },
+    { index: '02', label: 'Engagements', href: '/engagements/' },
+    { index: '03', label: 'Websites', href: '/websites/' },
+    { index: '04', label: 'About', href: '/about/' },
+    { index: '05', label: 'Contact', href: '/contact/' },
   ],
   cta: primaryCta,
   linkedin: { label: contact.linkedin.label, href: contact.linkedin.url },
@@ -600,7 +595,7 @@ export const cloudHero = {
   h1: 'Azure that costs less and runs better.',
   lead: 'Vesta administers and optimizes Microsoft Azure environments: a smaller bill, right-sized resources, clear governance and operations that hold up on a bad day.',
   primary: { label: 'Free cost review on WhatsApp', text: waMessages.cloud.hero } satisfies WaCta,
-  secondary: { label: 'See how it works', href: '#method' } satisfies Link,
+  secondary: { label: 'See the services', href: '/azure/' } satisfies Link,
   email: { label: 'Email Vinícius', subject: 'Azure cost review' },
   micro: 'Every engagement starts with a free, read-only cost review. You talk to the engineer who does the work.',
 };
@@ -635,36 +630,89 @@ export const costPlate = {
   caption: 'Illustration · Fictional subscription, not client data',
 };
 
-/* ------------------------------------------------ spec band (part of #hero) */
+/* --------------------------------------------------------------- #doors */
 
-export const cloudSpec: { cells: SpecCell[]; footnote: string } = {
-  cells: [
+export interface Door {
+  index: string;
+  title: string;
+  text: string;
+  keys: string[];
+  href: string;
+  cta: string;
+  /** Hairline glyph drawn in the corner of the card. */
+  glyph: 'cost' | 'steps' | 'browser' | 'portrait';
+}
+
+/** Home page: one door per page. The detail lives behind each one. */
+export const doors = {
+  id: 'start',
+  label: { index: '01', name: 'Where to go next' } satisfies SectionLabel,
+  h2: 'Pick what you need.',
+  items: [
     {
-      value: 'Free',
-      unit: 'Cost review',
-      caption: 'Read-only access. Every finding with its estimated monthly saving.',
-      count: null,
+      index: '01',
+      title: 'Azure services',
+      text: 'Administration, cost optimization and operational excellence, read against the framework Microsoft publishes.',
+      keys: ['Administration', 'Cost', 'Operations'],
+      href: '/azure/',
+      cta: 'See the services',
+      glyph: 'cost',
     },
     {
-      value: '5',
-      unit: 'Pillars',
-      caption: 'Each environment read against the Azure Well-Architected Framework.',
-      count: { to: 5, prefix: '', suffix: '' },
+      index: '02',
+      title: 'Engagements',
+      text: 'A free, read-only cost review first. Then an optimization project or managed operations.',
+      keys: ['Free review', 'Fixed price', 'Monthly'],
+      href: '/engagements/',
+      cta: 'See how to start',
+      glyph: 'steps',
     },
     {
-      value: '100%',
-      unit: 'Documented',
-      caption: 'Every change written down, with its reason and its rollback.',
-      count: { to: 100, prefix: '', suffix: '%' },
+      index: '03',
+      title: 'Websites',
+      text: 'High-end websites for businesses, new or rebuilt, set up to be found on Google.',
+      keys: ['Custom code', 'Google setup', 'Five studies'],
+      href: '/websites/',
+      cta: 'See the studio',
+      glyph: 'browser',
     },
     {
-      value: 'Azure first, websites too',
-      unit: null,
-      caption: 'The same engineer builds high-end websites, to the same standard.',
-      count: null,
+      index: '04',
+      title: 'The engineer',
+      text: 'Vinícius Magno: background, how Vesta works and the company behind it.',
+      keys: ['Background', 'How Vesta works', 'Company'],
+      href: '/about/',
+      cta: 'Meet Vinícius',
+      glyph: 'portrait',
     },
-  ],
-  footnote: 'Savings are measured on your own bill, never promised in advance.',
+  ] satisfies Door[],
+};
+
+/* ---------------------------------------------------------- /azure/ page */
+
+export const azurePage = {
+  seo: {
+    title: 'Azure services · Vesta',
+    description:
+      'Azure administration, cost optimization and operational excellence, read against the Azure Well-Architected Framework. One engineer, every change documented.',
+  } satisfies Seo,
+  label: 'Azure services',
+  h1: 'Azure, run like an operation.',
+  lead: 'Administration, cost optimization and operational excellence for Microsoft Azure environments. One engineer, every change documented.',
+  next: { label: 'Next', title: 'Engagements', text: 'How to start: a free, read-only cost review.', href: '/engagements/' },
+};
+
+/* ---------------------------------------------------- /engagements/ page */
+
+export const engagementsPage = {
+  seo: {
+    title: 'Engagements · Vesta',
+    description:
+      'Start with a free, read-only Azure cost review. Then an optimization project at a fixed price, or managed operations every month. Questions answered.',
+  } satisfies Seo,
+  label: 'Engagements',
+  h1: 'Three ways to work. One free review first.',
+  lead: 'The review is free and read-only. Whatever comes after is scoped from its findings and fixed in writing before any change is made.',
 };
 
 /* ------------------------------------------------------------- #problem */
@@ -984,7 +1032,7 @@ export interface Credential {
  */
 export const record = {
   id: 'record',
-  label: { index: '07', name: 'Track record' } satisfies SectionLabel,
+  label: { index: null, name: 'Track record' } satisfies SectionLabel,
   h2: 'Experience, in the open.',
   lead: 'Roles and certifications, each one checkable on LinkedIn.',
   experienceTitle: 'Experience',
@@ -1008,27 +1056,11 @@ export const record = {
   linkedin: { label: 'Full history on LinkedIn', href: contact.linkedin.url } satisfies Link,
 };
 
-/* ------------------------------------------------------------ #websites */
-
-export const webTeaser = {
-  id: 'websites',
-  label: { index: '08', name: 'Websites' } satisfies SectionLabel,
-  h2: 'Websites, built to the same standard.',
-  lead: 'Vesta also designs and builds high-end websites for businesses, new or rebuilt from the one you have, and sets them up to be found on Google.',
-  points: [
-    { title: 'Custom code', text: 'No page builders and no plugin stack to patch.' },
-    { title: 'Measured', text: 'Every launch ships with its Lighthouse report.' },
-    { title: 'Yours', text: 'Code, design, content and every login at launch.' },
-  ],
-  link: { label: 'See the website studio', href: '/websites/' } satisfies Link,
-  plateCaption: 'Concept 01 · A study by Vesta · Fictional business, not client work',
-};
-
 /* ----------------------------------------------------------------- #faq */
 
 export const cloudFaqSection = {
   id: 'faq',
-  label: { index: '09', name: 'Questions' } satisfies SectionLabel,
+  label: { index: '01', name: 'Questions' } satisfies SectionLabel,
   h2: 'Straight answers.',
   side: { label: 'Ask anything on WhatsApp →', text: waMessages.cloud.question } satisfies WaCta,
   email: { label: 'Or send it by email', subject: 'A question about Azure' },
@@ -1116,7 +1148,7 @@ export const cloudFinale = {
   reassurance: 'A Brazilian number. WhatsApp messages are free from any country.',
   secondary: [
     { label: contact.linkedin.label, href: contact.linkedin.url },
-    { label: 'See the engagements', href: '/#engagements' },
+    { label: 'See the engagements', href: '/engagements/' },
   ] satisfies Link[],
 };
 
@@ -2068,34 +2100,6 @@ export const process = {
   note: 'The clock starts when the first payment and your materials arrive.',
 };
 
-/* --------------------------------------------------------- 5.10 #builder */
-
-/** Home page (Azure practice): the engineer. */
-export const builder = {
-  id: 'engineer',
-  label: { index: '06', name: 'The engineer' } satisfies SectionLabel,
-  h2: 'The person you message is the engineer who does the work.',
-  paragraphs: [
-    'Vesta is Vinícius Magno. A Computer Science graduate of Mackenzie Presbyterian University in São Paulo, Vinícius works on Microsoft Azure administration, cost reduction and the operational structure that keeps environments healthy.',
-    'No account managers, no junior hand-offs, no outsourcing. The person who reads your bill is the person who makes the changes and signs the report.',
-    'São Paulo is one to two hours ahead of New York, depending on the season. Working hours are 9:00–18:00 local time, which covers most of the US Eastern and Central business day.',
-  ],
-  /** Hairline rows. "Hours" replaces the spec's live "Local time" row. */
-  facts: [
-    { label: 'Focus', value: 'Azure administration · Cost optimization · Operational excellence' },
-    { label: 'Education', value: founder.education },
-    { label: 'Company', value: `${brand.legalName} · CNPJ ${brand.cnpj}` },
-    { label: 'Based in', value: founder.location },
-    { label: 'Hours', value: contact.hours.label },
-  ] satisfies Fact[],
-  cta: { label: 'Message Vinícius on WhatsApp', text: waMessages.cloud.builder } satisfies WaCta,
-  /** Round 2: second channel next to WhatsApp (mailto via mail()). */
-  email: { label: 'Email Vinícius', subject: 'My Azure environment' },
-  linkedin: { label: contact.linkedin.label, href: contact.linkedin.url } satisfies Link,
-  /** Round 2: paragraphs 2–3 live in this Expand box; the lead stays visible. */
-  more: { title: 'More about Vinícius', keywords: ['No hand-offs', 'No outsourcing', 'US business hours'] },
-};
-
 /* ------------------------------------------------------------- 5.11 #faq */
 
 export interface FaqItem {
@@ -2246,10 +2250,10 @@ export const footer = {
     pricing: {
       title: 'Services',
       links: [
-        { label: 'Azure administration', href: '/#services' },
-        { label: 'Cost optimization', href: '/#services' },
-        { label: 'Operational excellence', href: '/#services' },
-        { label: 'Free cost review', href: '/#engagements' },
+        { label: 'Azure administration', href: '/azure/#services' },
+        { label: 'Cost optimization', href: '/azure/#services' },
+        { label: 'Operational excellence', href: '/azure/#services' },
+        { label: 'Free cost review', href: '/engagements/' },
         { label: 'Websites', href: '/websites/' },
       ] satisfies Link[],
     },
@@ -2647,7 +2651,7 @@ export const notFound = {
   text: "This page doesn't exist. The rest of the site does.",
   links: [
     { label: 'Home', href: '/' },
-    { label: 'Engagements', href: '/#engagements' },
+    { label: 'Engagements', href: '/engagements/' },
   ] satisfies Link[],
   cta: primaryCta,
 };

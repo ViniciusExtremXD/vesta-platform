@@ -1012,37 +1012,133 @@ html.motion-failed [data-magnetic] {
 }
 
 /* ---------- 11. page transitions ---------------------------------------- */
-/* Cross-document view transitions: nav and wordmark hold still, content
-   fades and rises. Unsupported browsers simply navigate. */
+/* Cross-document View Transitions, direction-aware.
+   Going in (html[data-vt="forward"], the default: a door, a deeper page) lays
+   the new page over the old one like a sheet sliding in from the right, its
+   leading edge a lilac hairline, while the old page sinks back into space.
+   Coming back (html[data-vt="back"]: the back button, a shallower page) pulls
+   the sheet off to the right and the page underneath rises to meet you.
+   The door you opened and the page head share one name (page-head): the card
+   grows into the head on the way in and shrinks back into it on the way out.
+   The nav and the mobile bar hold still. Direction and the door's name are
+   set by the inline script in Base.astro. Browsers without cross-document
+   transitions simply navigate; motion off (html.motion-reduced) cuts. */
 
 @view-transition {
   navigation: auto;
 }
 
+[data-nav] {
+  view-transition-name: site-nav;
+}
+
+[data-sticky-cta] {
+  view-transition-name: sticky-bar;
+}
+
+[data-vt-head] {
+  view-transition-name: page-head;
+}
+
+/* deep space behind the sheets while they move */
+::view-transition {
+  background-color: #08070d;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  mix-blend-mode: normal;
+  animation-duration: 860ms;
+  animation-timing-function: var(--ease-quint);
+  animation-fill-mode: both;
+  transform-origin: 50% 40%;
+}
+
+/* forward: the new sheet slides in over the old page, which sinks back */
 ::view-transition-old(root) {
-  animation: vt-out 220ms var(--ease-quint) both;
+  animation-name: vt-sink;
 }
 
 ::view-transition-new(root) {
-  animation: vt-in 420ms var(--ease-expo) both;
+  border-left: 1px solid #b9a2ff;
+  animation-name: vt-sheet-in;
 }
 
-@keyframes vt-out {
+/* back: the top sheet slides off; the page underneath rises */
+html[data-vt='back']::view-transition-old(root) {
+  z-index: 1;
+  border-left: 1px solid #b9a2ff;
+  animation-name: vt-sheet-out;
+}
+
+html[data-vt='back']::view-transition-new(root) {
+  border-left: 0;
+  animation-name: vt-rise;
+}
+
+@keyframes vt-sink {
+  to {
+    opacity: 0.3;
+    transform: translate3d(-5%, 0, 0) scale(0.93);
+  }
+}
+
+@keyframes vt-sheet-in {
+  from {
+    transform: translate3d(100%, 0, 0);
+  }
+}
+
+@keyframes vt-sheet-out {
+  to {
+    transform: translate3d(100%, 0, 0);
+  }
+}
+
+@keyframes vt-rise {
+  from {
+    opacity: 0.3;
+    transform: translate3d(-5%, 0, 0) scale(0.93);
+  }
+}
+
+/* the door ↔ page head: the group travels and resizes; the two images
+   cross over early, so the text never reads stretched */
+::view-transition-group(page-head) {
+  animation-duration: 860ms;
+  animation-timing-function: var(--ease-expo);
+  overflow: clip;
+}
+
+::view-transition-old(page-head) {
+  animation: vt-fade-out 300ms linear both;
+}
+
+::view-transition-new(page-head) {
+  animation: vt-fade-in 520ms linear 140ms both;
+}
+
+::view-transition-group(site-nav),
+::view-transition-group(sticky-bar) {
+  animation-duration: 420ms;
+}
+
+@keyframes vt-fade-out {
   to {
     opacity: 0;
   }
 }
 
-@keyframes vt-in {
+@keyframes vt-fade-in {
   from {
     opacity: 0;
-    transform: translate3d(0, 12px, 0);
   }
 }
 
-html.motion-reduced::view-transition-old(root),
-html.motion-reduced::view-transition-new(root) {
-  animation: none;
+html.motion-reduced::view-transition-group(*),
+html.motion-reduced::view-transition-old(*),
+html.motion-reduced::view-transition-new(*) {
+  animation: none !important;
 }
 
 /* ---------- 12. smooth scroll (Lenis, fine pointers only) --------------- */
