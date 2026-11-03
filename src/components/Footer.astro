@@ -991,7 +991,7 @@ const backToTop = footer.backToTop.replace(/\s*↑\s*$/, '');
 </style>
 
 <script>
-  import { addFrame, isReduced, vestibular, travelTo } from '../scripts/motion';
+  import { addFrame, isReduced, vestibular, travelTo, setVar } from '../scripts/motion';
 
   // Back to top travels on the site's eased curve (instant with Motion: off),
   // then focus returns to the top so keyboard users continue from there.
@@ -1039,9 +1039,9 @@ const backToTop = footer.backToTop.replace(/\s*↑\s*$/, '');
         if (key === written) return;
         written = key;
         const eased = 1 - Math.pow(1 - p, 3);
-        lift.style.setProperty('--dy', `${((1 - eased) * full * 0.55).toFixed(1)}px`);
+        setVar(lift, '--dy', `${((1 - eased) * full * 0.55).toFixed(1)}px`);
         // the outlined name surfaces a little later and further
-        if (ghost) ghost.style.setProperty('--gy', `${((1 - eased) * ghostH * 0.45).toFixed(1)}px`);
+        if (ghost) setVar(ghost, '--gy', `${((1 - eased) * ghostH * 0.45).toFixed(1)}px`);
       },
     });
   }

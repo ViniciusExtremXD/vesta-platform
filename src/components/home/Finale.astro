@@ -209,7 +209,7 @@ const STAGE = { h2: 240, body: 520, legend: 560, chip: 620, chipStep: 90, button
 </section>
 
 <script>
-  import { addFrame, isReduced, observeReveals, requestFrame, vestibular } from '../../scripts/motion';
+  import { addFrame, isReduced, observeReveals, requestFrame, vestibular, setVar } from '../../scripts/motion';
 
   const root = document.querySelector<HTMLElement>('[data-finale]');
   if (root) {
@@ -462,7 +462,7 @@ const STAGE = { h2: 240, body: 520, legend: 560, chip: 620, chipStep: 90, button
       write() {
         if (m === wm) return;
         wm = m;
-        body.style.setProperty('--m', m.toFixed(4));
+        setVar(body, '--m', m.toFixed(4));
       },
     });
   }

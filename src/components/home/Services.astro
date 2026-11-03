@@ -1065,7 +1065,7 @@ const P0 = 200; // planet start angle, degrees — the far left, behind the text
 </style>
 
 <script>
-  import { addFrame, requestFrame, vestibular } from '../../scripts/motion';
+  import { addFrame, requestFrame, vestibular, setVar } from '../../scripts/motion';
 
   /* ---- Stance: one --p write per frame on the track, only while it is
      near the viewport. CSS turns --p into each line's --pi and into the
@@ -1145,7 +1145,7 @@ const P0 = 200; // planet start angle, degrees — the far left, behind the text
         const v = settled ? target : next;
         if (v === p) return;
         p = v;
-        track.style.setProperty('--p', p.toFixed(4));
+        setVar(track, '--p', p.toFixed(4));
         place(p);
         lines.forEach((ln, i) => ln.classList.toggle('is-lit', pi(p, i) > 0.5));
         const last = lines[lines.length - 1];
@@ -1241,10 +1241,10 @@ const P0 = 200; // planet start angle, degrees — the far left, behind the text
       },
       write() {
         if (!near) return;
-        st.style.setProperty('--sp', sp.toFixed(4));
-        st.style.setProperty('--spx', `${spx.toFixed(1)}px`);
+        setVar(st, '--sp', sp.toFixed(4));
+        setVar(st, '--spx', `${spx.toFixed(1)}px`);
         nodes.forEach((n, i) => n.classList.toggle('is-on', lit[i]));
-        items.forEach((it, i) => it.style.setProperty('--sy', swaying && !vestibular() ? sway[i].toFixed(1) : '0'));
+        items.forEach((it, i) => setVar(it, '--sy', swaying && !vestibular() ? sway[i].toFixed(1) : '0'));
       },
     });
   }

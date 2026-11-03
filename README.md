@@ -120,6 +120,35 @@ scripts/
   gen-og.mjs             imagens OG · gen-portrait.mjs: retrato em P&B
 ```
 
+## Regras de desempenho (não regredir)
+
+Medido em nov/2026 (Chromium, antes → depois): parado, toda página gerava 60 quadros/s
+sozinha; agora fica em 0 depois das entradas. Na rolagem, o thread principal caiu de
+248–682 para 154–300 ms por segundo no desktop. Área de camadas de GPU em repouso caiu
+70–84%. JS total −11%.
+
+- **Rolagem é do navegador.** Nada de biblioteca de smooth scroll (o Lenis saiu): ela tira a
+  rolagem do compositor e força recálculo de estilo a cada quadro. Só âncoras usam
+  `travelTo()` (deslocamento suave próprio).
+- **Um loop só, e só quando algo se move** (`addFrame` em `motion.ts`). Nada de
+  `requestAnimationFrame` contínuo em componente.
+- **Escrita por quadro via `setVar()`**, que pula valor repetido. Toda escrita daquela
+  propriedade naquele elemento tem que passar por ele (nada de `style.setProperty` /
+  `removeProperty` direto na mesma propriedade).
+- **Variável escrita por quadro e lida só pelo próprio elemento = `@property` com
+  `inherits: false`** (`--scene`, `--py`, `--tilt-*` em `global.css`). Variável herdada
+  escrita num contêiner recalcula o estilo da subárvore inteira a cada quadro.
+- **Nada de transformação 3D/`will-change` permanente.** `[data-scene]` só tem transform com
+  `.is-scening`; `[data-tilt]` só com `.is-tilting`; `[data-magnetic]` só com `.is-pulling`.
+  Em repouso o elemento é plano, sem camada de GPU.
+- **Animação infinita fora da tela pausa sozinha** (`initOffscreenPause` em `motion.ts`,
+  por bloco de `main` e o rodapé). Animação em filho de SVG não é composta: evite infinitas
+  em SVG grande.
+- **Céu WebGL (`cosmos.ts`)**: no máximo 1,25× pixels do aparelho (1× em aparelho fraco),
+  30 fps no ambiente, 60 fps só na rolagem/meteoro, e um regulador que mede o ritmo real dos
+  quadros: se o navegador não segura 60, cai para 30; se nem 30, congela no quadro estático
+  (`data-cosmos-ms="… governed"`).
+
 ## Regras que o código impõe
 
 - **Nada invisível sem JS.** Reveals vivem em atributos `data-*`; o CSS falha aberto
