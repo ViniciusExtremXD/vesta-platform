@@ -130,7 +130,7 @@ for (let k = 0, j = 1; k <= STEPS; k++) {
 </section>
 
 <script>
-  import { addFrame, requestFrame, isReduced, vestibular } from '../../scripts/motion';
+  import { addFrame, requestFrame, isReduced, vestibular, setVar } from '../../scripts/motion';
 
   /* 1. The numerals' scroll plane: each row writes --rp (its centre's offset
      from the viewport centre, −1…1) and CSS turns it into a small `translate`
@@ -167,12 +167,12 @@ for (let k = 0, j = 1; k <= STEPS; k++) {
       write() {
         if (!near) return;
         if (vestibular()) {
-          if (!wasStatic) rows.forEach((row) => row.style.setProperty('--rp', '0'));
+          if (!wasStatic) rows.forEach((row) => setVar(row, '--rp', '0'));
           wasStatic = true;
           return;
         }
         wasStatic = false;
-        rows.forEach((row, i) => row.style.setProperty('--rp', rp[i].toFixed(3)));
+        rows.forEach((row, i) => setVar(row, '--rp', rp[i].toFixed(3)));
       },
     });
   }

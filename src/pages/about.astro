@@ -1948,7 +1948,7 @@ const jsonLd = {
 </style>
 
 <script>
-  import { addFrame, isReduced, vestibular } from '../scripts/motion';
+  import { addFrame, isReduced, vestibular, setVar } from '../scripts/motion';
 
   const onScreen = (el: Element, cb: (visible: boolean) => void) => {
     if (!('IntersectionObserver' in window)) return;
@@ -2020,7 +2020,7 @@ const jsonLd = {
       write() {
         how.classList.toggle('is-scrub', scrub);
         if (!scrub || !near) return;
-        how.style.setProperty('--hp', p.toFixed(4));
+        setVar(how, '--hp', p.toFixed(4));
         rows.forEach((row, i) => {
           row.classList.toggle('is-lit', i <= active);
           row.classList.toggle('is-now', i === active);

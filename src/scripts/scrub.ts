@@ -254,13 +254,12 @@ export function initScrub(): void {
   }
 
   /* ---- layer buttons ------------------------------------------------------ */
-  /* Lenis (fine pointers) re-targets a running scroll cleanly, so travelTo
-     is used there. Without it, travelTo's fallback tween can't be
-     interrupted (two rapid clicks fight), so the native smooth scroll —
-     which a newer call replaces — carries the page instead. */
+  /* travelTo's tween can't be interrupted (two rapid clicks would fight),
+     so the native smooth scroll — which a newer call replaces — carries
+     the page. Motion off: travelTo jumps. */
   const scrollToY = (y: number): void => {
     const top = Math.max(0, Math.round(y));
-    if (isReduced() || html.classList.contains('lenis')) travelTo(top);
+    if (isReduced()) travelTo(top);
     else window.scrollTo({ top, behavior: 'smooth' });
   };
 

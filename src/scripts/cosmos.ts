@@ -21,6 +21,11 @@
    Contract: starts after load on idle, skips on Save-Data, one static frame
    when motion is off (html.motion-reduced / 'vesta:motion'), pauses offscreen
    and in hidden tabs, drops the canvas on context loss, never logs.
+   Budget: renders at most 1.25× device pixels (1× on low-power devices) —
+   the sky is soft light, and 1.5× cost 44% more fill for no visible gain —
+   and a governor watches the page's real frame pacing: when the browser
+   stops holding 60fps the sky drops to 30fps, and if even that drags, it
+   keeps its still frame and stops drawing. Smoothness of the page first.
    ========================================================================= */
 
 import { addFrame, isReduced, requestFrame, vestibular } from './motion';
@@ -1245,7 +1250,7 @@ class Sky {
     const r = this.el.getBoundingClientRect();
     this.cssW = Math.max(1, Math.round(r.width));
     this.cssH = Math.max(1, Math.round(r.height));
-    this.dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    this.dpr = Math.min(window.devicePixelRatio || 1, this.lowPower ? 1 : 1.25);
 
     const landscape = this.cssW >= this.cssH * 1.05;
     const cs = getComputedStyle(this.el);
@@ -1519,6 +1524,8 @@ class Sky {
     const run = this.live && !this.slow && !this.dead && this.visible && !document.hidden && !isReduced();
     if (run && !this.raf) {
       this.last = performance.now();
+      // the pacing gap restarts with the loop; time spent stopped is not load
+      this.paceAt = 0;
       this.raf = requestAnimationFrame(this.tick);
     } else if (!run && this.raf) {
       cancelAnimationFrame(this.raf);
@@ -1526,16 +1533,52 @@ class Sky {
     }
   }
 
+  /** governor: eased gap between the browser's frames, and how long it has
+      been over budget */
+  private pace = 1000 / 60;
+  private paceAt = 0;
+  private overSince = 0;
+
+  /** The page is the priority: if frames come late, draw less. */
+  private govern(now: number): void {
+    const gap = now - this.paceAt;
+    this.paceAt = now;
+    // a gap over 250ms is a hidden tab, a paused loop or a breakpoint, not load
+    if (gap <= 0 || gap > 250) return;
+    this.pace += (gap - this.pace) * 0.08;
+    // 60fps wanted: late beyond ~45fps. 30fps wanted: late beyond ~22fps.
+    const budget = this.lowPower ? 45 : 22;
+    if (this.pace <= budget) {
+      this.overSince = 0;
+      return;
+    }
+    if (!this.overSince) this.overSince = now;
+    if (now - this.overSince < 1500) return;
+    this.overSince = 0;
+    this.pace = 1000 / 60;
+    if (!this.lowPower) {
+      // step 1: half the frame rate, for good on this page
+      this.lowPower = true;
+    } else {
+      // step 2: the still frame stays; the loop stops
+      this.slow = true;
+      this.el.dataset.cosmosMs = `${this.el.dataset.cosmosMs || ''} governed`;
+      this.sync();
+    }
+  }
+
   private tick = (now: number): void => {
     this.raf = requestAnimationFrame(this.tick);
+    this.govern(now);
+    if (!this.raf) return;
     const dt = now - this.last;
     const tx = this.fine ? pointer.x : 0;
     const ty = this.fine ? pointer.y : 0;
-    const settling = Math.abs(tx - this.px) + Math.abs(ty - this.py) > 0.002;
     const scrolling = now - this.scrollAt < 400;
-    // 60fps while something moves fast (pointer ease, scroll, a meteor);
-    // 30fps for the slow sky, and always on low-power devices
-    const fast = !this.lowPower && (settling || scrolling || !!this.meteor);
+    // 60fps only while something moves fast (the scroll dive, a meteor);
+    // 30fps for the slow sky and the eased pointer parallax (it moves a few
+    // pixels a second), and always on low-power devices
+    const fast = !this.lowPower && (scrolling || !!this.meteor);
     const interval = fast ? 1000 / 60 : 1000 / 30;
     if (dt < interval - 1.5) return;
     this.last = now;

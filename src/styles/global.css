@@ -979,18 +979,49 @@ html:not(.motion-reduced) [data-load-split] .w {
   font-variant-numeric: lining-nums proportional-nums;
 }
 
+/* Per-element scroll and pointer variables, registered as NON-inherited:
+   motion.ts writes them on every frame of a scroll or a pointer move, and an
+   inherited custom property would restyle the element's whole subtree each
+   time. Each one is read only by the element it is written on. (--hx and
+   --mag-* stay inherited: their children read them.) */
+@property --scene {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 1;
+}
+
+@property --py {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --tilt-x {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@property --tilt-y {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
 /* parallax & exits: transform-only, scroll-scrubbed by motion.ts */
 [data-parallax] {
   transform: translate3d(0, var(--py, 0px), 0);
-  will-change: transform;
 }
 
+/* The pull exists only while the pointer pulls (.is-pulling): at rest the
+   element carries no transform and so no compositor layer. Leaving eases
+   back to none on the 520ms transition. */
 [data-magnetic] {
-  transform: translate3d(var(--mag-x, 0px), var(--mag-y, 0px), 0);
   transition: transform 520ms var(--ease-expo);
 }
 
 [data-magnetic].is-pulling {
+  transform: translate3d(var(--mag-x, 0px), var(--mag-y, 0px), 0);
   transition-duration: 160ms;
 }
 
@@ -1141,24 +1172,7 @@ html.motion-reduced::view-transition-new(*) {
   animation: none !important;
 }
 
-/* ---------- 12. smooth scroll (Lenis, fine pointers only) --------------- */
-
-html.lenis,
-html.lenis body {
-  height: auto;
-}
-
-.lenis.lenis-smooth {
-  scroll-behavior: auto !important;
-}
-
-.lenis.lenis-smooth [data-lenis-prevent] {
-  overscroll-behavior: contain;
-}
-
-.lenis.lenis-stopped {
-  overflow: clip;
-}
+/* ---------- 12. anchors -------------------------------------------------- */
 
 /* JS anchors travel on an eased curve (motion.ts); the native smooth jump
    stays only as the no-JS fallback. */
@@ -1168,15 +1182,18 @@ html.js {
 
 /* ---------- 13. pointer tilt ([data-tilt], fine pointers) --------------- */
 /* motion.ts writes --tilt-x / --tilt-y (degrees) while the pointer is over
-   the element and eases them back to 0 on leave. Strength: data-tilt="6". */
+   the element and eases them back to 0 on leave. Strength: data-tilt="6".
+   The 3D transform exists only while tilting (.is-tilting): at rest the
+   element is flat, with no compositor layer of its own; leaving eases back
+   to none on the 700ms transition. */
 
 [data-tilt] {
-  transform: perspective(1100px) rotateX(var(--tilt-y, 0deg)) rotateY(var(--tilt-x, 0deg));
   transition: transform 700ms var(--ease-expo);
   transform-style: preserve-3d;
 }
 
 [data-tilt].is-tilting {
+  transform: perspective(1100px) rotateX(var(--tilt-y, 0deg)) rotateY(var(--tilt-x, 0deg));
   transition-duration: 120ms;
 }
 
@@ -1189,18 +1206,23 @@ html.motion-failed [data-tilt] {
 /* Put it on a section's inner wrapper (never on the section with the
    background). motion.ts writes --scene 0 → 1 with scroll; the wrapper
    swings up from a tilted, deeper plane. Transform-only; text opacity is
-   never scrubbed. data-scene="soft" halves the travel. */
+   never scrubbed. data-scene="soft" halves the travel.
+   The 3D transform applies only while the scene moves (.is-scening, set by
+   motion.ts): settled, or far from the viewport, the wrapper is a plain
+   element with no compositor layer — a whole section's worth of GPU memory
+   and layerization per frame saved. */
 
 [data-scene] {
-  --scene: 1;
   --scene-tilt: 16deg;
   --scene-rise: 90px;
   --scene-depth: -160px;
   transform-origin: 50% 0%;
+}
+
+[data-scene].is-scening {
   transform: perspective(1400px)
     translate3d(0, calc((1 - var(--scene)) * var(--scene-rise)), calc((1 - var(--scene)) * var(--scene-depth)))
     rotateX(calc((1 - var(--scene)) * var(--scene-tilt)));
-  will-change: transform;
 }
 
 [data-scene='soft'] {

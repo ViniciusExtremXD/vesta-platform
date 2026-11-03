@@ -665,7 +665,7 @@ const arc = `M${(Math.cos(arcA) * 110).toFixed(2)} ${(Math.sin(arcA) * 110).toFi
 </style>
 
 <script>
-  import { addFrame, requestFrame, isReduced, vestibular } from '../../scripts/motion';
+  import { addFrame, requestFrame, isReduced, vestibular, setVar } from '../../scripts/motion';
 
   /* Matches the 640ms grid-template-rows transition in the styles. */
   const CLOSE_MS = 600;
@@ -800,15 +800,15 @@ const arc = `M${(Math.cos(arcA) * 110).toFixed(2)} ${(Math.sin(arcA) * 110).toFi
       write() {
         if (float && fy !== wFy) {
           wFy = fy;
-          float.style.setProperty('--fy', `${fy.toFixed(1)}px`);
+          setVar(float, '--fy', `${fy.toFixed(1)}px`);
         }
         if (dial && ringDeg !== wRing) {
           wRing = ringDeg;
-          dial.style.setProperty('--ring', `${ringDeg.toFixed(2)}deg`);
+          setVar(dial, '--ring', `${ringDeg.toFixed(2)}deg`);
         }
         if (dial && needle !== wNeedle && dial.classList.contains('is-in')) {
           wNeedle = needle;
-          dial.style.setProperty('--needle', `${needle.toFixed(2)}deg`);
+          setVar(dial, '--needle', `${needle.toFixed(2)}deg`);
         }
         if (count && count.textContent !== pad(shown)) {
           count.textContent = pad(shown);

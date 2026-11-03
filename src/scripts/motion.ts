@@ -8,16 +8,21 @@
    - Nothing may ever stay invisible. Three safety nets guarantee every
      reveal eventually gets .is-in; the inline <head> guard adds
      html.motion-failed if this file never reports in.
+   - Scrolling is the browser's own: it runs on the compositor thread, so a
+     busy main thread can never make the page stutter under the finger or
+     the wheel. (A JS smooth-scroll library used to sit here; it moved every
+     scroll frame onto the main thread and forced a style recalc on each.)
    - One rAF loop for everything scroll-linked. Handlers READ in one pass,
      then WRITE in a second pass — interleaving forces layout per element.
+     Writes go through setVar(), which skips a value that has not changed:
+     an untouched style is never invalidated. The loop runs only while
+     something moves; an idle page schedules nothing.
    - The OS "prefers-reduced-motion" flag is ignored for entrances on
      purpose (Windows ships with it on and it silently killed the site for
      real clients). The footer toggle is the master control. Set
      HONOR_OS_VESTIBULAR to true to let the OS flag freeze the three
      vestibular effects (Build teardown, Stance, studio light).
    ========================================================================= */
-
-import Lenis from 'lenis';
 
 const STORAGE_KEY = 'vesta-motion';
 const READY_FLAG = '__vestaMotionReady';
@@ -209,9 +214,15 @@ function initReveals(): void {
   requestAnimationFrame(() => requestAnimationFrame(() => initial.forEach(markIn)));
 
   // Net #2 — a sweep inside the shared scroll loop, in case IO never fires.
+  // A safety net, so ~5 times a second, not on every frame: it reads the
+  // rect of every pending element, and there can be hundreds.
+  let lastSweep = 0;
   addFrame({
     read(y, vh) {
       if (!pending.size) return;
+      const now = performance.now();
+      if (now - lastSweep < 200) return;
+      lastSweep = now;
       // At the very bottom nothing can scroll further up into view, so a
       // sliver at the bottom edge (the footer wordmark) counts as seen.
       const atEnd = y + vh >= root.scrollHeight - 2;
@@ -302,6 +313,25 @@ export interface FrameHandler {
 const handlers = new Set<FrameHandler>();
 let frameQueued = false;
 
+/* Last value written per element and property. A write that repeats the
+   current value would still dirty the element's style (and, for an
+   inherited custom property, its whole subtree) on every frame. */
+const written = new WeakMap<Element, Record<string, string>>();
+
+/** Sets a custom property (or any inline style property) only on change.
+    Every write of a given property on an element must go through here (a
+    direct style write or removeProperty would leave the cache stale). */
+export function setVar(el: Element & ElementCSSInlineStyle, name: string, value: string): void {
+  let rec = written.get(el);
+  if (!rec) {
+    rec = {};
+    written.set(el, rec);
+  }
+  if (rec[name] === value) return;
+  rec[name] = value;
+  el.style.setProperty(name, value);
+}
+
 export function addFrame(h: FrameHandler): () => void {
   handlers.add(h);
   requestFrame();
@@ -337,7 +367,7 @@ function initScroll(): void {
         p = docH > 0 ? Math.min(1, Math.max(0, y / docH)) : 0;
       },
       write() {
-        bar.style.setProperty('--p', p.toFixed(4));
+        setVar(bar, '--p', p.toFixed(4));
       },
     });
   }
@@ -383,7 +413,7 @@ function initScroll(): void {
         p = vestibular() ? 0 : Math.min(1, Math.max(0, y / (vh * 0.85)));
       },
       write() {
-        hero.style.setProperty('--hx', p.toFixed(4));
+        setVar(hero, '--hx', p.toFixed(4));
       },
     });
   }
@@ -391,7 +421,11 @@ function initScroll(): void {
   /* 3D scene entrance: [data-scene] rises out of depth as it scrolls in.
      --scene goes 0 → 1 while the element's top travels from the bottom of
      the viewport to 55% of it; CSS turns that into a perspective tilt. The
-     default (no JS, reduced, before the first frame) is 1 = final. */
+     default (no JS, reduced, before the first frame) is the final, flat
+     state. The 3D transform — and the compositor layer it costs — exists
+     only while the scene is moving (.is-scening); a settled or far-away
+     scene is a plain element. --scene is registered as non-inherited
+     (global.css), so a write restyles the wrapper, not the whole section. */
   const scenes = Array.from(document.querySelectorAll<HTMLElement>('[data-scene]'));
   if (scenes.length) {
     const tops: number[] = [];
@@ -409,7 +443,9 @@ function initScroll(): void {
           const raw = off ? 1 : (vhNow - t) / (vhNow * 0.45);
           const s = Math.min(1, Math.max(0, raw));
           const eased = 1 - Math.pow(1 - s, 3);
-          el.style.setProperty('--scene', eased.toFixed(4));
+          const moving = eased < 0.999;
+          el.classList.toggle('is-scening', moving);
+          if (moving) setVar(el, '--scene', eased.toFixed(3));
         });
       },
     });
@@ -432,7 +468,7 @@ function initScroll(): void {
           if (r.bottom < -200 || r.top > vhNow + 200) return;
           const speed = Number(el.dataset.parallax || 0.12);
           const centre = r.top + r.height / 2 - vhNow / 2;
-          el.style.setProperty('--py', `${(-centre * speed).toFixed(1)}px`);
+          setVar(el, '--py', `${(-centre * speed).toFixed(1)}px`);
         });
       },
     });
@@ -479,13 +515,13 @@ function initPointer(): void {
       const gx = Math.max(-clampPx, Math.min(clampPx, (e.clientX - (r.left + r.width / 2)) * strength));
       const gy = Math.max(-clampPx, Math.min(clampPx, (e.clientY - (r.top + r.height / 2)) * strength));
       el.classList.add('is-pulling');
-      el.style.setProperty('--mag-x', `${gx.toFixed(1)}px`);
-      el.style.setProperty('--mag-y', `${gy.toFixed(1)}px`);
+      setVar(el, '--mag-x', `${gx.toFixed(1)}px`);
+      setVar(el, '--mag-y', `${gy.toFixed(1)}px`);
     });
     const reset = () => {
       el.classList.remove('is-pulling');
-      el.style.setProperty('--mag-x', '0px');
-      el.style.setProperty('--mag-y', '0px');
+      setVar(el, '--mag-x', '0px');
+      setVar(el, '--mag-y', '0px');
     };
     el.addEventListener('pointerleave', reset);
     el.addEventListener('blur', reset);
@@ -500,13 +536,13 @@ function initPointer(): void {
       const nx = (e.clientX - r.left) / r.width - 0.5;
       const ny = (e.clientY - r.top) / r.height - 0.5;
       el.classList.add('is-tilting');
-      el.style.setProperty('--tilt-x', `${(nx * max * 2).toFixed(2)}deg`);
-      el.style.setProperty('--tilt-y', `${(-ny * max * 2).toFixed(2)}deg`);
+      setVar(el, '--tilt-x', `${(nx * max * 2).toFixed(1)}deg`);
+      setVar(el, '--tilt-y', `${(-ny * max * 2).toFixed(1)}deg`);
     });
     el.addEventListener('pointerleave', () => {
       el.classList.remove('is-tilting');
-      el.style.setProperty('--tilt-x', '0deg');
-      el.style.setProperty('--tilt-y', '0deg');
+      setVar(el, '--tilt-x', '0deg');
+      setVar(el, '--tilt-y', '0deg');
     });
   });
 
@@ -531,15 +567,11 @@ function initImages(): void {
 }
 
 /* ---------------------------------------------------------------------- */
-/* 6b. smooth scroll + eased anchors                                      */
+/* 6b. eased anchors                                                     */
 /* ---------------------------------------------------------------------- */
-/* Lenis smooths wheel/trackpad scrolling on fine pointers only (touch keeps
-   native momentum). It drives the real window scroll, so position: sticky,
-   the shared frame loop and IntersectionObserver keep working unchanged.
-   Every same-page anchor — with or without Lenis — travels on an eased
-   curve instead of the browser's jump. Motion: off turns both off. */
-
-let lenis: Lenis | null = null;
+/* Wheel, trackpad and touch scrolling stay native (compositor-threaded).
+   Only a same-page anchor travels on the site's eased curve instead of the
+   browser's jump. Motion: off makes it a jump again. */
 
 const easeInOutExpo = (t: number): number =>
   t <= 0 ? 0 : t >= 1 ? 1 : t < 0.5 ? Math.pow(2, 20 * t - 10) / 2 : (2 - Math.pow(2, -20 * t + 10)) / 2;
@@ -562,10 +594,6 @@ export function travelTo(target: HTMLElement | number): void {
     window.scrollTo({ top, behavior: 'instant' as ScrollBehavior });
     return;
   }
-  if (lenis) {
-    lenis.scrollTo(top, { duration, easing: easeInOutExpo, force: true });
-    return;
-  }
   // a newer travel (or the visitor's own wheel/touch) cancels this one
   const id = ++travelId;
   const from = window.scrollY;
@@ -584,32 +612,7 @@ for (const ev of ['wheel', 'touchstart', 'keydown'] as const) {
   window.addEventListener(ev, () => travelId++, { passive: true });
 }
 
-function initSmoothScroll(): void {
-  const fine = window.matchMedia('(pointer: fine)').matches;
-  const start = () => {
-    if (lenis || isReduced() || !fine) return;
-    lenis = new Lenis({
-      duration: 1.15,
-      easing: (t) => 1 - Math.pow(1 - t, 4),
-      smoothWheel: true,
-      allowNestedScroll: true,
-      autoRaf: true,
-    });
-  };
-  const stop = () => {
-    lenis?.destroy();
-    lenis = null;
-  };
-  start();
-  document.addEventListener('vesta:motion', () => (isReduced() ? stop() : start()));
-
-  // the full-screen menu locks the page; Lenis has to stop with it
-  new MutationObserver(() => {
-    if (!lenis) return;
-    if (root.classList.contains('menu-open')) lenis.stop();
-    else lenis.start();
-  }).observe(root, { attributes: true, attributeFilter: ['class'] });
-
+function initAnchors(): void {
   document.addEventListener('click', (e) => {
     if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     const a = (e.target as HTMLElement | null)?.closest<HTMLAnchorElement>('a[href*="#"]');
@@ -630,6 +633,43 @@ function initSmoothScroll(): void {
 }
 
 /* ---------------------------------------------------------------------- */
+/* 6c. endless animations pause off screen                                */
+/* ---------------------------------------------------------------------- */
+/* An infinite CSS animation keeps the page producing frames (and, on SVG,
+   repainting) even where nobody can see it. Each top-level block pauses its
+   endless animations while it is well off screen and resumes them on the
+   way back. Only animations this code paused are resumed, so one a
+   component keeps paused on purpose stays paused. Finite (entrance)
+   animations are never touched. */
+
+function initOffscreenPause(): void {
+  if (!('IntersectionObserver' in window) || typeof Element.prototype.getAnimations !== 'function') return;
+  const blocks = Array.from(document.querySelectorAll<HTMLElement>('main > *, body > footer'));
+  const held = new WeakMap<Element, Animation[]>();
+  const io = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        const el = entry.target;
+        if (entry.isIntersecting) {
+          held.get(el)?.forEach((a) => {
+            if (a.playState === 'paused') a.play();
+          });
+          held.delete(el);
+          continue;
+        }
+        const endless = el
+          .getAnimations({ subtree: true })
+          .filter((a) => a.playState === 'running' && a.effect?.getTiming().iterations === Infinity);
+        endless.forEach((a) => a.pause());
+        if (endless.length) held.set(el, endless);
+      }
+    },
+    { rootMargin: '25% 0px' }
+  );
+  blocks.forEach((b) => io.observe(b));
+}
+
+/* ---------------------------------------------------------------------- */
 /* 7. boot                                                                */
 /* ---------------------------------------------------------------------- */
 
@@ -641,7 +681,8 @@ function boot(): void {
     initReveals();
     initPointer();
     initImages();
-    initSmoothScroll();
+    initAnchors();
+    initOffscreenPause();
   } catch (err) {
     failed = true;
     root.classList.add('motion-failed');
